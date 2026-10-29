@@ -27,13 +27,13 @@ test_that("示範資料跑一輪：回傳 items，圖、表、程式都出得來
     expect_match(output$code, "kits version")
     expect_match(output$next_step$html, "go_link")
     # 題目參數：每一題每一步，畫面與 csv 相同
-    expect_match(output$coef, "thr_se")
+    expect_match(output$coef, "threshold_se")
     coef_csv <- readr::read_csv(output$dl_coef, show_col_types = FALSE)
-    expect_named(coef_csv, c("scale", "item_id", "item_score", "beta", "beta_se", "thr",
-                             "thr_se"))
+    expect_named(coef_csv, c("scale", "item_id", "item_score", "difficulty", "difficulty_se",
+                             "threshold", "threshold_se"))
     expect_equal(unique(coef_csv$scale), "lan M03")
     # csv 保留完整的數字
-    expect_equal(coef_csv$beta, coef(res$items[["lan M03"]])$beta, tolerance = 1e-12)
+    expect_equal(coef_csv$difficulty, coef(res$items[["lan M03"]])$beta, tolerance = 1e-12)
     expect_equal(nrow(coef_csv), nrow(coef(res$items[["lan M03"]])))
     # 自由校準沒有偏移表：csv 是一列說明，不是下載失敗
     expect_match(readr::read_csv(output$dl_drift, show_col_types = FALSE)$note, "自由校準")
@@ -194,7 +194,7 @@ test_that("固定校準：偏移表的 reason 是中文；固定的步驟寫「�
     # 題目參數：固定的步驟寫「固定」；csv 是 0
     expect_match(output$coef, "固定")
     coef_csv <- readr::read_csv(output$dl_coef, show_col_types = FALSE)
-    expect_equal(coef_csv$beta_se[coef_csv$item_id == "p1"], c(0, 0, 0))
+    expect_equal(coef_csv$difficulty_se[coef_csv$item_id == "p1"], c(0, 0, 0))
     expect_equal(unique(coef_csv$scale), "sim M03")
     expect_match(output$log, "category problem, left out")
   })

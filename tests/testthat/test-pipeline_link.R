@@ -125,12 +125,12 @@ test_that("外部連結凍結後，新的 M03 領域沿用同一條外部連結�
   theta <- kits::kits_subj(r9$data[["soc M03"]], r9$items[["soc M03"]],
                            persons = kitsui_persons(df))$theta
   co <- coef(lk$D)
-  expect_equal(s9$d, co[["intercept"]] + co[["slope"]] * theta)
+  expect_equal(s9$d_score, co[["intercept"]] + co[["slope"]] * theta)
 
   # 早先的 lan、motor 的 D 分數不變
   before <- kitsui_score(r8$round, r8$df, lk$fixed)$scores
   after <- kitsui_score(r8$round, r8$df, r9$fixed)$scores
-  expect_identical(after$d, before$d)
+  expect_identical(after$d_score, before$d_score)
   expect_identical(after$se_total, before$se_total)
 
   # 寫出再讀回：延伸後的外部連結；③ 的表標出哪一輪延伸

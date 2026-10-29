@@ -192,7 +192,8 @@ mod_items_server <- function(id, data, goto) {
     coef_raw <- shiny::reactive({
       x <- sel()
       shiny::validate(shiny::need(x$item, "這個量尺停下來了，沒有題目參數。"))
-      as.data.frame(stats::coef(x$item))
+      # 畫面與下載的欄名：beta -> difficulty（kits 與固定檔裡仍叫 beta）
+      kitsui_display_names(as.data.frame(stats::coef(x$item)))
     })
     output$coef <- kit_table(items_coef_display(coef_raw()))
     coef_csv <- shiny::reactive(items_with_scale(coef_raw(), sel()$scale))
@@ -324,12 +325,12 @@ items_result_ui <- function(ns, sc, pick) {
     scroll(ns("drift")),
     dl(ns("dl_drift"), "下載偏移表（csv）"),
     shiny::h4("題目參數"),
-    hint("每一題每一個步驟一列（coef(item)）。",
-         "beta 是步驟難度（logit）。",
-         "thr 是門檻：能力值（theta）到這裡時，有一半的機會得到這個分數以上。",
-         "_se 是標準誤。",
-         "固定在題庫的值的步驟沒有標準誤，表上寫「固定」（csv 裡是 0）。"),
+    hint("每一題每一個步驟一列（coef(item)）。欄位說明在表的下面。"),
     scroll(ns("coef")),
+    hint("difficulty、difficulty_se：步驟難度與標準誤（logit；kits 裡叫 beta、beta_se）。",
+         paste0("threshold、threshold_se：Thurstonian 門檻與標準誤（kits 裡叫 thr）；",
+                "能力值（ability）到這裡時，有一半的機會得到這個分數以上。"),
+         "固定在題庫的值的步驟沒有標準誤，表上寫「固定」（csv 裡是 0）。"),
     dl(ns("dl_coef"), "下載題目參數（csv）"),
     shiny::h4("這一輪的紀錄"),
     hint("新版本、併分數、分數類別的問題、借用另一世代題庫、停下來的原因，都會寫進固定檔的 checks.csv。",
@@ -571,8 +572,8 @@ items_drift_display <- function(rows) {
 items_coef_display <- function(co) {
   se <- \(x) dplyr::case_when(is.na(x) ~ "", x == 0 ~ "固定",
                                .default = formatC(x, format = "f", digits = 2))
-  co$beta_se <- se(co$beta_se)
-  co$thr_se <- se(co$thr_se)
+  co$difficulty_se <- se(co$difficulty_se)
+  co$threshold_se <- se(co$threshold_se)
   co
 }
 
@@ -582,7 +583,7 @@ items_plot_help <- function(type) {
   switch(
     type,
     category = "每一題每個分數的機率，隨能力值（theta）變化。",
-    wright = paste("左邊是受試者能力值（theta）的分布，右邊是各題步驟的門檻（thr）。",
+    wright = paste("左邊是受試者能力值（ability）的分布，右邊是各題步驟的 Thurstonian 門檻（threshold）。",
                    "兩邊用同一個縱軸，要對得上。"),
     fit = paste("每一題的 infit（圓點）與 outfit（方塊）；灰色帶是 0.6–1.4。",
                 "點的顏色只看它自己（infit 或 outfit）在不在帶子裡。"),

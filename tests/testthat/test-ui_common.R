@@ -132,3 +132,11 @@ test_that("啟動時找 pandoc（這台電腦有 Quarto 時找得到），圖存
   plot_save(p, file)
   expect_true(file.exists(file))
 })
+
+test_that("畫面用的欄名：beta -> difficulty、thr -> threshold、theta -> ability、d -> d_score", {
+  df <- data.frame(item_id = "a", beta = 1, beta_se = 0.1, thr = 1, thr_se = 0.1, theta = 2, d = 50,
+                   d_se = 3)
+  expect_named(kitsui_display_names(df),
+               c("item_id", "difficulty", "difficulty_se", "threshold", "threshold_se", "ability",
+                 "d_score", "d_score_se"))
+})

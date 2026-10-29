@@ -4,19 +4,22 @@ test_that("這一輪的分數換算到 D，合成一張表", {
   out <- kitsui_score(r8$round, r8$df, lk$fixed)
   s <- out$scores
   expect_equal(nrow(s), dplyr::n_distinct(r8$df$visit_id))
-  cols <- c("visit_id", "subj_id", "domain", "round", "bank", "scale", "d", "se_d", "se_link",
-            "se_total")
+  cols <- c("visit_id", "subj_id", "domain", "round", "bank", "scale", "ability", "ability_se",
+            "d_score", "d_score_se", "se_link", "se_total")
   expect_true(all(cols %in% names(s)))
-  # 全部換到 D：theta、se 叫 d、se_d（和分數對照表相同）
-  expect_false(any(c("theta", "se") %in% names(s)))
+  # 分開校準的 ability 與換到 D 的 d_score 都在
+  expect_false("se" %in% names(s))
+  own <- kits::kits_subj(r8$round$data[["lan M36"]], r8$round$items[["lan M36"]])
+  expect_equal(s$ability[s$cohort == "M36"], own$theta)
+  expect_equal(s$ability_se[s$cohort == "M36"], own$se)
   expect_equal(unique(s$scale), "D")
   expect_equal(unique(s$round), "r8")
   expect_setequal(unique(s$bank), c("lan M36", "motor M03"))
   # 和直接呼叫 kits 相同
   m36 <- kits::kits_subj(r8$round$data[["lan M36"]], r8$round$items[["lan M36"]]) |>
     kits::kits_convert(lk$internal, lk$D)
-  expect_equal(s$d[s$cohort == "M36"], m36$theta)
-  expect_equal(s$se_d[s$cohort == "M36"], m36$se)
+  expect_equal(s$d_score[s$cohort == "M36"], m36$theta)
+  expect_equal(s$d_score_se[s$cohort == "M36"], m36$se)
   expect_s3_class(kits::kits_subj_table(out$subj[["lan M36"]]), "kits_subj_table")
 })
 
@@ -24,7 +27,8 @@ test_that("沒有連結時分數留在校準的量尺", {
   r8 <- round8()
   s <- kitsui_score(r8$round, r8$df)$scores
   expect_setequal(unique(s$scale), c("lan M36", "motor M03"))
-  expect_false("se_link" %in% names(s))
+  expect_true(all(is.na(s$d_score)))
+  expect_true(all(is.na(s$se_link)))
 })
 
 test_that("換算路線與找人", {
@@ -111,36 +115,44 @@ test_that("兩個世代的垂直連結三個版本：未連結、內部連結後
   s <- kitsui_score(wide$round, wide$df, wide$fixed)$scores
   s <- s[s$domain == "motor" & s$cohort == "M36" & s$wave_m == 48, ]
   ext <- v$external$vertical
-  expect_equal(ext$median[ext$cohort == "M36" & ext$wave_m == 48], stats::median(s$d))
+  expect_equal(ext$median[ext$cohort == "M36" & ext$wave_m == 48], stats::median(s$d_score))
   # 兩個世代有共同的月齡（36、48）：沒有說明
   expect_null(v$external$note)
   one <- kitsui_verticals(round8()$round, round8()$df, linked()$fixed, "lan")
   expect_true(all(purrr::map_lgl(one, \(x) grepl("只有一個世代", x$why))))
 })
 
-test_that("分數對照表：theta 在校準的量尺上，d 是換算後的值（表直接換算，不重解）", {
+test_that("分數對照表：ability 在校準的量尺上、ability_int 經過內部連結、d_score 換到 D", {
   r <- round8()
   lk <- linked()
   sc <- kitsui_score(r$round, r$df, lk$fixed)
   path <- kitsui_path_links(lk$fixed, kitsui_links(lk$fixed), "lan M36")
-  tab <- kitsui_raw_table(sc$own[["lan M36"]], path)
-  expect_true(all(c("theta", "se", "d", "se_d", "se_link", "se_total") %in% names(tab)))
-  own <- as.data.frame(kits::kits_subj_table(sc$own[["lan M36"]]))
-  # 和換算後的分數再做一次 kits_subj_table() 每一欄都相同
+  internal <- kitsui_path_links(lk$fixed, kitsui_links(lk$fixed), "lan M36", stage = "internal")
+  tab <- kitsui_raw_table(sc$own[["lan M36"]], path, internal)
+  expect_true(all(c("ability", "ability_se", "ability_int", "ability_int_se", "d_score",
+                    "d_score_se", "se_link", "se_total") %in% names(tab)))
+  own <- kits::kits_subj_table(sc$own[["lan M36"]])
+  expect_equal(tab$ability, as.data.frame(own)$theta)
+  # ability_int：經過內部連結（M36 -> M03）
+  inner_t <- as.data.frame(kits::kits_convert(own, lk$internal))
+  expect_equal(tab$ability_int, inner_t$theta)
+  expect_equal(tab$ability_int_se, inner_t$se)
+  # d：和換算後的分數再做一次 kits_subj_table() 每一欄都相同
   conv <- as.data.frame(kits::kits_subj_table(sc$subj[["lan M36"]]))
-  expect_equal(tab$theta, own$theta)
-  expect_equal(tab$d, conv$theta)
-  expect_equal(tab$se_d, conv$se)
+  expect_equal(tab$d_score, conv$theta)
+  expect_equal(tab$d_score_se, conv$se)
   expect_equal(tab$se_link, conv$se_link)
   expect_equal(tab$se_total, conv$se_total)
   expect_equal(tab[c("n", "pct", "cum_pct", "wave_n", "form_pct")],
                conv[c("n", "pct", "cum_pct", "wave_n", "form_pct")])
-  # 沒有連結時只有 theta
+  # 沒有連結時只有 ability（校準的量尺）
   plain <- kitsui_raw_table(sc$own[["lan M36"]])
-  expect_false("d" %in% names(plain))
-  # 只做了內部連結：換算後的欄叫 theta_lan_M03
-  inner <- kitsui_raw_table(sc$own[["lan M36"]], list(lk$internal))
-  expect_true(all(c("theta_lan_M03", "se_lan_M03") %in% names(inner)))
+  expect_false(any(c("d_score", "ability_int") %in% names(plain)))
+  expect_equal(plain$ability, as.data.frame(own)$theta)
+  # 只做了內部連結：ability_int 換到 M03，沒有 d_score
+  inner <- kitsui_raw_table(sc$own[["lan M36"]], list(lk$internal), list(lk$internal))
+  expect_equal(inner$ability_int, inner_t$theta)
+  expect_false("d_score" %in% names(inner))
   # 畫面上預設不列沒有人的原始分數
   expect_true(any(tab$n == 0))
   shown <- kitsui_raw_table_shown(tab)
@@ -162,7 +174,7 @@ test_that("分數只算一次：換算只要校準量尺上的分數與連結；
   # 只有連結變了：用同一組校準量尺上的分數重新換算
   plain <- kitsui_score_convert(out$own, r8$round$fixed, round_label = "r8")
   expect_setequal(unique(plain$scores$scale), c("lan M36", "motor M03"))
-  expect_true(all(c("theta", "se") %in% names(plain$scores)))
+  expect_true(all(c("ability", "ability_se") %in% names(plain$scores)))
   again <- kitsui_score_convert(plain$own, lk$fixed, links, "r8")
   expect_equal(again$scores, out$scores)
   # 校準量尺上的分數和直接 kits_subj() 相同
@@ -172,7 +184,7 @@ test_that("分數只算一次：換算只要校準量尺上的分數與連結；
   expect_equal(own$theta, direct$theta)
 })
 
-test_that("分數表的欄：全部到 D 時叫 d、se_d；還有量尺不在 D 時留 theta、se；每一欄一句說明", {
+test_that("分數表的欄：ability、ability_se 一直都在；不在 D 的量尺 d_score 是空白；每一欄一句說明", {
   r8 <- round8()
   lk <- linked()
   links <- kitsui_links(lk$fixed)
@@ -181,12 +193,14 @@ test_that("分數表的欄：全部到 D 時叫 d、se_d；還有量尺不在 D 
   inner$links <- dplyr::filter(inner$links, kind == "internal")
   s <- kitsui_score(r8$round, r8$df, inner)$scores
   expect_setequal(unique(s$scale), c("lan M03", "motor M03"))
-  expect_true(all(c("theta", "se", "bank") %in% names(s)))
+  expect_true(all(c("ability", "ability_se", "d_score", "d_score_se", "bank") %in% names(s)))
+  expect_true(all(is.na(s$d_score)))
   expect_equal(unique(s$bank[s$scale == "lan M03"]), "lan M36")
   cols <- kitsui_score_columns(kitsui_score(r8$round, r8$df, lk$fixed, links)$scores)
   expect_named(cols, c("column", "meaning"))
-  expect_true(all(c("d", "se_d", "se_link", "se_total", "bank", "round") %in% cols$column))
-  expect_false("theta" %in% cols$column)
+  expect_true(all(c("ability", "ability_se", "d_score", "d_score_se", "se_link", "se_total", "bank",
+                    "round") %in%
+                    cols$column))
   expect_match(cols$meaning[cols$column == "bank"], "借用另一世代題庫")
 })
 
@@ -211,7 +225,7 @@ test_that("題目表：每一列都沒有內容的欄不列出（domain、column
   shown <- kitsui_item_table_shown(tab)
   expect_false(any(c("domain", "column", "stem", "DIF") %in% names(shown)))
   expect_setequal(attr(shown, "dropped"), c("domain", "column", "stem", "DIF"))
-  expect_true(all(c("item_id", "D", "age50") %in% names(shown)))
+  expect_true(all(c("item_id", "d_threshold", "age50") %in% names(shown)))
   # 有內容時留著
   tab$DIF[1] <- "favors girls"
   tab$stem[1] <- "說出兩個字"
@@ -260,4 +274,11 @@ test_that("垂直連結：分數算一次（progress 每個世代一次），換
   expect_match(note, "沒有共同的月齡")
   expect_match(note, "lan M03：3、6 個月")
   expect_null(kitsui_vertical_no_common(raw))
+})
+
+test_that("題目表依 D 由小到大，畫面叫 d_threshold", {
+  tab <- data.frame(item_id = c("a", "b", "c"), D = c(40, 20, NA), age50 = c(9, 3, NA))
+  out <- kitsui_item_table_shown(tab)
+  expect_equal(out$item_id, c("b", "a", "c"))
+  expect_equal(out$d_threshold, c(20, 40, NA))
 })

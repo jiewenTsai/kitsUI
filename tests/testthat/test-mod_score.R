@@ -10,7 +10,7 @@ score_args <- function(round, df, fixed, persons = NULL) {
   )
 }
 
-test_that("分數表有 visit_id、subj_id、round、bank，換到 D（d、se_d）；可搜尋、下載", {
+test_that("分數表有 visit_id、subj_id、round、bank、ability、ability_se、d_score、d_score_se；可搜尋、下載", {
   r8 <- round8()
   lk <- linked()
   args <- score_args(r8$round, r8$df, lk$fixed, kitsui_persons(r8$df))
@@ -18,15 +18,16 @@ test_that("分數表有 visit_id、subj_id、round、bank，換到 D（d、se_d�
     session$setInputs(run = 1)
     s <- session$returned()$scores
     expect_equal(nrow(s), dplyr::n_distinct(r8$df$visit_id))
-    cols <- c("visit_id", "subj_id", "cohort", "round", "bank", "d", "se_d", "se_link", "se_total")
+    cols <- c("visit_id", "subj_id", "cohort", "round", "bank", "ability", "ability_se", "d_score",
+              "d_score_se",
+              "se_link", "se_total")
     expect_true(all(cols %in% names(s)))
-    expect_false("theta" %in% names(s))
     expect_equal(unique(s$scale), "D")
     expect_match(output$routes, "lan M36 → lan M03 → D")
     expect_match(output$routes, "lan M36（36、48 個月）")
     # 每一欄一句說明
     expect_match(output$columns$html, "se_total")
-    expect_match(output$columns$html, "量尺分數（d）")
+    expect_match(output$columns$html, "量尺分數（d_score）")
 
     id <- s$subj_id[1]
     session$setInputs(search = id, page = 1)
@@ -35,12 +36,16 @@ test_that("分數表有 visit_id、subj_id、round、bank，換到 D（d、se_d�
     csv <- readr::read_csv(output$scores_dl, show_col_types = FALSE)
     expect_equal(nrow(csv), nrow(s))
     expect_equal(csv$visit_id, s$visit_id)
-    expect_equal(csv$d, s$d)
+    expect_equal(csv$d_score, s$d_score)
+    expect_equal(csv$ability, s$ability)
+    expect_true(all(c("ability", "ability_se", "d_score", "d_score_se") %in% names(csv)))
 
-    # 分數對照表：d、se_d；預設不列沒有人的原始分數
+    # 分數對照表：ability、ability_int、d_score；預設不列沒有人的原始分數
     session$setInputs(subj_scale = "lan M36")
     tab <- subj_table()
-    expect_true(all(c("wave_m", "raw", "theta", "d", "se_d", "se_total") %in% names(tab)))
+    expect_true(all(c("wave_m", "raw", "ability", "ability_int", "d_score", "d_score_se",
+                      "se_total") %in%
+                      names(tab)))
     expect_true(any(tab$n == 0))
     shown_n <- nrow(kitsui_raw_table_shown(tab))
     expect_equal(lengths(regmatches(output$subj_table, gregexpr("<tr", output$subj_table))),
@@ -70,12 +75,12 @@ test_that("分數表有 visit_id、subj_id、round、bank，換到 D（d、se_d�
     # 題目表：換到 D，通過年齡用這一輪的作答；沒有內容的欄不列出
     session$setInputs(item_scale = "lan M36")
     expect_s3_class(item_table(), "data.frame")
-    expect_true(all(c("item_id", "D", "age50") %in% names(item_table())))
+    expect_true(all(c("item_id", "d_threshold", "age50") %in% names(item_table())))
     expect_false(any(c("domain", "column", "stem", "DIF") %in% names(item_table())))
     expect_match(output$item_table_note$html, "kits_dif")
     expect_match(output$item_table_scale, "在 D 的量尺上")
     csv <- readr::read_csv(output$item_table_dl, show_col_types = FALSE)
-    expect_equal(csv$D, item_table()$D)
+    expect_equal(csv$d_threshold, item_table()$d_threshold)
     expect_match(output$checks, "share of misfit")
     expect_match(output$checks, "explain")
   })
@@ -161,7 +166,7 @@ test_that("連結的模組還沒有回傳時，用題目校準的固定檔（沒
     session$setInputs(run = 1)
     s <- session$returned()$scores
     expect_setequal(unique(s$scale), c("lan M36", "motor M03"))
-    expect_true(all(c("theta", "se") %in% names(s)))
+    expect_true(all(c("ability", "ability_se") %in% names(s)))
     session$setInputs(subj_scale = "lan M36")
     # 沒有連結：R 程式不讀固定檔，也不出錯
     expect_false(grepl("unzip", output$code))

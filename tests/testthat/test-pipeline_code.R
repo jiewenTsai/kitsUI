@@ -37,15 +37,18 @@ test_that("連結與評分的程式碼接在一輪之後能跑，結果相同", 
   sc <- kitsui_score(r8$round, r8$df, lk$fixed)
   score <- sc$scores
   m36 <- score[score$cohort == "M36", ]
-  expect_equal(env$scores$theta[match(m36$visit_id, env$scores$visit_id)], m36$d)
+  expect_equal(env$scores$theta[match(m36$visit_id, env$scores$visit_id)], m36$d_score)
   tab <- kitsui_item_table(r8$round, r8$df, lk$fixed, "lan M36")
   expect_equal(env$item_table$D, tab$D)
   expect_equal(env$item_table$age50, tab$age50)
   # 分數對照表：程式直接換算表，和 app 的 d 欄相同
+  links <- kitsui_links(lk$fixed)
   raw <- kitsui_raw_table(sc$own[["lan M36"]],
-                          kitsui_path_links(lk$fixed, kitsui_links(lk$fixed), "lan M36"))
-  expect_equal(as.data.frame(env$raw_table)$theta, raw$d)
-  expect_equal(as.data.frame(env$raw_table)$se_total, raw$se_total)
+                          kitsui_path_links(lk$fixed, links, "lan M36"),
+                          kitsui_path_links(lk$fixed, links, "lan M36", stage = "internal"))
+  expect_equal(as.data.frame(env$raw_d)$theta, raw$d_score)
+  expect_equal(as.data.frame(env$raw_d)$se_total, raw$se_total)
+  expect_equal(as.data.frame(env$raw_theta)$theta, raw$ability_int)
 })
 
 test_that("連結的程式讀真的固定檔檔名：之前的輪做的讀上傳的 zip，這一輪做的讀新的固定檔", {

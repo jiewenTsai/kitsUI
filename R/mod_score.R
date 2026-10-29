@@ -35,8 +35,8 @@ score_guide <- function() {
       "還沒有外部連結的量尺，分數留在自己的量尺上。"
     ),
     note = paste0(
-      "能力值（theta）在校準的量尺上；換到 D 後是量尺分數（d）。",
-      "se、se_d 是它們的標準誤。",
+      "能力值（ability，kits 裡叫 theta）在校準的量尺上；換到 D 後是量尺分數（d_score）。",
+      "ability_se、d_score_se 是它們的標準誤。",
       "se_link 是連結的誤差，se_total 是兩者合起來。"
     )
   )
@@ -159,9 +159,10 @@ mod_score_server <- function(id, data, items, links, goto, next_round = NULL) {
       shiny::req(s %in% names(res$own))
       if (is.null(raw_memo[[s]])) {
         path <- kitsui_path_links(fixed(), link_objs(), s)
+        internal <- kitsui_path_links(fixed(), link_objs(), s, stage = "internal")
         raw_memo[[s]] <- shiny::withProgress(
           message = "正在做分數對照表…", detail = s, value = 0.5,
-          kitsui_raw_table(res$own[[s]], path)
+          kitsui_raw_table(res$own[[s]], path, internal)
         )
       }
       raw_memo[[s]]
@@ -183,7 +184,9 @@ mod_score_server <- function(id, data, items, links, goto, next_round = NULL) {
     )
     output$item_table_scale <- shiny::renderText({
       s <- shiny::req(input$item_scale)
-      paste0("D 欄是第一步的門檻，在 ", attr(result()$subj[[s]], "scale"), " 的量尺上（和分數相同）。")
+      paste0("d_threshold：第一步的門檻（通過這一題的難度），在 ", attr(result()$subj[[s]], "scale"),
+             " 的量尺上，和 d_score 同一把尺：d_score 高於 d_threshold 的孩子，通過這題的機會超過一半。",
+             "題目依 d_threshold 由小到大排列（kits 裡這一欄叫 D）。")
     })
     output$item_table_note <- shiny::renderUI(item_table_note_ui(item_table()))
 
@@ -371,24 +374,35 @@ score_result_ui <- function(ns, scales) {
     shiny::tags$div(class = "kit-table-scroll", shiny::tableOutput(ns("scores"))),
     shiny::uiOutput(ns("columns")),
     shiny::h4("2. 分數對照表"),
-    shiny::tags$small(
-      class = "kit-hint",
-      "每個原始分數對應的能力值與人數（kits_subj_table()）。",
-      "能力值（theta）在校準的量尺上（logit）。",
-      "量尺分數（d）是換到 D 之後的值，se_d 是它的標準誤。"
-    ),
-    shiny::tags$ul(
-      class = "kit-hint",
-      shiny::tags$li("作答組合：這個波次最多孩子作答的那一組題目。表裡只算用這個作答組合的孩子。"),
-      shiny::tags$li("n：這個原始分數有幾個孩子。pct：佔這個作答組合的百分比。"),
-      shiny::tags$li("cum_pct：累積百分比，也就是原始分數到這一列為止的孩子佔幾 %。"),
-      shiny::tags$li("wave_n：這個波次全部的孩子數。"),
-      shiny::tags$li("form_pct：這個波次的孩子有幾 % 用這個作答組合。")
-    ),
+    shiny::tags$small(class = "kit-hint",
+                      "每個原始分數對應的能力值與人數（kits_subj_table()）。欄位說明在表的下面。"),
     shiny::selectInput(ns("subj_scale"), "哪一個量尺？", choices = scales),
     shiny::checkboxInput(ns("show_empty"), "顯示沒有人的原始分數", value = FALSE),
     shiny::tags$div(class = "kit-table-scroll kit-table-tall",
                     shiny::tableOutput(ns("subj_table"))),
+    shiny::tags$details(
+      open = NA,
+      shiny::tags$summary("每一欄是什麼"),
+      shiny::tags$ul(
+        class = "kit-hint",
+        shiny::tags$li(shiny::tags$code("ability"), "、", shiny::tags$code("ability_se"),
+                       "：校準的量尺上的能力值與標準誤（logit；kits 裡叫 theta、se）。",
+                       "和上面分數表的 ability 相同：各世代分開估計，沒有經過連結。"),
+        shiny::tags$li(shiny::tags$code("ability_int"), "、", shiny::tags$code("ability_int_se"),
+                       "：int 表示經過內部連結（internal），換到參照世代（M03）的量尺上。",
+                       "參照世代自己的量尺沒有這兩欄。"),
+        shiny::tags$li(shiny::tags$code("d_score"), "、", shiny::tags$code("d_score_se"),
+                       "：再經過外部連結，D 上的量尺分數與標準誤（kits 裡叫 d）。"),
+        shiny::tags$li(shiny::tags$code("se_link"), "、", shiny::tags$code("se_total"),
+                       "：d_score 的連結誤差，以及測量誤差與連結誤差合起來。"),
+        shiny::tags$li("作答組合：這個波次最多孩子作答的那一組題目。表裡只算用這個作答組合的孩子。"),
+        shiny::tags$li(shiny::tags$code("n"), "：這個原始分數有幾個孩子。",
+                       shiny::tags$code("pct"), "：佔這個作答組合的百分比。"),
+        shiny::tags$li(shiny::tags$code("cum_pct"), "：累積百分比，原始分數到這一列為止的孩子佔幾 %。"),
+        shiny::tags$li(shiny::tags$code("wave_n"), "：這個波次全部的孩子數。"),
+        shiny::tags$li(shiny::tags$code("form_pct"), "：這個波次的孩子有幾 % 用這個作答組合。")
+      )
+    ),
     shiny::tags$div(
       class = "kit-downloads",
       ui_download(ns("subj_table_dl"), "下載對照表（CSV）"),

@@ -189,3 +189,20 @@ csv_or_note <- function(table_fun) {
   }
   as.data.frame(tab)
 }
+
+# 畫面與下載用的欄名（kits、固定檔裡仍用左邊的名字）：beta -> difficulty、thr -> threshold、
+# theta -> ability、
+# d -> d_score；標準誤加 _se
+KITSUI_DISPLAY_NAMES <- c(
+  beta = "difficulty", beta_se = "difficulty_se", thr = "threshold", thr_se = "threshold_se",
+  theta = "ability", theta_se = "ability_se", se = "ability_se",
+  d = "d_score", d_se = "d_score_se"
+)
+
+#' 把表的欄名換成畫面用的名字（只換表裡有的欄）
+#' @noRd
+kitsui_display_names <- function(df) {
+  hit <- intersect(names(df), names(KITSUI_DISPLAY_NAMES))
+  names(df)[match(hit, names(df))] <- KITSUI_DISPLAY_NAMES[hit]
+  df
+}

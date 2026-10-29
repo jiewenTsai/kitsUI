@@ -70,30 +70,39 @@ kitsui_score <- function(round, df, fixed = round$fixed, links = NULL, persons =
 kitsui_score_convert <- function(own, fixed, links = NULL, round_label = NULL) {
   links <- links %||% kitsui_links(fixed)
   subj <- purrr::imap(own, \(x, s) kitsui_convert_path(x, kitsui_path_links(fixed, links, s)))
-  list(scores = kitsui_score_rows(subj, round_label), subj = subj, own = own)
+  list(scores = kitsui_score_rows(subj, round_label, own), subj = subj, own = own)
 }
 
 #' 分數表：一列一列次一個量尺
 #'
 #' bank 是校準用的題庫（借用另一世代題庫時是另一個世代的量尺，人的 cohort 不變）；scale 是換算後的量尺。
-#' 全部換到 D 時，theta、se 改叫 d、se_d（和分數對照表相同）。
+#' ability、ability_se（kits 的 theta、se）是 bank 那把尺上的能力值（各世代分開校準，沒有經過連結）；
+#' d_score、d_score_se 是換到 D 之後的量尺分數（還沒換到 D 的量尺是空白），
+#' se_total 是 d_score_se 與 se_link 合起來。
 #' @param subj 具名 list（校準的量尺）：換算後的 kits_subj
+#' @param own 具名 list（同 subj）：換算前（校準量尺上）的 kits_subj；NULL 時用 subj
 #' @noRd
-kitsui_score_rows <- function(subj, round_label = NULL) {
+kitsui_score_rows <- function(subj, round_label = NULL, own = NULL) {
+  own <- own %||% subj
   cols <- c("visit_id", "subj_id", "cohort", "wave_m", "age_m", "sex", "domain", "round", "bank",
-            "scale", "raw", "theta", "se", "se_link", "se_total")
+            "scale", "raw", "ability", "ability_se", "d_score", "d_score_se", "se_link", "se_total")
   label <- if (length(round_label) == 0) NA_character_ else round_label
-  rows <- purrr::imap(subj, \(x, s) {
-    tibble::as_tibble(x) |>
-      dplyr::mutate(domain = scale_domain(s), round = label, bank = s, scale = attr(x, "scale")) |>
+  purrr::imap(subj, \(x, s) {
+    base <- tibble::as_tibble(own[[s]])
+    conv <- tibble::as_tibble(x)
+    on_d <- identical(attr(x, "scale"), "D")
+    base |>
+      dplyr::mutate(
+        domain = scale_domain(s), round = label, bank = s, scale = attr(x, "scale"),
+        ability = .data$theta, ability_se = .data$se,
+        d_score = if (on_d) conv$theta else NA_real_, d_score_se = if (on_d) conv$se else NA_real_,
+        se_link = if (on_d && "se_link" %in% names(conv)) conv$se_link else NA_real_,
+        se_total = if (on_d && "se_total" %in% names(conv)) conv$se_total else NA_real_
+      ) |>
       dplyr::select(dplyr::any_of(cols))
   }) |>
     unname() |>
     purrr::list_rbind()
-  if (nrow(rows) > 0 && all(rows$scale == "D")) {
-    rows <- dplyr::rename(rows, d = "theta", se_d = "se")
-  }
-  rows
 }
 
 # 分數表各欄的一句說明（畫面上列在表的下面）
@@ -109,12 +118,13 @@ KITSUI_SCORE_COLUMNS <- c(
   bank = "校準用的題庫（量尺）。借用另一世代題庫時，這裡是那個世代的量尺。",
   scale = "分數最後在哪一把尺上。",
   raw = "原始分數（答對或通過的步驟數）。",
-  theta = "能力值（theta，WLE），在 scale 那把尺上。",
-  se = "theta 的標準誤（測量誤差）。",
-  d = "量尺分數（d）：換到 D 之後的值。",
-  se_d = "d 的標準誤（測量誤差）。",
-  se_link = "連結的誤差（換算本身的不確定性）。",
-  se_total = "測量誤差與連結誤差合起來：sqrt(se² + se_link²)。"
+  ability = paste0("能力值（ability，kits 裡叫 theta；WLE，logit）：在 bank 那把尺上，",
+                   "各世代分開校準，沒有經過內部、外部連結。"),
+  ability_se = "ability 的標準誤（測量誤差）。",
+  d_score = "量尺分數（d_score）：經過內部、外部連結換到 D 之後的值；還沒換到 D 時是空白。",
+  d_score_se = "d_score 的標準誤（測量誤差，D 的單位）。",
+  se_link = "連結的誤差（換算本身的不確定性，D 的單位）。",
+  se_total = "d_score 的測量誤差與連結誤差合起來：sqrt(d_score_se² + se_link²)。"
 )
 
 #' 分數表有的欄，各一句說明
@@ -216,7 +226,11 @@ kitsui_item_table_shown <- function(tab) {
   }
   if ("DIF" %in% names(tab) && all(is.na(tab$DIF) | tab$DIF == "none")) drop <- c(drop, "DIF")
   drop <- unique(setdiff(drop, c("item_id", "D")))
-  structure(tab[setdiff(names(tab), drop)], dropped = drop)
+  # 依 D（第一步的門檻）由小到大；畫面與下載叫 d_threshold
+  if ("D" %in% names(tab)) tab <- tab[order(tab$D, tab$item_id, na.last = TRUE), , drop = FALSE]
+  tab <- tab[setdiff(names(tab), drop)]
+  names(tab)[names(tab) == "D"] <- "d_threshold"
+  structure(tab, dropped = drop)
 }
 
 #' 這一輪校準到這個量尺的資料是哪些世代（借用另一世代題庫時不只是量尺自己的世代）
@@ -336,27 +350,37 @@ kitsui_vertical_why <- function(fixed, scales, links, stage) {
 #' kits_subj_table() 只算一次（校準量尺上的分數）；換算後的欄直接用 kits_convert() 換這張表
 #' （和換算後的分數再做一次 kits_subj_table() 每一欄都相同，但不用重解每個原始分數的 WLE）。
 #' @param own 換算前的 kits_subj
-#' @param path 換算路線上的連結（kitsui_path_links()）；空的 list 時不換算
-#' @return data.frame；沒有連結時只有 theta、se；換到 D 時多 d、se_d、se_link、se_total；
-#'   只做了內部連結時，換算後的欄叫 theta_<量尺>（例如 theta_lan_M03）
+#' @param path 換算到最後的連結（kitsui_path_links()）；空的 list 時不換算
+#' @param internal 只有內部連結的那一段（kitsui_path_links(stage = "internal")）
+#' @return data.frame：ability、ability_se 在校準的量尺上（kits 的 theta、se）；有內部連結時多
+#'   ability_int、ability_int_se（參照世代的量尺）；換到 D 時多 d_score、d_score_se、
+#'   se_link、se_total（se_link、se_total 是 d_score 的）
 #' @noRd
-kitsui_raw_table <- function(own, path = list()) {
+kitsui_raw_table <- function(own, path = list(), internal = list()) {
   keys <- c("wave_m", "n_items", "raw")
   counts <- c("n", "pct", "cum_pct", "wave_n", "form_pct")
   table <- kits::kits_subj_table(own)
-  base <- as.data.frame(table)
-  if (length(path) == 0) return(dplyr::select(base, -dplyr::any_of("se_link")))
-  conv <- kitsui_convert_path(table, path)
-  to <- attr(conv, "scale")
-  name <- if (to == "D") "d" else paste0("theta_", gsub("[^A-Za-z0-9]+", "_", to))
-  new_names <- stats::setNames(c("theta", "se"), c(name, sub("^(theta_)?", "se_", name)))
-  conv <- as.data.frame(conv) |>
-    dplyr::select(dplyr::all_of(c(keys, "theta", "se")), dplyr::any_of(c("se_link", "se_total"))) |>
-    dplyr::rename(dplyr::all_of(new_names))
-  base |>
+  # ability：校準的量尺上（和分數表的 ability 相同，各世代分開估計）
+  out <- as.data.frame(table) |>
     dplyr::select(dplyr::all_of(c(keys, "theta", "se", counts))) |>
-    dplyr::left_join(conv, by = keys) |>
-    dplyr::relocate(dplyr::all_of(counts), .after = dplyr::last_col())
+    dplyr::rename(ability = "theta", ability_se = "se")
+  # ability_int：經過內部連結（換到參照世代的量尺）
+  if (length(internal) > 0) {
+    inner <- as.data.frame(kitsui_convert_path(table, internal)) |>
+      dplyr::select(dplyr::all_of(c(keys, "theta", "se"))) |>
+      dplyr::rename(ability_int = "theta", ability_int_se = "se")
+    out <- dplyr::left_join(out, inner, by = keys)
+  }
+  conv <- kitsui_convert_path(table, path)
+  if (identical(attr(conv, "scale"), "D")) {
+    # d_score：再經過外部連結換到 D
+    d <- as.data.frame(conv) |>
+      dplyr::select(dplyr::all_of(c(keys, "theta", "se")),
+                    dplyr::any_of(c("se_link", "se_total"))) |>
+      dplyr::rename(d_score = "theta", d_score_se = "se")
+    out <- dplyr::left_join(out, d, by = keys)
+  }
+  dplyr::relocate(out, dplyr::all_of(counts), .after = dplyr::last_col())
 }
 
 #' 畫面上的分數對照表：預設不列沒有人的原始分數（n = 0）

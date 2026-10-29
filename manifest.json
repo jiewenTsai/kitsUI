@@ -2810,7 +2810,7 @@
       "checksum": "226d7cbec671c2e297aebc835d03041f"
     },
     "DESCRIPTION": {
-      "checksum": "21ae2aff82b806656679e17a6907c94b"
+      "checksum": "c8c3873df1a5a6b849d90cc6937ee0dc"
     },
     "NAMESPACE": {
       "checksum": "317ae8dff22b06e5d19fde44a9aaf7a7"
@@ -2837,13 +2837,13 @@
       "checksum": "7ecbf4220f4222ca2048c1d7c7156eba"
     },
     "R/mod_items.R": {
-      "checksum": "38d033107a713d8247474084a867466a"
+      "checksum": "1b7fad2f90a77d9749053012361c2686"
     },
     "R/mod_link.R": {
       "checksum": "d717f7b7b544e6b87d03a4ecdd7da926"
     },
     "R/mod_score.R": {
-      "checksum": "6c997573b7d4ad51a75e2da5de950376"
+      "checksum": "37b06593482e24860afa328c155dddb4"
     },
     "R/pipeline_bank.R": {
       "checksum": "a7df0dec7a132a99feec53afbfa854e8"
@@ -2852,7 +2852,7 @@
       "checksum": "d59509dc0c39e5e8c7cc84054d51a53c"
     },
     "R/pipeline_code.R": {
-      "checksum": "9ab6b0e7090e94973f2a72cb35130068"
+      "checksum": "f2cba996d66fe1bd199f23fb1bb7efdb"
     },
     "R/pipeline_data.R": {
       "checksum": "1cf7e3e49ccb4369ff4c4e5a2fbc4055"
@@ -2870,13 +2870,13 @@
       "checksum": "a8668d681ec82925d0b12dcde61ff2f6"
     },
     "R/pipeline_score.R": {
-      "checksum": "d1d1ad2bb4cfd64f9ed562ace2c20339"
+      "checksum": "7536158983463474c1b81065089cdf1f"
     },
     "R/run_kitsui.R": {
       "checksum": "e1f8faea2e445c16d8acd95fc65fa320"
     },
     "R/ui_common.R": {
-      "checksum": "ac1d52872eecad594336df012d60874b"
+      "checksum": "9e04a38fa506b50f93658de90dadd559"
     },
     "R/utils.R": {
       "checksum": "527049a0d401817b64cbb954de521e0c"

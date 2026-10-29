@@ -175,14 +175,23 @@ kitsui_code_score <- function(fixed, scale, cohorts = scale_cohort(scale)) {
   convert <- if (length(path) > 0) sprintf("scores <- kits_convert(scores, %s)", links)
   thr <- if (length(path) > 0) sprintf("thr <- kits_convert(item, %s)", links) else "thr <- item"
   # 對照表：在校準的量尺上做一次，換算直接換這張表（不用重解每個原始分數）
-  table <- if (length(path) > 0) {
-    c(sprintf("raw_table <- kits_convert(raw_table, %s) # 換算後（d）", links), "raw_table")
-  }
+  inner <- setdiff(path, kitsui_link_var("D"))
+  table <- c(
+    if (length(inner) > 0) {
+      sprintf("raw_theta <- kits_convert(raw_table, %s) # theta：經過內部連結",
+              paste(inner, collapse = ", "))
+    } else {
+      "raw_theta <- raw_table # theta：參照世代自己的量尺，不用換"
+    },
+    "raw_theta",
+    if (kitsui_link_var("D") %in% path) {
+      c(sprintf("raw_d <- kits_convert(raw_table, %s) # d：再經過外部連結", links), "raw_d")
+    }
+  )
   paste(c(
     "persons <- distinct(responses, visit_id, subj_id, cohort, sex, wave_m, age_m)",
-    "scores <- kits_subj(X, item, persons = persons)",
-    "raw_table <- kits_subj_table(scores) # theta：校準的量尺上",
-    "raw_table",
+    "scores <- kits_subj(X, item, persons = persons) # theta：各世代分開估計，沒有經過連結",
+    "raw_table <- kits_subj_table(scores)",
     table,
     convert,
     "# 題目表：門檻和分數用同一組連結；通過年齡用這一輪的作答（沒有常模）",
