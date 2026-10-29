@@ -1,0 +1,29 @@
+.Rhistory
+.Rapp.history
+.RData
+.Ruserdata
+*.Rproj
+*.Rproj.user
+.DS_Store
+/doc/
+/Meta/
+*.tar.gz
+renv/library/
+renv/staging/
+
+# 根目錄其他 csv/sav（範例四檔見下方白名單）
+/*.csv
+/*.sav
+!/data36.csv
+!/data48.sav
+!/data60.sav
+!/irt36.csv
+
+# run.bat 執行時產生的 log
+kitsui_log.txt
+Rplots.pdf
+
+# 測試失敗時 testthat 留下的檔案、給代理的工作說明（不公開）
+tests/testthat/_problems/
+tests/testthat/testthat-problems.rds
+BRIEF.md

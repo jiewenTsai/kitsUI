@@ -1,0 +1,36 @@
+Package: kitsUI
+Title: KIT Scale Construction Tool
+Version: 0.3.0
+Date: 2026-10-30
+Authors@R: person("Jie-Wen", "Tsai", email = "tsai.jiewen@gmail.com", role = c("aut", "cre"))
+Description: KIT scale construction tool: a Shiny application for the KIT developmental
+    scale, built on 'kits': calibrate one wave at a time with the earlier item parameters
+    fixed, check items, link cohorts (internal link) and link to the D-score (external link),
+    and score children. Launch with \code{run_kitsui()}.
+License: GPL-3
+Encoding: UTF-8
+Depends: R (>= 4.1.0)
+Imports:
+    bslib,
+    dplyr (>= 1.1.0),
+    haven,
+    kits (>= 0.25.2),
+    plotly,
+    purrr,
+    readr,
+    shiny,
+    stats,
+    tibble,
+    tools,
+    utils,
+    vctrs,
+    zip
+Remotes:
+    jiewenTsai/kits
+Suggests:
+    rmarkdown,
+    testthat (>= 3.0.0),
+    withr
+Config/testthat/edition: 3
+Roxygen: list(markdown = TRUE)
+Config/roxygen2/version: 8.1.0

@@ -1,0 +1,12 @@
+# rsconnect bundle exclusions（僅本機/套件用檔案，Connect Cloud 不需要）
+.Rhistory
+.Rproj.user
+.cursor
+.claude
+run.bat
+scripts
+kitsui_log.txt
+man
+tests
+LICENSE.md
+BRIEF.md
