@@ -2,7 +2,7 @@
 #   VERSION（DCF）、bank.csv、versions.csv、links.csv、checks.csv、waves.csv、
 #   wave_summary.csv、pass_steps.csv
 #   bank.csv、links.csv 與 waves.csv 的 round 是加進來的那一回合（題目步驟、連結、波次）
-#   VERSION 的 Checksums 是每個檔案的 SHA-256（kitsUI 0.3.13 起），上傳時核對有沒有被改過
+#   VERSION 的 Checksums 是每個檔案的 SHA-256（kitsUI 0.4.0 起），上傳時核對有沒有被改過
 
 # 各表的欄位與型別（readr 的縮寫：c 文字、i 整數、d 數字）
 KITSUI_FIXED_COLS <- list(
