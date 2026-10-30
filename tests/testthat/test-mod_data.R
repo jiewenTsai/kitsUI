@@ -188,6 +188,10 @@ test_that("作答設計：換一個列數相同的新檔案時重新整理（不
     session$setInputs(waves = "M03 3", design_scale = "lan M03")
     ra <- design_resp()
     expect_match(output$design_dl$html, "下載作答設計圖（HTML）")
+    if (kit_pandoc_ok()) {
+      href <- kit_link_attr(output$design_dl$html, session$ns("dl_design"), "href")
+      expect_match(href, "/design_lan_M03\\.html\\?")
+    }
     session$setInputs(file = upload_input(pb, "b.csv"))
     rb <- design_resp()
     expect_equal(nrow(checked()$df), nrow(a))
@@ -200,12 +204,23 @@ test_that("下載的檔名：responses_<名稱>.csv、design_<量尺>.html", {
   shiny::testServer(mod_data_server, args = list(goto = \(tab) NULL), {
     session$setInputs(source = "demo", domains = "lan", waves = "M03 3", round_label = "",
                       design_scale = "lan M03")
-    expect_equal(basename(output$dl_data), "responses_R1.csv")
-    expect_equal(nrow(readr::read_csv(output$dl_data, show_col_types = FALSE)),
+    html <- output$dl_data_ui$html
+    expect_match(html, "下載這一回合的資料（CSV）")
+    expect_equal(kit_link_attr(html, session$ns("dl_data"), "download"), "responses_R1.csv")
+    expect_match(kit_link_attr(html, session$ns("dl_data"), "href"), "/responses_R1\\.csv\\?")
+    res <- kit_test_download(session, "dl_data")
+    expect_equal(res$headers[["Content-Disposition"]], 'attachment; filename="responses_R1.csv"')
+    expect_equal(nrow(readr::read_csv(res$content$file, show_col_types = FALSE)),
                  nrow(checked()$df))
+    # 位元組和原本的寫法（write_excel_csv）一樣
+    old <- withr::local_tempfile(fileext = ".csv")
+    readr::write_excel_csv(checked()$df, old)
+    expect_equal(file_bytes(res$content$file), file_bytes(old))
+    # 改名稱：按鈕重畫，檔名跟著變
     session$setInputs(round_label = "R7")
-    expect_equal(basename(output$dl_data), "responses_R7.csv")
-    expect_equal(download_name(\() paste0("design_", input$design_scale)), "design_lan_M03")
+    expect_match(output$dl_data_ui$html, 'download="responses_R7.csv"')
+    expect_equal(kit_test_download_name(session, "dl_data"), "responses_R7.csv")
+    if (kit_pandoc_ok()) expect_match(output$design_dl$html, 'download="design_lan_M03.html"')
   })
 })
 
@@ -310,8 +325,12 @@ test_that("第一回合的固定檔（④ 下載）：VERSION 有 kitsUI 的版�
     session$setInputs(`data-source` = "demo", `data-domains` = "lan",
                       `data-waves` = "M03 3", `data-round_label` = "")
     session$setInputs(`items-run` = 1)
-    zip <- output$`score-fixed_dl`
-    expect_equal(basename(zip), "kitsui_fixed_R1.zip")
+    html <- output$`score-fixed_dl_ui`$html
+    expect_equal(kit_link_attr(html, "score-fixed_dl", "download"), "kitsui_fixed_R1.zip")
+    res <- kit_test_download(session, "score-fixed_dl")
+    expect_equal(res$content_type, "application/zip")
+    expect_equal(res$headers[["Content-Disposition"]], 'attachment; filename="kitsui_fixed_R1.zip"')
+    zip <- res$content$file
     dir <- withr::local_tempdir()
     utils::unzip(zip, exdir = dir, junkpaths = TRUE)
     v <- read.dcf(file.path(dir, "VERSION"), keep.white = "Sources")
@@ -345,7 +364,9 @@ test_that("一次上傳好幾個檔案（含 .csv.gz）；欄位不一樣時說�
     expect_match(output$upload_info$html, "讀進 2 個檔案")
     expect_match(output$upload_info$html, "匯入完成")
     expect_match(output$code, 'read_csv\\(c\\(')
-    ex <- readr::read_csv(output$dl_example, show_col_types = FALSE)
+    expect_match(output$dl_example_ui$html, 'download="kitsui_example.csv"')
+    expect_match(output$dl_example_ui$html, "下載欄位範例檔（CSV）")
+    ex <- readr::read_csv(kit_test_download_file(session, "dl_example"), show_col_types = FALSE)
     expect_named(ex, KITSUI_COLUMNS$column)
     session$setInputs(file = rbind(upload_input(a, "m03.csv"), upload_input(bad, "bad.csv")))
     expect_null(session$getReturned()())
@@ -401,7 +422,34 @@ test_that("頁面：「加一個新的波次」預設收起來；欄位表只有
   expect_length(guides, 2)
   expect_false(any(grepl("open", guides)))
   expect_equal(lengths(regmatches(html, gregexpr("kit-columns", html))), 1)
-  expect_match(html, "下載這一回合的資料（CSV）")
-  expect_match(html, "下載欄位範例檔（CSV）")
+  # 下載鈕在 server 端畫（字寫在 mod_data_server()，見下載的測試）
+  expect_match(html, 'id="data-dl_data_ui"')
+  expect_match(html, 'id="data-dl_example_ui"')
   expect_false(grepl("（csv）|（html）|固定集|漂移|人次", html))
+})
+
+test_that("作答設計圖：通過比例照固定檔的通過步驟；有不是 1 的題時一句說明", {
+  fixed <- kitsui_fixed_empty()
+  fixed$pass_steps <- tibble::tibble(item_id = "lana01", step = 2L, round = "R1")
+  handover <- shiny::reactiveVal(list(fixed = fixed, round = "R1", n = 1))
+  shiny::testServer(mod_data_server, args = list(goto = \(tab) NULL, handover = handover), {
+    session$setInputs(source = "demo", domains = "lan", round_label = "")
+    session$setInputs(waves = c("M03 3", "M03 6"), design_scale = "lan M03")
+    expect_match(output$design_steps$html, "1 題的通過步驟不是 1：lana01（2 分以上）")
+    b <- plotly::plotly_build(design_plot())$x$data[[1]]
+    r <- design_resp()
+    want <- tapply(r$lana01 >= 2, r$wave_m, mean, na.rm = TRUE)
+    expect_equal(unname(b$z[, which(b$x == "lana01")]), unname(as.numeric(want)))
+    # 作答本身不改（kits_check 用的）
+    expect_true(any(r$lana01 >= 2, na.rm = TRUE))
+  })
+  # 沒有固定檔（示範資料）：每題都是 1，沒有說明
+  shiny::testServer(mod_data_server, args = list(goto = \(tab) NULL), {
+    session$setInputs(source = "demo", domains = "lan", round_label = "")
+    session$setInputs(waves = "M03 3", design_scale = "lan M03")
+    expect_null(output$design_steps)
+    b <- plotly::plotly_build(design_plot())$x$data[[1]]
+    r <- design_resp()
+    expect_equal(unname(b$z[, which(b$x == "lana01")]), mean(r$lana01 >= 1, na.rm = TRUE))
+  })
 })

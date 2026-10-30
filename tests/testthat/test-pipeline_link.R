@@ -111,6 +111,13 @@ test_that("外部連結凍結後，新的 M03 領域沿用同一條外部連結�
   expect_equal(ext$scale, "soc M03")
   expect_equal(ext$round, "r9")
   expect_true("D extended" %in% r9$log$check)
+  # checks.csv 是英文；畫面的紀錄是中文
+  expect_equal(ext$detail, paste0("external link extended to soc M03: same line",
+                                  " (intercept, slope and points unchanged), not re-estimated"))
+  shown <- dplyr::filter(r9$log, check == "D extended")
+  expect_match(shown$detail, "^外部連結延伸到 soc M03：同一條線")
+  expect_equal(shown$detail_en, ext$detail)
+  expect_false(any(grepl("[^ -~]", r9$fixed$checks$detail)))
 
   links <- kitsui_links(r9$fixed)
   expect_equal(links$D$from_scale, c("lan M03", "motor M03", "soc M03"))

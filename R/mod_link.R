@@ -32,7 +32,9 @@ mod_link_ui <- function(id) {
       class = "kit-hint",
       "三個分頁：未連結、內部連結後、外部連結後。",
       "每個波次畫中位數，線段是 P25 到 P75（kits_vertical()）。",
-      "連結後，同一個月齡兩個世代的點靠在一起，表示連結合理。"
+      "連結後，同一個月齡兩個世代的點靠在一起，表示連結合理。",
+      "之前回合的點來自固定檔裡的各波次摘要，照現在的連結換算。",
+      "所以這一回合只有一個世代時，也看得到連結得怎樣。"
     ),
     shiny::uiOutput(ns("vertical_ui")),
     shiny::h4("固定檔裡的連結（內部連結與外部連結）"),
@@ -145,7 +147,7 @@ mod_link_server <- function(id, data, items, goto) {
       why <- kitsui_link_check_why(items(), internal()$link)
       link_result_ui(ns, "internal", internal()$link, internal_check_ui(ns, why))
     })
-    link_outputs(output, "internal", internal_link,
+    link_outputs(output, session, "internal", internal_link,
                  shiny::reactive(kitsui_link_var(input$internal_scale)))
 
     # 獨立檢核（kits_link_check()）：要這一回合兩個世代的作答
@@ -163,8 +165,9 @@ mod_link_server <- function(id, data, items, goto) {
     output$check_result <- shiny::renderUI(check_result_ui(ns, check_now()))
     output$check_table <- kit_table(kitsui_link_check_table(shiny::req(check_now())))
     output$check_print <- shiny::renderPrint(print(shiny::req(check_now())))
-    output$check_dl <- download_csv(
-      \() check_now()$at, \() paste0(kitsui_link_var(input$internal_scale), "_check")
+    output$check_dl_ui <- render_download_csv(
+      session, "check_dl", "下載檢核結果（CSV）", \() check_now()$at,
+      \() paste0(kitsui_link_var(input$internal_scale), "_check")
     )
 
     # 2. 外部連結 ----
@@ -183,7 +186,7 @@ mod_link_server <- function(id, data, items, goto) {
       if (is.null(d_state()$link)) return(NULL)
       link_result_ui(ns, "d", d_state()$link)
     })
-    link_outputs(output, "d", shiny::reactive(links()[["D"]]), shiny::reactive("link_D"))
+    link_outputs(output, session, "d", shiny::reactive(links()[["D"]]), shiny::reactive("link_D"))
 
     # 3. 兩個世代的垂直連結：未連結、內部連結後、外部連結後 ----
     # 分數只跟這一回合與領域有關（連結變了不重算）；換算跟連結有關（幾乎不花時間）
@@ -191,7 +194,7 @@ mod_link_server <- function(id, data, items, goto) {
     v_raw <- shiny::reactive({
       dom <- shiny::req(input$vertical_domain)
       shiny::req(dom %in% v_domains())
-      shiny::withProgress(message = "正在算兩個世代的分數…", value = 0, tryCatch(
+      shiny::withProgress(message = "正在算這一回合的分數…", value = 0, tryCatch(
         kitsui_vertical_scores(items(), dom, persons(), vertical_progress),
         error = \(e) e
       ))
@@ -209,18 +212,21 @@ mod_link_server <- function(id, data, items, goto) {
     })
     output$vertical_ui <- shiny::renderUI({
       if (is.null(items())) return(NULL)
-      vertical_pick_ui(ns, v_domains(), shiny::isolate(input$vertical_domain))
+      vertical_pick_ui(ns, v_domains(), shiny::isolate(input$vertical_domain),
+                       kitsui_vertical_alone(items()$fixed))
     })
     output$vertical_body <- shiny::renderUI({
       vertical_body_ui(ns, vertical(), shiny::isolate(input$vertical_tab))
     })
     purrr::walk(names(KITSUI_VERTICAL_STAGES), \(st) {
-      vertical_outputs(output, st, vertical, \() input$vertical_domain)
+      vertical_outputs(output, session, st, vertical, \() input$vertical_domain)
     })
-    # 檢查與 R 程式用的垂直連結：連結到最後的版本（有外部連結時是 D）
+    # 檢查與 R 程式用的垂直連結：連結到最後的版本（有外部連結時是 D）。
+    # 檢查只看這一回合兩個世代的比較（只有一個世代時不放進檢查）
     vertical_all <- shiny::reactive(tryCatch(vertical(), error = \(e) NULL))
     vertical_now <- shiny::reactive({
       v <- vertical_all()
+      if (length(v$none$from) < 2) return(NULL)
       v$external$vertical %||% v$internal$vertical
     })
 
@@ -241,7 +247,12 @@ mod_link_server <- function(id, data, items, goto) {
       v <- vertical_all()
       drawn <- names(Filter(\(x) !is.null(x$vertical), v))
       if (length(drawn) == 0) return(code)
-      paste(code, kitsui_code_vertical(fixed(), v$none$from, drawn), sep = "\n\n")
+      earlier <- setdiff(v$none$scales, v$none$from)
+      zip <- kitsui_fixed_name(score_round_label(d, fixed()))
+      more <- if (any(v$none$table$source == "earlier")) {
+        kitsui_code_vertical_earlier(fixed(), v$none$scales, utils::tail(drawn, 1), zip)
+      }
+      paste(c(code, kitsui_code_vertical(fixed(), v$none$from, drawn), more), collapse = "\n\n")
     })
     # 還可以建立的內部連結
     internal_ready <- shiny::reactive({
@@ -285,13 +296,19 @@ link_next_text <- function(fixed, ready, d) {
 }
 
 #' 一條連結的輸出：圖、下載圖與點（key 是 "internal" 或 "d"）
-#' @param link reactive：kits_link；name reactive：下載的檔名（按下載時才讀）
+#' @param link reactive：kits_link；name reactive：下載的檔名（畫按鈕時讀，變了按鈕重畫）
 #' @noRd
-link_outputs <- function(output, key, link, name) {
+link_outputs <- function(output, session, key, link, name) {
   out <- \(x) paste0(key, "_", x)
+  kind <- if (key == "d") "外部連結" else "內部連結"
   output[[out("plot")]] <- plotly::renderPlotly(plot(shiny::req(link())))
-  output[[out("plot_dl")]] <- download_plot(\() plot(link()), name)
-  output[[out("points_dl")]] <- download_csv(\() link()$points, \() paste0(name(), "_points"))
+  output[[out("plot_dl_ui")]] <- render_download_plot(
+    session, out("plot_dl"), paste0("下載", kind, "圖（HTML）"), \() plot(link()), name
+  )
+  output[[out("points_dl_ui")]] <- render_download_csv(
+    session, out("points_dl"), paste0("下載", kind, "的點（CSV）"), \() link()$points,
+    \() paste0(name(), "_points")
+  )
   output[[out("checks")]] <- kit_table({
     # object 欄寫連結的名稱（不是 object 1）
     objs <- stats::setNames(list(shiny::req(link())), name())
@@ -301,14 +318,21 @@ link_outputs <- function(output, key, link, name) {
 }
 
 #' 一個版本的垂直連結：圖與下載（stage 是 KITSUI_VERTICAL_STAGES 的名稱）
-#' @param vertical reactive：kitsui_verticals()；domain：下載檔名用的領域（按下載時才讀）
+#' @param vertical reactive：kitsui_verticals()；domain：下載檔名用的領域（變了按鈕重畫）
 #' @noRd
-vertical_outputs <- function(output, stage, vertical, domain) {
+vertical_outputs <- function(output, session, stage, vertical, domain) {
   force(stage)
   id <- \(x) paste0("vertical_", stage, "_", x)
-  p <- shiny::reactive(plot(shiny::req(vertical()[[stage]]$vertical), type = "median"))
+  p <- shiny::reactive({
+    v <- vertical()[[stage]]
+    shiny::req(v$vertical)
+    kitsui_vertical_plot(v)
+  })
   output[[id("plot")]] <- plotly::renderPlotly(p())
-  output[[id("dl")]] <- download_plot(p, \() paste0("vertical_", domain(), "_", stage))
+  output[[id("dl_ui")]] <- render_download_plot(
+    session, id("dl"), "下載這張垂直連結圖（HTML）", p,
+    \() paste0("vertical_", domain(), "_", stage)
+  )
 }
 
 #' 重建固定檔裡所有連結的 R 程式
@@ -375,8 +399,8 @@ link_result_ui <- function(ns, key, link, extra = NULL) {
     link_plot_box(out("plot"), "正在畫連結圖…"),
     shiny::tags$div(
       class = "kit-downloads",
-      ui_download(out("plot_dl"), paste0("下載", kind, "圖（HTML）")),
-      ui_download(out("points_dl"), paste0("下載", kind, "的點（CSV）"))
+      ui_download(out("plot_dl")),
+      ui_download(out("points_dl"))
     ),
     extra
   )
@@ -455,7 +479,7 @@ check_result_ui <- function(ns, chk) {
       shiny::verbatimTextOutput(ns("check_print"))
     ),
     shiny::tags$div(class = "kit-downloads",
-                    ui_download(ns("check_dl"), "下載檢核結果（CSV）"))
+                    ui_download(ns("check_dl")))
   )
 }
 
@@ -476,11 +500,11 @@ link_anchor_ui <- function(anchors, table_id) {
   )
 }
 
-#' 垂直連結：選領域；這一回合沒有兩個世代的領域時，一句話說明
+#' 垂直連結：選領域；沒有可以畫的領域時，一句話說明（why，kitsui_vertical_alone()）
 #' @noRd
-vertical_pick_ui <- function(ns, domains, pick) {
+vertical_pick_ui <- function(ns, domains, pick, why = NULL) {
   if (length(domains) == 0) {
-    return(ui_callout("這一回合每個領域只有一個世代，所以沒有兩個世代的垂直連結。"))
+    return(ui_callout(why %||% "這一回合每個領域只有一個世代，所以沒有兩個世代的垂直連結。"))
   }
   if (!isTRUE(pick %in% domains)) pick <- domains[1]
   shiny::tagList(
@@ -509,19 +533,26 @@ vertical_tab_ui <- function(ns, stage, v) {
     link_plot_box(id("plot"), "正在畫垂直連結圖…", "460px"),
     if (!is.null(v$note)) ui_callout(v$note, warning = TRUE),
     shiny::tags$div(class = "kit-downloads",
-                    ui_download(id("dl"), "下載這張垂直連結圖（HTML）"))
+                    ui_download(id("dl")))
   )
 }
 
-#' 每個版本一句說明
+#' 每個版本一句說明；有之前回合的點時，再說哪些點是哪一回合
 #' @noRd
 vertical_caption <- function(stage, v) {
-  switch(
+  scales <- v$scales %||% v$from
+  text <- switch(
     stage,
-    none = paste0("未連結：兩個世代各在自己校準的量尺上（", paste(v$from, collapse = "、"),
+    none = paste0("未連結：各世代在自己校準的量尺上（", paste(scales, collapse = "、"),
                   "），數字不能直接比。"),
-    internal = paste0("內部連結後：", paste(setdiff(v$from, v$scale), collapse = "、"), " 換到 ",
+    internal = paste0("內部連結後：", paste(setdiff(scales, v$scale), collapse = "、"), " 換到 ",
                       v$scale, " 的量尺，同一個月齡兩個世代的點應該靠在一起。"),
-    external = "外部連結後：兩個世代都換到 D，相對位置和內部連結後相同。"
+    external = "外部連結後：各世代都換到 D，相對位置和內部連結後相同。"
   )
+  if (!any(v$table$source == "earlier")) return(text)
+  rounds <- unique(v$table$round[v$table$source == "earlier"])
+  paste0(text, "實心的點是這一回合。",
+         "空心、較淡的點是之前的回合（", paste(rounds, collapse = "、"), "），來自固定檔。",
+         "滑鼠移到點上，可以看是哪一回合。",
+         "摘要沒有實際月齡，所以 x 軸用波次。")
 }

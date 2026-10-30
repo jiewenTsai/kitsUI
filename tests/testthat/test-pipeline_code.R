@@ -95,6 +95,26 @@ test_that("① 的程式碼能跑：示範資料選波次、一個量尺的作�
   expect_match(up, 'read_csv\\("my data.csv"\\) \\|>\n  filter\\(wave_m %in% 12\\)')
 })
 
+test_that("① 的程式碼帶通過步驟：作答設計圖的通過比例和 app 相同；都是 1 時不變", {
+  steps <- c(lana01 = 2L, lana02 = 1L, lana05 = 2L)
+  code <- kitsui_code_data("lan M03", waves = c("3", "6"), steps = steps)
+  expect_match(code, "steps <- c\\(\n  lana01 = 2, lana05 = 2\n\\)")
+  expect_match(code, "plot(resp_pass)\nkits_check(resp = resp)", fixed = TRUE)
+  expect_true(all(nchar(strsplit(code, "\n")[[1]]) <= 100))
+  env <- run_code(code, withr::local_tempdir())
+  app <- kitsui_resp_pass(env$resp, steps)
+  expect_equal(env$resp_pass, app, ignore_attr = TRUE)
+  z <- \(r) plotly::plotly_build(plot(r))$x$data[[1]]$z
+  expect_equal(z(env$resp_pass), z(app))
+  expect_false(identical(z(env$resp_pass), z(env$resp)))
+  # 都是 1（或沒有通過步驟）時和原來的程式一樣
+  plain <- kitsui_code_data("lan M03", waves = c("3", "6"))
+  expect_identical(kitsui_code_data("lan M03", waves = c("3", "6"), steps = c(lana01 = 1L)),
+                   plain)
+  expect_identical(kitsui_code_data("lan M03", waves = c("3", "6"),
+                                    steps = kitsui_steps_vec(NULL)), plain)
+})
+
 test_that("① 的程式碼：好幾個檔案一起讀（readr 接起來），和 app 讀的相同", {
   dir <- withr::local_tempdir()
   a <- kitsui_demo("M03", 3, "lan")
@@ -147,4 +167,34 @@ test_that("程式照勾到的世代 × 波次選資料（只勾 M03 36 時不帶
   expect_equal(coef(env$item)$beta, coef(r$items[["lan M03"]])$beta)
   # 沒有 picks 時照舊照波次選
   expect_match(kitsui_code_data("lan M03", waves = 3), "filter\\(wave_m %in% 3\\)")
+})
+
+test_that("題目表的程式帶通過步驟（step = steps）能跑，和 app 的題目表相同；每行不超過 100 字", {
+  r8 <- round8()
+  lk <- linked()
+  dir <- withr::local_tempdir()
+  kitsui_write_fixed(lk$fixed, file.path(dir, "fixed_r8.zip"))
+  item <- r8$round$items[["lan M36"]]
+  steps <- c(lanb08 = 2L, lanb09 = 3L, lanc01 = 2L)
+  step <- kitsui_item_step_arg(item, steps, lk$fixed$versions)
+  score <- kitsui_code_score(lk$fixed, "lan M36", step = step)
+  expect_match(score, "steps <- c\\(\n  lanb08 = 2, lanb09 = 3, lanc01 = 2\n\\)")
+  expect_match(score, "kits_convert\\(item, link_lan_M36, link_D\\), step = steps\\)")
+  code <- c(
+    kitsui_code_round("lan M36", "r8", lan_chain()[["48"]]$fixed, waves = c(36, 48)),
+    kitsui_code_link(lk$fixed, "lan M36", "fixed_r8.zip"),
+    kitsui_code_link(lk$fixed, "D", "fixed_r8.zip"),
+    score
+  )
+  env <- run_code(paste(code, collapse = "\n"), dir)
+  tab <- kitsui_item_table(r8$round, r8$df, lk$fixed, "lan M36", steps = steps)
+  expect_equal(env$item_table$D, tab$D)
+  expect_equal(env$item_table$age50, tab$age50)
+  expect_equal(env$item_table$step, tab$step)
+  # 很多題：一行放幾題，每行不超過 100 字
+  many <- stats::setNames(rep(3L, 30), sprintf("cogD%02d_r12", 1:30))
+  lines <- strsplit(kitsui_code_score(lk$fixed, "lan M36", step = many), "\n")[[1]]
+  expect_true(all(nchar(lines) <= 100))
+  expect_no_error(parse(text = kitsui_code_steps(many)))
+  expect_null(kitsui_code_steps(1))
 })

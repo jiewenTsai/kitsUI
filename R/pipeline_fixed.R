@@ -1,5 +1,6 @@
 # 固定檔（fixed set）：一個 zip，寫了就不再改
-#   VERSION（DCF）、bank.csv、versions.csv、links.csv、checks.csv、waves.csv
+#   VERSION（DCF）、bank.csv、versions.csv、links.csv、checks.csv、waves.csv、
+#   wave_summary.csv、pass_steps.csv
 #   bank.csv、links.csv 與 waves.csv 的 round 是加進來的那一回合（題目步驟、連結、波次）
 
 # 各表的欄位與型別（readr 的縮寫：c 文字、i 整數、d 數字）
@@ -10,12 +11,20 @@ KITSUI_FIXED_COLS <- list(
             to = "d", domain = "c", cut = "d", spread = "c", unit = "c", n_boot = "i", seed = "i",
             round = "c"),
   checks = c(round = "c", scale = "c", item_id = "c", check = "c", detail = "c"),
-  waves = c(scale = "c", wave_m = "d", round = "c")
+  waves = c(scale = "c", wave_m = "d", round = "c"),
+  # 每個量尺、每個世代、每個波次的能力值摘要（校準的量尺上，還沒換算）：畫垂直圖用。
+  # 連結是斜率為正的直線，中位數與 P25、P75 換算後仍然是中位數與 P25、P75
+  wave_summary = c(scale = "c", cohort = "c", wave_m = "d", n = "i", p25 = "d", p50 = "d",
+                   p75 = "d", round = "c"),
+  # 題目的通過步驟（得分至少 step 算通過）：題目表的門檻與 age50、作答設計圖用。
+  # 沒列的題用 1；偏移後的新版本沿用原題號的設定
+  pass_steps = c(item_id = "c", step = "i", round = "c")
 )
 
 # 舊的固定檔（kitsUI 0.2.0 以前）沒有 waves.csv：讀進來時，題庫的波次記成不知道（NA）；
-# versions.csv 沒有 cohort 欄：當成量尺自己的世代的資料做的版本
-KITSUI_FIXED_OPTIONAL <- "waves"
+# versions.csv 沒有 cohort 欄：當成量尺自己的世代的資料做的版本。
+# kitsUI 0.3.8 以前沒有 wave_summary.csv、pass_steps.csv：讀進來是空表
+KITSUI_FIXED_OPTIONAL <- c("waves", "wave_summary", "pass_steps")
 
 #' 空的固定檔
 #' @return list(version, sources, bank, versions, links, checks)
@@ -55,15 +64,27 @@ kitsui_write_fixed <- function(fixed, zip_path) {
   dir.create(dir, recursive = TRUE)
   write.dcf(kitsui_dcf(fixed), file.path(dir, "VERSION"), keep.white = "Sources")
   # 給人看的說明（每個檔案是什麼、下一回合怎麼用）；讀固定檔時不讀它
-  writeLines(kitsui_fixed_readme(fixed), file.path(dir, "README.txt"), useBytes = TRUE)
+  # 說明是英文；使用者給的名稱有中文時加 UTF-8 BOM，記事本打開才不會是亂碼
+  readme <- enc2utf8(kitsui_fixed_readme(fixed))
+  bom <- if (all(utf8ToInt(readme) < 128)) "" else "﻿"
+  writeLines(paste0(bom, readme), file.path(dir, "README.txt"), useBytes = TRUE)
   for (name in names(KITSUI_FIXED_COLS)) {
     exact <- dplyr::mutate(fixed[[name]], dplyr::across(
       dplyr::where(is.double), \(x) ifelse(is.na(x), NA, sprintf("%.17g", x))
     ))
-    readr::write_csv(exact, file.path(dir, paste0(name, ".csv")), na = "")
+    kitsui_write_fixed_csv(exact, file.path(dir, paste0(name, ".csv")))
   }
   zip::zip(zip_path, list.files(dir, full.names = TRUE), mode = "cherry-pick")
   invisible(zip_path)
+}
+
+#' 固定檔裡的一個 csv：內容都是英文時用 write_csv()；有中文（例如使用者的題號、領域）時
+#' 用 write_excel_csv()（加 BOM），Excel 打開才不會是亂碼。讀回來時 readr 會略過 BOM
+#' @noRd
+kitsui_write_fixed_csv <- function(df, file) {
+  text <- unlist(lapply(df, \(x) if (is.character(x)) x), use.names = FALSE)
+  ascii <- all(!grepl("[^ -~]", c(names(df), stats::na.omit(text))))
+  if (ascii) readr::write_csv(df, file, na = "") else readr::write_excel_csv(df, file, na = "")
 }
 
 #' 讀入固定檔（zip）
@@ -89,6 +110,8 @@ kitsui_read_fixed <- function(zip_path) {
     tables$waves <- tibble::tibble(scale = unique(tables$bank$scale), wave_m = NA_real_,
                                    round = NA_character_)
   }
+  empty <- kitsui_fixed_empty()
+  for (name in c("wave_summary", "pass_steps")) tables[[name]] <- tables[[name]] %||% empty[[name]]
   tables$versions$cohort <- dplyr::coalesce(tables$versions$cohort,
                                             scale_cohort(tables$versions$scale))
   dcf <- read.dcf(file.path(dir, "VERSION"), keep.white = "Sources")[1, ]

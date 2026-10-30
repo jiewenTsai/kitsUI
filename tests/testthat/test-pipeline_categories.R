@@ -10,13 +10,17 @@ test_that("每個資料量尺的分數類別問題：沒有 0 分、不連續、
     item_id == "lanc01" & item_score == 1, 0, item_score
   ))
   p <- kitsui_category_problems(dplyr::bind_rows(df, df36))
-  expect_named(p, c("scale", "item_id", "problem", "detail_zh"))
+  expect_named(p, c("scale", "item_id", "problem", "detail_zh", "detail_en"))
   m03 <- dplyr::filter(p, scale == "lan M03")
   expect_equal(m03$item_id, c("lanc01", "lanc02", "lanc03"))
   expect_equal(m03$problem, c("no 0 score", "score gap", "one score only"))
   expect_equal(m03$detail_zh, c("lanc01 沒有人得 0 分（分數 1、2、3）",
                                 "lanc02 分數不連續，沒有人得 1 分（分數 0、2、3）",
                                 "lanc03 每個人都得 1 分，只有一種分數"))
+  # 英文（checks.csv 用）：不含題號
+  expect_equal(m03$detail_en, c("no score 0 (scores 1, 2, 3)",
+                                "score gap: no score 1 (scores 0, 2, 3)",
+                                "one score only: everyone has 1"))
   # M36 的 lanc01 有人得 0 分（0、2、3 是不連續）；只看給的列
   m36 <- dplyr::filter(p, scale == "lan M36")
   expect_equal(m36$item_id, c("lanc01", "lanc02", "lanc03"))
@@ -26,6 +30,9 @@ test_that("每個資料量尺的分數類別問題：沒有 0 分、不連續、
   both <- kitsui_score_problem("x", c(1, 3))
   expect_equal(both$problem, "no 0 score, score gap")
   expect_equal(both$detail, "x 沒有人得 0 分；分數不連續，沒有人得 2 分（分數 1、3）")
+  expect_equal(both$detail_en, "no score 0; score gap: no score 2 (scores 1, 3)")
+  expect_equal(kitsui_score_problem("x", c(0, 3))$detail_en,
+               "score gap: no score 1, 2 (scores 0, 3)")
   expect_true(is.na(kitsui_score_problem("x", 0:2)$problem))
 })
 
@@ -42,6 +49,12 @@ test_that("沒有 0 分：題庫的題固定在題庫的值；新的題這一回
   out <- dplyr::filter(r2$log, check == "category problem, left out")
   expect_equal(out$item_id, "n1")
   expect_equal(out$detail, "n1 沒有人得 0 分（分數 1、2、3）：不在題庫裡，這一回合不放進來")
+  # 固定檔的 checks.csv：同一列是英文
+  ck <- \(check) dplyr::filter(r2$fixed$checks, check == !!check, round == "2")
+  expect_equal(ck("category problem, kept fixed")$detail,
+               "no score 0 (scores 1, 2, 3); not judged for drift, kept at the bank values")
+  expect_equal(ck("category problem, left out")$detail,
+               "no score 0 (scores 1, 2, 3); not in the bank, left out this round")
   co <- coef(r2$items[["sim M03"]])
   old <- pb$r1$fixed$bank
   expect_equal(co$beta[co$item_id == "p1"], old$beta[old$item_id == "p1"])
@@ -109,6 +122,13 @@ test_that("併分數與分數類別一致：題庫最高步沒有人得到時併
   expect_equal(capped$item_id, c("a1", "a2"))
   expect_match(capped$detail[1], "超過 1 分，併為 1 分$")
   expect_match(capped$detail[2], "併為 1 分（分數類別有問題，不加新的步驟）")
+  # 固定檔的 checks.csv：英文
+  en <- dplyr::filter(r2$fixed$checks, check == "capped", round == "2")
+  expect_equal(en$item_id, c("a1", "a2"))
+  expect_equal(en$detail, capped$detail_en)
+  n <- sub(" .*$", "", capped$detail)
+  expect_equal(en$detail, paste0(n, " visits above score 1, merged into 1",
+                                 c("", " (score category problem, no new steps)")))
   kept <- dplyr::filter(r2$log, check == "category problem, kept fixed")
   expect_equal(kept$item_id, "a2")
   expect_match(kept$detail, "a2 沒有人得 0 分（分數 1、2）")
@@ -145,6 +165,12 @@ test_that("kits 說估不出來的題：讀出題號；自由校準時這一回�
   ev <- kitsui_error_events(no_cml, c("x1", "x2"), c(TRUE, FALSE))
   expect_equal(ev$check, c("no CML estimate, kept fixed", "category problem, left out"))
   expect_match(ev$detail[2], "估不出有限的 CML 估計值.*這一回合不放進來")
+  expect_equal(ev$detail_en, paste0(KITSUI_NO_CML_EN, c("; no new version, kept at the bank values",
+                                                       "; not in the bank, left out this round")))
+  gap <- kitsui_error_events(err("Item a12 has scores 0, 2, 3 (missing 1)."), "a12", TRUE)
+  expect_equal(gap$detail_en, paste0("kits reports a score category problem (kits message: ",
+                                     "Item a12 has scores 0, 2, 3 (missing 1).); not judged for",
+                                     " drift, kept at the bank values"))
   # 自由校準：a10 只有全對的人以外都通過，CML 估不出來
   sb <- sim_bank()
   X <- kits::kits_sim(seq(-3, 3, length.out = 1000), sb$betas, prefix = "h", seed = 16)

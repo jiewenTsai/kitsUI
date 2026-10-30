@@ -146,7 +146,8 @@ kitsui_items_total <- function(fixed, scales, round) {
 #' kits 的外部連結是各領域共用的一條線，沒有錨題的領域也用同一條線。所以新的參照世代量尺
 #' （例如之後才校準的 "soc M03"）直接加進外部連結的起點：截距、斜率、點都不變，不重新估計。
 #' @return list(fixed, log)：fixed$links 的 from_scale 加上新的量尺，fixed$checks 與 log 各一列
-#'   （check = "D extended"）；沒有外部連結或沒有新量尺時不變
+#'   （check = "D extended"；log 的 detail 是中文、detail_en 是英文，checks 寫英文）；
+#'   沒有外部連結或沒有新量尺時不變
 #' @noRd
 kitsui_link_D_extend <- function(fixed, round) {
   d <- fixed$links$kind == "D"
@@ -156,9 +157,13 @@ kitsui_link_D_extend <- function(fixed, round) {
   fixed$links$from_scale[d] <- paste(c(from, new), collapse = ", ")
   log <- tibble::tibble(
     round = round, scale = new, item_id = NA_character_, check = "D extended",
-    detail = paste0("外部連結延伸到 ", new, "：同一條線（截距、斜率、點都不變），沒有重新估計")
+    detail = paste0("外部連結延伸到 ", new, "：同一條線（截距、斜率、點都不變），沒有重新估計"),
+    detail_en = paste0("external link extended to ", new,
+                       ": same line (intercept, slope and points unchanged), not re-estimated")
   )
-  fixed$checks <- dplyr::bind_rows(fixed$checks, log)
+  # checks.csv 寫英文
+  checks <- dplyr::mutate(log, detail = .data$detail_en)
+  fixed$checks <- dplyr::bind_rows(fixed$checks, checks[names(KITSUI_FIXED_COLS$checks)])
   list(fixed = fixed, log = log)
 }
 
@@ -407,16 +412,4 @@ kitsui_check_explain <- function(tab) {
   })
   tab$explain <- hit
   tab
-}
-
-#' 這一回合兩個世代沒有共同的月齡時，一句說明（有共同月齡時是 NULL）
-#' @param raw 具名 list：各量尺換算前的 kits_subj（有 wave_m）
-#' @noRd
-kitsui_vertical_no_common <- function(raw) {
-  waves <- purrr::map(raw, \(x) sort(unique(x$wave_m)))
-  if (any(purrr::map_lgl(waves, is.null))) return(NULL)
-  if (length(Reduce(intersect, waves)) > 0) return(NULL)
-  each <- purrr::imap_chr(waves, \(w, s) paste0(s, "：", paste(w, collapse = "、"), " 個月"))
-  paste0("這一回合兩個世代沒有共同的月齡（", paste(each, collapse = "；"), "）。",
-         "所以圖上沒有同一個月齡可以直接比的兩個點。")
 }

@@ -8,7 +8,7 @@ mod_data_ui <- function(id) {
       goal = "選這一回合要校準的資料。第二回合起，再放上一回合下載的固定檔。",
       steps = c(
         "選資料來源：示範資料，或上傳自己的長格式資料（可以一次選好幾個檔案）。",
-        "勾這一回合的世代與波次（月齡）。一個檔案可以有好幾個波次。更新時通常只勾一波。",
+        "勾這一回合的世代與波次（月齡）。一個檔案可以有好幾個波次。新收一波時只勾那一波；已經收完的好幾波可以一次勾。",
         "第二回合起：上傳上一回合的固定檔（zip）。第一回合不用。",
         "確認右邊沒有紅字。橘色的提醒請看過。",
         "按「下一步：題目校準」。"
@@ -32,8 +32,10 @@ mod_data_ui <- function(id) {
         shiny::uiOutput(ns("next_step")),
         shiny::uiOutput(ns("fixed_info")),
         shiny::h4("作答設計"),
-        shiny::tags$p(class = "kit-hint", "每格是一個波次、一題的通過比例（得分 1 以上）。",
+        shiny::tags$p(class = "kit-hint",
+                      "每格是一個波次、一題的通過比例（得分達到通過步驟以上；預設 1 分）。",
                       "空白表示沒有施測。"),
+        shiny::uiOutput(ns("design_steps")),
         shiny::uiOutput(ns("design_pick")),
         plotly::plotlyOutput(ns("design"), height = "420px"),
         shiny::uiOutput(ns("design_dl")),
@@ -41,7 +43,7 @@ mod_data_ui <- function(id) {
         shiny::textOutput(ns("preview_meta")),
         shiny::tags$div(class = "kit-table-scroll", shiny::tableOutput(ns("preview"))),
         shiny::tags$div(class = "kit-downloads",
-                        ui_download(ns("dl_data"), "下載這一回合的資料（CSV）")),
+                        ui_download(ns("dl_data"))),
         ui_check_panel(ns("check"), "kits 的檢查（kits_check，作答設計選的量尺）"),
         ui_code_panel(ns("code"))
       )
@@ -80,7 +82,7 @@ data_choices_ui <- function(ns) {
       shiny::uiOutput(ns("upload_info")),
       data_columns_guide(),
       shiny::tags$div(class = "kit-downloads",
-                      ui_download(ns("dl_example"), "下載欄位範例檔（CSV）"))
+                      ui_download(ns("dl_example")))
     ),
     shiny::h5("2. 這一回合的世代與波次"),
     shiny::uiOutput(ns("pick_ui")),
@@ -180,7 +182,9 @@ mod_data_server <- function(id, goto, handover = NULL) {
                                                          trim = TRUE)), collapse = "、")
       )
     })
-    output$dl_example <- download_csv(kitsui_example_data, "kitsui_example")
+    output$dl_example_ui <- render_download_csv(
+      session, "dl_example", "下載欄位範例檔（CSV）", kitsui_example_data, "kitsui_example"
+    )
     is_upload <- shiny::reactive(identical(input$source, "upload"))
 
     # 這個來源的全部資料（還沒選世代與波次）；示範資料是兩個世代、勾選的領域
@@ -387,17 +391,20 @@ mod_data_server <- function(id, goto, handover = NULL) {
       shiny::validate(shiny::need(!inherits(r, "error"), paste(
         "這個量尺的作答有問題（kits_resp 的訊息）：", if (inherits(r, "error")) conditionMessage(r)
       )))
-      plot(r)
+      # 通過比例照固定檔的通過步驟（示範資料、沒有固定檔時每題都是 1）
+      plot(kitsui_resp_pass(r, kitsui_steps_vec(fixed()$pass_steps)))
     })
     output$design <- plotly::renderPlotly(design_plot())
-    # 下載鈕等圖畫好才出現
+    output$design_steps <- shiny::renderUI(data_steps_note(fixed()$pass_steps))
+    # 下載鈕等圖畫好才出現；檔名跟著選的量尺（換量尺時按鈕重畫）
     output$design_dl <- shiny::renderUI({
       # 還沒有量尺（req）或 kits_resp 出錯時都是 error：不顯示
       if (inherits(tryCatch(design_resp(), error = \(e) e), "error")) return(NULL)
-      shiny::tags$div(class = "kit-downloads",
-                      ui_download(ns("dl_design"), "下載作答設計圖（HTML）"))
+      shiny::tags$div(class = "kit-downloads", download_plot_ui(
+        session, "dl_design", "下載作答設計圖（HTML）", design_plot,
+        \() paste0("design_", input$design_scale)
+      ))
     })
-    output$dl_design <- download_plot(design_plot, \() paste0("design_", input$design_scale))
 
     output$preview_meta <- shiny::renderText({
       df <- checked()$df
@@ -409,8 +416,10 @@ mod_data_server <- function(id, goto, handover = NULL) {
       shiny::req(df)
       df_for_display(df, KIT_PREVIEW_ROWS)
     })
-    output$dl_data <- download_csv(\() shiny::req(checked()$df),
-                                   \() paste0("responses_", round_label()))
+    output$dl_data_ui <- render_download_csv(
+      session, "dl_data", "下載這一回合的資料（CSV）", \() shiny::req(checked()$df),
+      \() paste0("responses_", round_label())
+    )
 
     output$check <- kit_table({
       r <- design_resp()
@@ -425,12 +434,29 @@ mod_data_server <- function(id, goto, handover = NULL) {
       ck <- checked()
       shiny::req(ck$scales)
       upload_name <- if (is_upload()) upload()$name
-      kitsui_code_data(input$design_scale %||% ck$scales$scale[1], upload_name,
-                       sort(unique(ck$picks$wave_m)), picks = ck$picks)
+      s <- input$design_scale %||% ck$scales$scale[1]
+      # 通過步驟只寫這個量尺有的題（和作答設計圖相同）
+      steps <- kitsui_steps_vec(fixed()$pass_steps)
+      steps <- steps[names(steps) %in% ck$df$item_id[paste(ck$df$domain, ck$df$cohort) == s]]
+      kitsui_code_data(s, upload_name, sort(unique(ck$picks$wave_m)), picks = ck$picks,
+                       steps = steps)
     })
 
     result
   })
+}
+
+#' 作答設計圖：固定檔裡有通過步驟不是 1 的題時，一句說明
+#' @param pass_steps 固定檔的 pass_steps
+#' @noRd
+data_steps_note <- function(pass_steps) {
+  steps <- kitsui_steps_vec(pass_steps)
+  steps <- steps[steps != 1]
+  if (length(steps) == 0) return(NULL)
+  shiny::tags$p(class = "kit-hint", paste0(
+    "固定檔裡有 ", length(steps), " 題的通過步驟不是 1：",
+    kitsui_some(paste0(names(steps), "（", steps, " 分以上）")), "。"
+  ), "可以在「④ 受試者評分」的題目表改。")
 }
 
 #' 得分不完整的題：橘色的提醒，說 ② 怎麼處理（分數本身不改）

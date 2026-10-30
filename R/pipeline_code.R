@@ -43,14 +43,26 @@ kitsui_code_picks <- function(picks) {
 #' ① 的程式碼：讀資料、選波次、一個量尺的作答設計與檢查
 #' @param data_file 上傳的檔名；NULL 時用示範資料
 #' @param picks NULL 或勾到的世代 × 波次（cohort、wave_m 的表）；有給時照組合選
+#' @param steps NULL 或題號 -> step（固定檔的通過步驟，kitsui_steps_vec()）：有不是 1 的題時，
+#'   作答設計圖先把這些題換成通過（1）或沒通過（0），和 kitsui_resp_pass() 相同
 #' @noRd
-kitsui_code_data <- function(scale, data_file = NULL, waves = NULL, picks = NULL) {
+kitsui_code_data <- function(scale, data_file = NULL, waves = NULL, picks = NULL, steps = NULL) {
   waves <- as.numeric(waves)
+  steps <- steps[steps != 1]
+  plot <- "plot(resp)"
+  if (length(steps) > 0) {
+    plot <- c(kitsui_code_steps(steps),
+              "# 作答設計圖畫通過比例：這些題換成通過（1）或沒通過（0）；檢查仍用原來的分數",
+              "resp_pass <- resp |>",
+              "  mutate(across(any_of(names(steps)),",
+              "                \\(x) as.integer(x >= steps[[cur_column()]])))",
+              "plot(resp_pass)")
+  }
   paste(c(
     "library(kits)", "library(dplyr)", kitsui_code_read(data_file, waves, picks),
     "count(responses, domain, cohort)",
     sprintf("resp <- kits_resp(filter(responses, paste(domain, cohort) == %s))", kitsui_r(scale)),
-    "plot(resp)", "kits_check(resp = resp)"
+    plot, "kits_check(resp = resp)"
   ), collapse = "\n")
 }
 
@@ -168,10 +180,12 @@ kitsui_link_file <- function(name, earlier, fixed_file, round_label) {
 
 #' 評分的程式碼：接在一回合（X、item）與連結的程式碼後面
 #' @param cohorts 校準到這個量尺的資料的世代（借用另一世代題庫時不只量尺自己的世代）
+#' @param step 題目表的通過步驟（kitsui_item_step_arg()）：1，或目前的題號 -> step
 #' @noRd
-kitsui_code_score <- function(fixed, scale, cohorts = scale_cohort(scale)) {
+kitsui_code_score <- function(fixed, scale, cohorts = scale_cohort(scale), step = 1) {
   path <- kitsui_link_var(kitsui_link_path(fixed, scale))
   links <- paste(path, collapse = ", ")
+  step_arg <- if (!is.null(names(step))) ", step = steps" else ""
   convert <- if (length(path) > 0) sprintf("scores <- kits_convert(scores, %s)", links)
   # 對照表：在校準的量尺上做一次，換算直接換這張表（不用重解每個原始分數）
   inner <- setdiff(path, kitsui_link_var("D"))
@@ -196,17 +210,36 @@ kitsui_code_score <- function(fixed, scale, cohorts = scale_cohort(scale)) {
     "# 題目表：D 欄在校準的量尺上（ability_threshold）；通過年齡用這一回合的作答（沒有常模）",
     sprintf("ages <- filter(persons, cohort %%in%% %s)", kitsui_r(cohorts)),
     'ages <- ages[match(rownames(X), ages$visit_id), c("visit_id", "age_m", "wave_m")]',
-    "item_table <- kits_item_table(item, data = cbind(ages, X))",
+    kitsui_code_steps(step),
+    sprintf("item_table <- kits_item_table(item, data = cbind(ages, X)%s)", step_arg),
     "item_table",
     # 同一題的門檻用分數的連結換到另外兩把尺
     if (length(inner) > 0) {
-      sprintf("kits_item_table(kits_convert(item, %s)) # D 欄：ability_linked_threshold",
-              paste(inner, collapse = ", "))
+      sprintf("kits_item_table(kits_convert(item, %s)%s) # D 欄：ability_linked_threshold",
+              paste(inner, collapse = ", "), step_arg)
     },
     if (kitsui_link_var("D") %in% path) {
-      sprintf("kits_item_table(kits_convert(item, %s)) # D 欄：d_threshold", links)
+      sprintf("kits_item_table(kits_convert(item, %s)%s) # D 欄：d_threshold", links, step_arg)
     }
   ), collapse = "\n")
+}
+
+# 通過步驟不是 1 的題寫成 steps <- c(...)，一行放幾題（每行不超過 100 字）；都是 1 時不寫
+kitsui_code_steps <- function(step) {
+  if (is.null(names(step))) return(NULL)
+  ids <- names(step)
+  ids <- ifelse(make.names(ids) == ids, ids, paste0("`", ids, "`"))
+  parts <- paste0(ids, " = ", step, c(rep(",", length(step) - 1), ""))
+  lines <- character()
+  now <- " "
+  for (p in parts) {
+    if (nchar(now) + 1 + nchar(p) > 100) {
+      lines <- c(lines, now)
+      now <- " "
+    }
+    now <- paste(now, p)
+  }
+  c("# 通過步驟：得分至少 step 算通過（沒列的題用 1）", "steps <- c(", c(lines, now), ")")
 }
 
 #' 兩個世代的垂直連結（未連結、內部連結後、外部連結後）的程式碼
@@ -246,4 +279,53 @@ kitsui_code_vertical <- function(fixed, scales, stages = names(KITSUI_VERTICAL_S
   )
   head <- sprintf("# %s：%s 用 ④ 的程式算好的 kits_subj()（還沒換算）", vars, scales)
   paste(c(head, unlist(purrr::map(code[stages], \(x) c("", x)))), collapse = "\n")
+}
+
+#' 垂直連結加上之前回合的點：讀固定檔的 wave_summary.csv，照現在的連結換算後一起畫
+#'
+#' 新固定檔的 wave_summary.csv 有每一回合的摘要（這一回合的列和 kits_vertical() 的相同）。
+#' 同一個量尺 × 世代 × 波次校準過兩次時，用最新的回合。
+#' @param scales 這個領域的量尺（這一回合與之前回合的）；stage 是畫的版本；zip 是新固定檔
+#' @noRd
+kitsui_code_vertical_earlier <- function(fixed, scales, stage, zip) {
+  label <- utils::tail(fixed$version$rounds, 1)
+  paths <- purrr::map_chr(scales, \(s) {
+    path <- kitsui_link_path(fixed, s)
+    if (stage == "internal") path <- setdiff(path, "D")
+    sprintf("  `%s` = list(%s)", s, paste(kitsui_link_var(path), collapse = ", "))
+  })
+  convert <- if (stage != "none") {
+    c("# 照現在的連結換算：連結是斜率為正的直線，換過去還是 P25、中位數、P75",
+      "paths <- list(", paste0(paths, c(rep(",", length(paths) - 1), "")), ")",
+      "to <- \\(x, s) {",
+      "  if (length(paths[[s]]) == 0) return(x)",
+      "  as.vector(do.call(kits_convert, c(list(x), paths[[s]], from = s)))",
+      "}",
+      "ws <- mutate(ws, across(c(p25, p50, p75), \\(x) to(x, scale[1])), .by = scale)")
+  }
+  paste(c(
+    "# 之前回合的點：固定檔的 wave_summary.csv（各波次的人數與 P25、中位數、P75）",
+    sprintf('unzip(%s, exdir = "fixed_set", junkpaths = TRUE)', kitsui_r(zip)),
+    'ws <- read.csv("fixed_set/wave_summary.csv", colClasses = c(round = "character")) |>',
+    sprintf("  filter(scale %%in%% %s) |>", kitsui_r(scales)),
+    "  slice_tail(n = 1, by = c(scale, cohort, wave_m)) # 校準過兩次的波次：用最新的回合",
+    convert,
+    "# 點是中位數，線段是 P25 到 P75；空心的點是之前的回合",
+    sprintf('now <- if_else(ws$round == %s, "這一回合", "之前的回合")', kitsui_r(label)),
+    'ws$source <- factor(now, c("之前的回合", "這一回合"))',
+    "plotly::plot_ly(ws, x = ~wave_m, y = ~p50, color = ~cohort, symbol = ~source,",
+    '                symbols = c("circle-open", "circle"), type = "scatter", mode = "markers",',
+    "                error_y = ~list(array = p75 - p50, arrayminus = p50 - p25, symmetric = FALSE))"
+  ), collapse = "\n")
+}
+
+#' ② 的程式碼加上偏移把關圖：kits_drift() 那一行後面加 plot(drift)（自由校準時不變）
+#' @param code kitsui_code_round() 的字串
+#' @noRd
+kitsui_code_drift_plot <- function(code) {
+  lines <- strsplit(code, "\n", fixed = TRUE)[[1]]
+  at <- grep("^drift <- kits_drift\\(", lines)
+  if (length(at) == 0) return(code)
+  plot_line <- "plot(drift) # 偏移把關圖：這一回合的門檻對題庫的門檻，與判斷用的線"
+  paste(append(lines, plot_line, after = at[1]), collapse = "\n")
 }

@@ -107,6 +107,18 @@ kitsui_resp <- function(df, scale) {
   kits::kits_resp(part)
 }
 
+#' 作答設計圖用：通過步驟不是 1 的題，分數換成通過（1）或沒通過（0）
+#'
+#' plot() 畫的通過比例是「得分 1 以上」；換過以後就是「得分達到通過步驟以上」。
+#' 只給圖用，不改校準用的作答。
+#' @param steps 題號 -> step（kitsui_steps_vec()）
+#' @noRd
+kitsui_resp_pass <- function(resp, steps) {
+  hit <- intersect(attr(resp, "items"), names(steps)[steps != 1])
+  for (it in hit) resp[[it]] <- as.integer(resp[[it]] >= steps[[it]])
+  resp
+}
+
 # 兩個世代放進同一個矩陣時，visit_id 不能重複
 kitsui_check_ids <- function(df) {
   ids <- dplyr::distinct(df, .data$visit_id, .data$cohort)

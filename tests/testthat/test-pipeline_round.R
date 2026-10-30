@@ -48,6 +48,11 @@ test_that("強烈偏移時量尺被標記（flag），照常校準，產生新�
   flag <- dplyr::filter(r2$log, check == "flag")
   expect_match(flag$detail, "偏移題太多")
   expect_equal(dplyr::filter(r2$fixed$checks, check == "flag")$round, "2")
+  # checks.csv 是英文
+  expect_match(dplyr::filter(r2$fixed$checks, check == "flag")$detail, paste0(
+    "^[0-9]+ drifting items \\([0-9]+ judged\\); [0-9]+ items can be fixed ",
+    "\\(too many drifting items\\); calibrated as usual$"
+  ))
   expect_false("stop" %in% r2$log$check)
   # 新版本、題庫照常更新；舊的 beta 不動；固定檔寫得出來
   moved <- dplyr::filter(r2$log, check == "drift")$item_id
@@ -101,7 +106,11 @@ test_that("kits 出錯的量尺停下來並記下原因（中文），其他量�
   err <- dplyr::filter(r$log, check == "error")
   expect_equal(err$scale, "sim M03")
   expect_match(err$detail, "^kits 出錯，這個量尺停下來。kits 的訊息：Only")
-  expect_equal(dplyr::filter(r$fixed$checks, check == "error")$scale, "sim M03")
+  en <- dplyr::filter(r$fixed$checks, check == "error")
+  expect_equal(en$scale, "sim M03")
+  # checks.csv 是英文：kits 的訊息原文
+  msg <- sub("^kits 出錯，這個量尺停下來。kits 的訊息：", "", err$detail)
+  expect_equal(en$detail, paste0("kits error, scale stopped: ", msg))
   zip_path <- withr::local_tempfile(fileext = ".zip")
   expect_error(kitsui_write_fixed(r$fixed, zip_path), "sim M03", class = "kit_user_error")
 })
@@ -115,6 +124,8 @@ test_that("拿掉分數類別有問題的題以後沒有題可以估計：量尺
   expect_equal(r$stopped, "sim M03")
   stop_row <- dplyr::filter(r$log, check == "stop")
   expect_match(stop_row$detail, "只剩 1 題，沒有題可以估計")
+  expect_equal(dplyr::filter(r$fixed$checks, check == "stop")$detail,
+               "only 1 items left after leaving out score category problems; nothing to estimate")
   expect_setequal(dplyr::filter(r$log, check == "category problem, left out")$item_id,
                   c("a1", "a2"))
 })
@@ -141,7 +152,11 @@ test_that("可固定的題少於 5 題時標記（flag），照常校準", {
   flag <- dplyr::filter(r2$log, check == "flag")
   expect_equal(nrow(flag), 1)
   expect_match(flag$detail, "可固定 4 題（可固定的題少於 5 題）")
-  expect_equal(dplyr::filter(r2$fixed$checks, check == "flag")$detail, flag$detail)
+  expect_equal(dplyr::filter(r2$fixed$checks, check == "flag")$detail, flag$detail_en)
+  expect_match(flag$detail_en, paste0(
+    "^[0-9]+ drifting items \\([0-9]+ judged\\); 4 items can be fixed ",
+    "\\(fewer than 5 items can be fixed\\); calibrated as usual$"
+  ))
   expect_true(all(paste0("b", 1:8) %in% r2$fixed$bank$item_id))
   expect_equal(formals(kitsui_round)$flag_fixed, 5)
   # flag_fixed = 3 時不標記
@@ -182,7 +197,10 @@ test_that("自己的題庫沒有涵蓋這個波次、另一個世代的有：借
   log <- dplyr::filter(r2$fixed$checks, check == "borrowed bank")
   expect_equal(log$scale, "motor M36")
   expect_equal(log$detail, detail)
-  expect_match(dplyr::filter(r2$log, check == "calibration")$detail, "M03 的資料借用另一世代題庫")
+  calib <- dplyr::filter(r2$log, check == "calibration")
+  expect_match(calib$detail, "M03 的資料借用另一世代題庫")
+  expect_match(calib$detail_en,
+               "^fixed calibration: [0-9]+ items fixed \\(M03 data use another cohort's bank\\)$")
   # 舊的 beta 不動；新的步驟加進 motor M36 的題庫；motor M36 的波次多了 60
   old <- bc$fixed$bank
   expect_identical(r2$fixed$bank[seq_len(nrow(old)), ], old)
@@ -287,4 +305,92 @@ test_that("再偏移一次時，新版本從原來的題號做（a2_r3，不是 
   expect_equal(r3$fixed$versions$current_id, "a2_r3")
   expect_equal(r3$fixed$versions$cohort, "M03")
   expect_true("a2_r3" %in% colnames(r3$data[["sim M03"]]))
+})
+
+# checks.csv 只寫英文 ----
+
+# 紀錄（畫面）的 detail 有中文、detail_en 與 fixed$checks 的 detail 都是 ASCII
+expect_ascii <- \(x) expect_false(any(grepl("[^ -~]", x)))
+
+test_that("固定檔的 checks.csv 都是英文；畫面的紀錄還是中文", {
+  chain <- lan_chain()
+  for (r in chain) {
+    expect_ascii(r$fixed$checks$detail)
+    expect_ascii(r$log$detail_en)
+  }
+  expect_ascii(round8()$round$fixed$checks$detail)
+  expect_ascii(linked()$fixed$checks$detail)
+  # 畫面的紀錄：中文
+  expect_equal(round8()$round$log$detail, c("自由校準", "自由校準"))
+  expect_equal(round8()$round$log$detail_en, c("free calibration", "free calibration"))
+  r <- chain[["48"]]
+  calib <- dplyr::filter(r$log, check == "calibration")
+  expect_match(calib$detail, "^固定校準：固定 [0-9]+ 題$")
+  expect_match(calib$detail_en, "^fixed calibration: [0-9]+ items fixed$")
+  expect_equal(sub("\\D+([0-9]+).*", "\\1", calib$detail_en),
+               sub("\\D+([0-9]+).*", "\\1", calib$detail))
+})
+
+test_that("checks.csv 一列對一列：偏移、併分數、新版本；之前回合的列不動", {
+  chain <- lan_chain()
+  r <- chain[["48"]]
+  # 偏移：同一題、同一個距離
+  drift <- dplyr::filter(r$log, check == "drift")
+  expect_true(nrow(drift) > 0)
+  en <- dplyr::filter(r$fixed$checks, check == "drift", round == "48")
+  expect_equal(en$item_id, drift$item_id)
+  expect_equal(en$detail, drift$detail_en)
+  d <- sub("^離連結線最遠的步驟差 ([0-9.]+) logit.*$", "\\1", drift$detail)
+  expect_equal(en$detail, paste0("largest step distance from the link line ", d,
+                                 " logit (more than 2 residual SD)"))
+  expect_match(drift$detail, "（大於 2 個殘差標準差）$")
+  # 新版本：本來就是 ASCII
+  nv <- dplyr::filter(r$log, check == "new version")
+  expect_equal(nv$detail_en, nv$detail)
+  # 併分數（第 18 回合）
+  cap <- dplyr::filter(chain[["18"]]$log, check == "capped")
+  expect_match(cap$detail, "^[0-9]+ 列次超過 [0-9]+ 分，併為 [0-9]+ 分$")
+  n <- regmatches(cap$detail, gregexpr("[0-9]+", cap$detail))[[1]]
+  expect_equal(dplyr::filter(r$fixed$checks, check == "capped")$detail,
+               sprintf("%s visits above score %s, merged into %s", n[1], n[2], n[3]))
+  # 之前回合的列（舊固定檔可能是中文）照原樣留著
+  old <- chain[["3"]]$fixed
+  old$checks <- tibble::tibble(round = "0", scale = "lan M03", item_id = NA_character_,
+                               check = "flag", detail = "舊的中文說明")
+  r6 <- suppressMessages(kitsui_round(kitsui_demo("M03", 6, "lan"), old, "6"))
+  expect_equal(r6$fixed$checks[1, ], old$checks)
+  expect_ascii(r6$fixed$checks$detail[-1])
+})
+
+test_that("寫出固定檔：checks.csv 是 ASCII，沒有 BOM；讀回來一樣", {
+  fixed <- lan_chain()[["48"]]$fixed
+  zip_path <- withr::local_tempfile(fileext = ".zip")
+  kitsui_write_fixed(fixed, zip_path)
+  dir <- withr::local_tempdir()
+  utils::unzip(zip_path, exdir = dir, junkpaths = TRUE)
+  file <- file.path(dir, "checks.csv")
+  bytes <- readBin(file, "raw", file.size(file))
+  expect_false(identical(bytes[1:3], as.raw(c(0xef, 0xbb, 0xbf))))
+  expect_true(all(bytes < as.raw(0x80)))
+  back <- kitsui_read_fixed(zip_path)
+  expect_equal(back$checks$detail, fixed$checks$detail)
+})
+
+test_that("停下來的原因的英文：kits 的訊息原文；kitsui 自己的訊息用 en", {
+  e <- simpleError("Fewer than 2 items")
+  expect_equal(kitsui_error_detail_en(e), "kits error, scale stopped: Fewer than 2 items")
+  # 兩個世代的 visit_id 重複：中文的錯誤帶英文的 en
+  bc <- borrow_chain()
+  df <- dplyr::bind_rows(bc$df2, kitsui_demo("M36", 60, "motor"))
+  df$visit_id[df$cohort == "M36"] <- df$visit_id[df$cohort == "M03"][1]
+  e <- tryCatch(kitsui_round_matrix(df, c("motor M03", "motor M36")), error = \(e) e)
+  expect_s3_class(e, "kit_user_error")
+  expect_match(kitsui_error_detail(e), "相同的 visit_id")
+  expect_equal(kitsui_error_detail_en(e),
+               "two cohorts share a visit_id; they cannot go into one response matrix")
+  r <- suppressMessages(kitsui_round(df, bc$fixed, "3"))
+  expect_equal(dplyr::filter(r$fixed$checks, check == "error")$detail, kitsui_error_detail_en(e))
+  # 沒有 en 的 kitsui 訊息：一句通用的英文
+  plain <- tryCatch(kit_abort("中文"), error = \(e) e)
+  expect_ascii(kitsui_error_detail_en(plain))
 })

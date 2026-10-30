@@ -8,6 +8,7 @@ items_data <- function(df, fixed = kitsui_fixed_empty(), label = "3") {
 }
 
 test_that("示範資料跑一回合：回傳 items，圖、表、程式都出得來", {
+  pandoc_ok <- kit_test_local_pandoc()
   d <- items_data(kitsui_demo("M03", 3, "lan"))
   shiny::testServer(mod_items_server, args = list(data = shiny::reactive(d), goto = \(tab) NULL), {
     expect_null(session$getReturned()())
@@ -28,7 +29,7 @@ test_that("示範資料跑一回合：回傳 items，圖、表、程式都出得
     expect_match(output$next_step$html, "go_link")
     # 題目參數：每一題每一步，畫面與 csv 相同
     expect_match(output$coef, "threshold_se")
-    coef_csv <- readr::read_csv(output$dl_coef, show_col_types = FALSE)
+    coef_csv <- kit_test_dl_csv(output, session, "dl_coef")
     expect_named(coef_csv, c("scale", "item_id", "item_score", "difficulty", "difficulty_se",
                              "threshold", "threshold_se"))
     expect_equal(unique(coef_csv$scale), "lan M03")
@@ -36,20 +37,33 @@ test_that("示範資料跑一回合：回傳 items，圖、表、程式都出得
     expect_equal(coef_csv$difficulty, coef(res$items[["lan M03"]])$beta, tolerance = 1e-12)
     expect_equal(nrow(coef_csv), nrow(coef(res$items[["lan M03"]])))
     # 自由校準沒有偏移表：csv 是一列說明，不是下載失敗
-    expect_match(readr::read_csv(output$dl_drift, show_col_types = FALSE)$note, "自由校準")
-    expect_gt(nrow(readr::read_csv(output$dl_fit, show_col_types = FALSE)), 0)
-    log_file <- output$dl_log
+    expect_match(kit_test_dl_csv(output, session, "dl_drift")$note, "自由校準")
+    expect_gt(nrow(kit_test_dl_csv(output, session, "dl_fit")), 0)
+    log_file <- kit_test_dl_file(output, session, "dl_log")
     log_csv <- readr::read_csv(log_file, show_col_types = FALSE)
     expect_true("status" %in% names(log_csv))
     # 沒有題號的列是空的，不是 NA
     expect_false(any(grepl(",NA,", readLines(log_file, encoding = "UTF-8"))))
     expect_true(all(c("scale", "flag") %in%
-                      names(readr::read_csv(output$dl_fit, show_col_types = FALSE))))
-    # 圖存成 html 要 pandoc
-    pandoc <- "/opt/quarto/bin/tools/x86_64"
-    if (dir.exists(pandoc)) {
-      withr::local_envvar(RSTUDIO_PANDOC = pandoc)
-      expect_true(file.exists(output$dl_plot))
+                      names(kit_test_dl_csv(output, session, "dl_fit"))))
+    # 下載鈕：網址最後一段、download 屬性都是檔名；CSV 和 write_excel_csv() 的位元組一樣
+    html <- output$dl_coef_ui$html
+    expect_match(html, "下載題目參數（csv）")
+    expect_equal(kit_link_attr(html, session$ns("dl_coef"), "download"), "item_coef_lan_M03.csv")
+    expect_match(kit_link_attr(html, session$ns("dl_coef"), "href"), "/item_coef_lan_M03\\.csv\\?")
+    old <- withr::local_tempfile(fileext = ".csv")
+    readr::write_excel_csv(coef_csv(), old)
+    expect_equal(file_bytes(kit_test_dl_file(output, session, "dl_coef")), file_bytes(old))
+    expect_equal(kit_test_download_name(session, "dl_log"), "round_log_3.csv")
+    # 圖存成 html 要 pandoc：按鈕的檔名跟著圖的種類
+    if (pandoc_ok) {
+      expect_match(output$dl_plot_ui$html, 'download="item_lan_M03_observed_1-6.html"')
+      res <- kit_test_download(session, "dl_plot")
+      expect_equal(res$content_type, "text/html; charset=UTF-8")
+      expect_match(paste(readLines(res$content$file, n = 5), collapse = ""), "<!DOCTYPE html>",
+                   ignore.case = TRUE)
+    } else {
+      expect_match(output$dl_plot_ui$html, "找不到 pandoc")
     }
   })
 })
@@ -188,12 +202,12 @@ test_that("固定校準：偏移表的 reason 是中文；固定的步驟寫「�
                  "p1 沒有人得 0 分（分數 1、2、3）：不判斷偏移，固定在題庫的值")
     expect_match(output$drift, "不判斷偏移")
     expect_false(grepl("category problem", output$drift))
-    drift_csv <- readr::read_csv(output$dl_drift, show_col_types = FALSE)
+    drift_csv <- kit_test_dl_csv(output, session, "dl_drift")
     expect_true(all(c("scale", "reason", "reason_zh") %in% names(drift_csv)))
     expect_true("category problem, kept fixed" %in% drift_csv$reason)
     # 題目參數：固定的步驟寫「固定」；csv 是 0
     expect_match(output$coef, "固定")
-    coef_csv <- readr::read_csv(output$dl_coef, show_col_types = FALSE)
+    coef_csv <- kit_test_dl_csv(output, session, "dl_coef")
     expect_equal(coef_csv$difficulty_se[coef_csv$item_id == "p1"], c(0, 0, 0))
     expect_equal(unique(coef_csv$scale), "sim M03")
     expect_match(output$log, "category problem, left out")
@@ -245,6 +259,10 @@ test_that("選題：預設前 9 題，換頁、自己選；圖上面說畫了哪
     expect_match(output$plot_items_ui$html, "第 10–18 題")
     session$setInputs(plot_items = plot_ids()[10:18])
     expect_equal(download_name(plot_name), "item_sim_M03_category_10-18")
+    # 換了題：下載鈕重畫，檔名是畫的題（按下載時寫的也是這張圖）
+    if (kit_pandoc_ok()) {
+      expect_match(output$dl_plot_ui$html, 'download="item_sim_M03_category_10-18.html"')
+    }
     expect_match(output$plot_note$html, "第 10–18 題")
     p <- plot_obj()
     titles <- unlist(purrr::map(p$x$layout$annotations, "text"))
@@ -313,4 +331,42 @@ test_that("紀錄的 csv：有 status；沒有題號是空字串；完成的句�
   expect_match(as.character(items_status(one)), "這個量尺校準好了")
   two <- list(items = list(a = 1, b = 2), ok = TRUE, log = log[0, ])
   expect_match(as.character(items_status(two)), "2 個量尺都校準好了")
+})
+
+test_that("固定了哪些題：狀態、核對、全部固定的題、csv；偏移把關圖與程式", {
+  fixed <- lan_chain()[["18"]]$fixed
+  d <- items_data(kitsui_demo("M03", 24, "lan"), fixed, "24")
+  shiny::testServer(mod_items_server, args = list(data = shiny::reactive(d), goto = \(tab) NULL), {
+    session$setInputs(run = 1, scale = "lan M03", plot_type = "drift")
+    expect_true(session$getReturned()()$ok)
+    html <- output$fixed_status$html
+    expect_match(html, "這一回合固定 13 題（沿用題庫的參數），換成新版本 2 題")
+    expect_match(html, "參數和題庫完全相同（最大差 0）")
+    expect_match(html, "lanc03 → lanc03_r24")
+    expect_match(html, "看全部固定的題（13 題）")
+    expect_false(grepl("alert-danger", html))
+    csv <- kit_test_dl_csv(output, session, "dl_status")
+    expect_named(csv, c("scale", "item_id", "status", "steps", "detail"))
+    expect_equal(nrow(csv), 15)
+    expect_equal(csv$status[1], "偏移 → 新版本")
+    # 偏移把關圖
+    p <- plot_obj()
+    expect_s3_class(p, "plotly")
+    names <- purrr::map_chr(p$x$data, \(tr) as.character(tr$name)[1])
+    expect_true("偏移 → 新版本" %in% names)
+    expect_match(output$plot_help$html, "落在帶子裡的步驟")
+    expect_equal(download_name(plot_name), "item_lan_M03_drift")
+    expect_match(output$code, "drift <- kits_drift\\(.*\\)\nplot\\(drift\\)")
+  })
+})
+
+test_that("自由校準：沒有固定的題，偏移把關圖是一句說明", {
+  d <- items_data(kitsui_demo("M03", 3, "lan"))
+  shiny::testServer(mod_items_server, args = list(data = shiny::reactive(d), goto = \(tab) NULL), {
+    session$setInputs(run = 1, scale = "lan M03", plot_type = "drift")
+    expect_match(output$fixed_status$html, "沒有題庫，這個量尺是自由校準，沒有固定的題")
+    expect_match(output$fixed_status$html, "看全部自由校準的題（6 題）")
+    expect_error(plot_obj(), "沒有偏移把關圖")
+    expect_false(grepl("plot\\(drift\\)", output$code))
+  })
 })

@@ -199,26 +199,33 @@ kitsui_score_search <- function(scores, text) {
 #' 換到另外兩把尺：內部連結後（ability_linked）、再經過外部連結（D）；放在 attr(, "thresholds")。
 #' 通過年齡（age50）用這一回合的作答與月齡算，和量尺無關。kitsUI 不做常模（kits_norms()），
 #' 所以沒有常模算的年齡（age_reach 等）。
+#' 門檻與 age50 都照每一題的通過步驟（得分至少 step 算通過；kitsui_item_step_arg()）。
 #' @param round kitsui_round() 的結果；df 是這一回合的長格式資料；fixed 是含連結的固定檔
 #' @param links NULL 或 kitsui_links(fixed)；persons NULL 或 kitsui_persons(df)
+#' @param steps NULL 或通過步驟（原來的題號 -> step，kitsui_steps_vec()）；NULL 時用固定檔的
+#'   pass_steps
 #' @noRd
-kitsui_item_table <- function(round, df, fixed, scale, links = NULL, persons = NULL) {
+kitsui_item_table <- function(round, df, fixed, scale, links = NULL, persons = NULL,
+                              steps = NULL) {
   item <- round$items[[scale]]
   if (is.null(item)) kit_abort("這一回合沒有 ", scale, " 的校準結果。")
   links <- links %||% kitsui_links(fixed, kitsui_link_path(fixed, scale))
   persons <- persons %||% kitsui_persons(df)
+  steps <- steps %||% kitsui_steps_vec(fixed$pass_steps)
+  step <- kitsui_item_step_arg(item, steps, fixed$versions)
   ages <- kitsui_item_ages(round$data[[scale]], persons, kitsui_round_cohorts(round, scale))
-  tab <- kits::kits_item_table(item, data = ages)
-  attr(tab, "thresholds") <- kitsui_item_thresholds(item, fixed, links, scale)
+  tab <- kits::kits_item_table(item, data = ages, step = step)
+  attr(tab, "thresholds") <- kitsui_item_thresholds(item, fixed, links, scale, step)
   tab
 }
 
 #' 同一題的門檻換到內部連結後、外部連結後的量尺
+#' @param step kits_item_table() 的 step（kitsui_item_step_arg()）
 #' @return NULL 或 tibble：item_id，有內部連結時 ability_linked_threshold，換得到 D 時 d_threshold
 #' @noRd
-kitsui_item_thresholds <- function(item, fixed, links, scale) {
+kitsui_item_thresholds <- function(item, fixed, links, scale, step = 1) {
   first <- function(path, name) {
-    tab <- kits::kits_item_table(kitsui_convert_path(item, path))
+    tab <- kits::kits_item_table(kitsui_convert_path(item, path), step = step)
     stats::setNames(tibble::tibble(item_id = tab$item_id, threshold = tab$D), c("item_id", name))
   }
   inner <- kitsui_path_links(fixed, links, scale, "internal")
@@ -256,6 +263,8 @@ kitsui_item_table_shown <- function(tab) {
     tab <- dplyr::left_join(tab, extra, by = "item_id") |>
       dplyr::relocate(dplyr::any_of(KITSUI_ITEM_THRESHOLDS), .after = "ability_threshold")
   }
+  # 通過步驟（有題不是 1 時 kits 才給這一欄）放在題號旁邊
+  tab <- dplyr::relocate(tab, dplyr::any_of("step"), .after = "item_id")
   last <- utils::tail(intersect(KITSUI_ITEM_THRESHOLDS, names(tab)), 1)
   if (length(last) == 1) tab <- tab[order(tab[[last]], tab$item_id, na.last = TRUE), , drop = FALSE]
   rownames(tab) <- NULL
@@ -264,6 +273,193 @@ kitsui_item_table_shown <- function(tab) {
 
 # 題目表的三種門檻（由校準的量尺到 D）
 KITSUI_ITEM_THRESHOLDS <- c("ability_threshold", "ability_linked_threshold", "d_threshold")
+
+# 通過步驟 ----
+# 得分至少 step 算通過（kits_item_table(step = )）：題目表的門檻與 age50、① 的作答設計圖用。
+# 設定用原來的題號；偏移後的新版本（題號_r回合）沿用原來題號的設定。沒列的題用 1。
+# 校準、偏移、連結、分數都用全部的步驟，和通過步驟無關
+
+#' 通過步驟的設定表（固定檔的 pass_steps）轉成具名整數向量：原來的題號 -> step
+#' @noRd
+kitsui_steps_vec <- function(tab) {
+  if (NROW(tab) == 0) return(stats::setNames(integer(), character()))
+  tab <- dplyr::slice_tail(tibble::as_tibble(tab), n = 1, by = "item_id")
+  stats::setNames(as.integer(tab$step), as.character(tab$item_id))
+}
+
+#' 目前的題號換回原來的題號（versions 的 current_id -> item_id）；不是新版本的題不變
+#' @noRd
+kitsui_base_ids <- function(ids, versions) {
+  if (NROW(versions) == 0) return(ids)
+  dplyr::coalesce(versions$item_id[match(ids, versions$current_id)], ids)
+}
+
+#' 這一回合校準的每一題：量尺、目前的題號、原來的題號、校準裡最高的分數
+#' @param items round$items（具名 list，量尺 -> kits_item）
+#' @return tibble：scale、current_id、item_id、top
+#' @noRd
+kitsui_round_item_steps <- function(items, versions = NULL) {
+  none <- tibble::tibble(scale = character(), current_id = character(), item_id = character(),
+                         top = integer())
+  out <- purrr::imap(items, \(item, s) {
+    co <- stats::coef(item)
+    top <- tapply(co$item_score, as.character(co$item_id), max)
+    tibble::tibble(scale = s, current_id = names(top), top = as.integer(top))
+  }) |>
+    purrr::list_rbind()
+  if (NROW(out) == 0) return(none)
+  out |>
+    dplyr::mutate(item_id = kitsui_base_ids(.data$current_id, versions), .after = "current_id")
+}
+
+#' 一個量尺 kits_item_table(step = ) 的值
+#'
+#' 目前的題號當名字，只列不是 1 的題；每一題都是 1 時是 1。
+#' 校準裡沒有這個分數的題用 1（上傳時已經擋下來，這裡只是保險）。
+#' @param steps 原來的題號 -> step（kitsui_steps_vec()）
+#' @noRd
+kitsui_item_step_arg <- function(item, steps, versions = NULL) {
+  if (length(steps) == 0) return(1)
+  co <- stats::coef(item)
+  ids <- unique(as.character(co$item_id))
+  st <- unname(steps[kitsui_base_ids(ids, versions)])
+  has <- purrr::map2_lgl(ids, st, \(i, s) !is.na(s) && any(co$item_id == i & co$item_score == s))
+  ok <- has & st != 1
+  if (!any(ok)) return(1)
+  stats::setNames(as.integer(st[ok]), ids[ok])
+}
+
+#' 讀上傳的通過步驟（CSV）：每一欄都讀成文字，檢查在 kitsui_steps_check()
+#' @noRd
+kitsui_read_steps <- function(path) {
+  out <- tryCatch(
+    readr::read_csv(path, col_types = readr::cols(.default = "c"), na = c("", "NA"),
+                    lazy = FALSE, progress = FALSE),
+    error = \(e) NULL
+  )
+  if (is.null(out)) kit_abort("讀不進這個檔案。請上傳 CSV 檔（逗號分隔）。")
+  tibble::as_tibble(out)
+}
+
+#' 上傳的通過步驟：檢查並整理
+#'
+#' 擋下來（errors）：缺 item_id 或 step 欄、step 不是 1 以上的整數、同一題列了兩次而 step 不一樣、
+#' 校準裡沒有這麼高的分數。只提醒（warnings）：這一回合的校準裡沒有的題（設定照樣存著）。
+#' 題號可以用新版本的題號（例如 lana02_r12），會換回原來的題號。
+#' @param tab kitsui_read_steps() 的結果
+#' @param known kitsui_round_item_steps()
+#' @return list(steps, errors, warnings)：steps 是原來的題號 -> step（有 errors 時 NULL）
+#' @noRd
+kitsui_steps_check <- function(tab, known) {
+  fail <- \(...) list(steps = NULL, errors = c(...), warnings = character())
+  miss <- setdiff(c("item_id", "step"), names(tab))
+  if (length(miss) > 0) {
+    return(fail(paste0("檔案要有 item_id 與 step 兩欄。這個檔案缺少：",
+                       paste(miss, collapse = "、"), "。")))
+  }
+  id <- trimws(as.character(tab$item_id))
+  raw <- trimws(as.character(tab$step))
+  keep <- !is.na(id) & nzchar(id)
+  id <- id[keep]
+  raw <- raw[keep]
+  if (length(id) == 0) return(fail("檔案裡沒有任何一題。"))
+  id <- dplyr::coalesce(known$item_id[match(id, known$current_id)], id)
+  num <- suppressWarnings(as.numeric(raw))
+  bad <- is.na(num) | num < 1 | num != round(num)
+  shown <- ifelse(is.na(raw) | raw == "", "空白", raw)
+  errors <- c(
+    if (any(bad)) {
+      paste0("step 要是 1 以上的整數。這幾題不是：",
+             kitsui_some(paste0(id[bad], "（", shown[bad], "）")), "。")
+    },
+    kitsui_steps_twice(id[!bad], num[!bad])
+  )
+  ok <- tibble::tibble(item_id = id[!bad], step = as.integer(num[!bad])) |>
+    dplyr::distinct()
+  tops <- dplyr::summarise(known, top = min(.data$top), .by = "item_id")
+  over <- dplyr::inner_join(ok, tops, by = "item_id") |>
+    dplyr::filter(.data$step > .data$top)
+  if (nrow(over) > 0) {
+    errors <- c(errors, paste0(
+      "這幾題在校準裡沒有這麼高的分數：",
+      kitsui_some(sprintf("%s（設定 %d，最高 %d 分）", over$item_id, over$step, over$top)), "。"
+    ))
+  }
+  if (length(errors) > 0) return(fail(errors))
+  unknown <- setdiff(ok$item_id, known$item_id)
+  warnings <- if (length(unknown) > 0) {
+    c(paste0("這一回合的校準裡沒有這幾題：", kitsui_some(unknown), "。"),
+      "這些設定照樣存進固定檔，之後的回合用得到。",
+      "如果是打錯了，請改好再上傳。")
+  }
+  list(steps = stats::setNames(ok$step, ok$item_id), errors = character(),
+       warnings = warnings %||% character())
+}
+
+# 同一題列了兩次以上而 step 不一樣
+kitsui_steps_twice <- function(id, step) {
+  n <- tapply(step, id, \(x) length(unique(x)))
+  twice <- names(n)[n > 1]
+  if (length(twice) == 0) return(NULL)
+  paste0("同一題列了兩次以上，step 不一樣：", kitsui_some(twice), "。每一題只列一次。")
+}
+
+# 列出前幾個，太多時加「等 n 題」
+kitsui_some <- function(x, n = 10) {
+  more <- if (length(x) > n) paste0(" 等 ", length(x), " 題")
+  paste0(paste(utils::head(x, n), collapse = "、"), more)
+}
+
+#' 套用新的設定：檔案裡列的題換成新的 step，沒列的題不變；只留不是 1 的題
+#' @noRd
+kitsui_steps_merge <- function(steps, new) {
+  steps[names(new)] <- new
+  steps <- steps[steps != 1]
+  stats::setNames(as.integer(steps), names(steps) %||% character())
+}
+
+#' 範本：這一回合的每一題（原來的題號）與目前的 step；scale、max_score 只是參考
+#' @noRd
+kitsui_steps_template <- function(known, steps) {
+  known |>
+    dplyr::summarise(scale = paste(unique(.data$scale), collapse = "; "),
+                     max_score = min(.data$top), .by = "item_id") |>
+    dplyr::mutate(step = dplyr::coalesce(unname(steps[.data$item_id]), 1L), .after = "item_id") |>
+    dplyr::arrange(.data$scale, .data$item_id)
+}
+
+#' 目前不是 1 的題：這一回合有的題列出量尺；沒有的題 scale 是 NA
+#' @return tibble：item_id、step、scale
+#' @noRd
+kitsui_steps_shown <- function(known, steps) {
+  scales <- dplyr::summarise(known, scale = paste(unique(.data$scale), collapse = "、"),
+                             .by = "item_id")
+  tibble::tibble(item_id = names(steps), step = unname(steps)) |>
+    dplyr::filter(.data$step != 1) |>
+    dplyr::left_join(scales, by = "item_id")
+}
+
+#' 新固定檔的 pass_steps：一題一列，最新的設定
+#'
+#' 這一回合新設或改了的題，round 是這一回合；沒改的題留原來的回合。
+#' 原來列著、這一回合改回 1 的題留一列 step = 1。都沒有改時固定檔原樣回傳。
+#' @param steps 原來的題號 -> step（kitsui_steps_vec()；沒列的題是 1）
+#' @noRd
+kitsui_fixed_pass_steps <- function(fixed, steps, round_label) {
+  old <- fixed$pass_steps %||% kitsui_fixed_empty()$pass_steps
+  old <- dplyr::slice_tail(old, n = 1, by = "item_id")
+  ids <- union(old$item_id, names(steps))
+  now <- dplyr::coalesce(unname(steps[ids]), 1L)
+  at <- match(ids, old$item_id)
+  same <- !is.na(at) & dplyr::coalesce(old$step[at] == now, FALSE)
+  if (all(same) && length(ids) == nrow(fixed$pass_steps %||% old)) return(fixed)
+  keep <- !is.na(at) | now != 1
+  fixed$pass_steps <- tibble::tibble(
+    item_id = ids, step = as.integer(now),
+    round = ifelse(same, old$round[at], round_label %||% NA_character_)
+  )[keep, ]
+  fixed
+}
 
 #' 這一回合校準到這個量尺的資料是哪些世代（借用另一世代題庫時不只是量尺自己的世代）
 #' @noRd
@@ -285,97 +481,7 @@ kitsui_item_ages <- function(X, persons, cohorts) {
   cbind(as.data.frame(ages), X)
 }
 
-#' 這一回合有兩個以上世代的領域（兩個世代的垂直連結用）
-#' @noRd
-kitsui_vertical_domains <- function(round) {
-  domains <- scale_domain(names(round$items))
-  sort(unique(domains[duplicated(domains)]))
-}
-
-# 垂直連結的三個版本（③ 的分頁標籤）
-KITSUI_VERTICAL_STAGES <- c(none = "未連結", internal = "內部連結後", external = "外部連結後")
-
-#' 一個領域各世代校準量尺上的分數（垂直連結用；只跟這一回合與領域有關，和連結無關）
-#' @param progress NULL 或 function(i, n, scale)：每個世代開始前呼叫一次
-#' @return 具名 list（量尺）：kits_subj；這一回合只有一個世代時是 NULL
-#' @noRd
-kitsui_vertical_scores <- function(round, domain, persons, progress = NULL) {
-  scales <- names(round$items)[scale_domain(names(round$items)) == domain]
-  if (length(scales) < 2) return(NULL)
-  kitsui_score_own(round, persons, progress, scales)
-}
-
-#' 一個領域的兩個世代：連結前後三個版本的 kits_vertical()
-#'
-#' 分數只算一次（kitsui_vertical_scores()），再依版本換算：
-#' - none（未連結）：各世代留在自己校準的量尺上。kits 的 rbind() 不讓不同量尺的分數合在一起，
-#'   所以去掉量尺的標記，當成沒有量尺的分數交給 kits_vertical()（y 軸不標量尺）。
-#' - internal（內部連結後）：M36 用內部連結換到參照世代的量尺，兩個世代 rbind()。
-#' - external（外部連結後）：再用外部連結換到 D（和 kitsui_score() 的換算相同）。
-#' @param links NULL 或 kitsui_links(fixed)；persons NULL 或 kitsui_persons(df)
-#' @param raw NULL 或 kitsui_vertical_scores() 的結果（已經算好時傳進來，連結變了不用重算）
-#' @return 具名 list（none、internal、external），各是 list(vertical, scale, from, why, note)：
-#'   scale 是畫出來的量尺（未連結時是 NA），from 是這個領域的量尺；
-#'   畫不了時 vertical 是 NULL，why 是一句原因；note 是兩個世代沒有共同月齡時的一句說明
-#' @noRd
-kitsui_verticals <- function(round, df, fixed, domain, links = NULL, persons = NULL,
-                             raw = NULL) {
-  scales <- names(round$items)[scale_domain(names(round$items)) == domain]
-  if (length(scales) < 2) {
-    why <- paste0("這一回合的 ", domain, " 只有一個世代，要兩個世代都在這一回合才畫得出來。")
-    return(purrr::map(KITSUI_VERTICAL_STAGES, \(x) kitsui_vertical_none(scales, why)))
-  }
-  raw <- raw %||% kitsui_vertical_scores(round, domain, persons %||% kitsui_persons(df))
-  links <- links %||% kitsui_links(fixed)
-  out <- list(
-    none = kitsui_vertical_raw(raw),
-    internal = kitsui_vertical_linked(raw, fixed, links, "internal"),
-    external = kitsui_vertical_linked(raw, fixed, links, "external")
-  )
-  note <- kitsui_vertical_no_common(raw)
-  purrr::map(out, \(x) c(x, list(note = note)))
-}
-
-# 畫不了的版本
-kitsui_vertical_none <- function(scales, why) {
-  list(vertical = NULL, scale = NULL, from = scales, why = why)
-}
-
-# 未連結：去掉量尺的標記（各世代的量尺不同），kits_vertical() 照樣算各波次的中位數
-kitsui_vertical_raw <- function(raw) {
-  s <- dplyr::bind_rows(purrr::map(unname(raw), tibble::as_tibble))
-  attr(s, "scale") <- NULL
-  list(vertical = kits::kits_vertical(s), scale = NA_character_, from = names(raw), why = NULL)
-}
-
-# 內部連結後（到參照世代的量尺）或外部連結後（到 D）：換算後用 kits 的 rbind() 合起來
-kitsui_vertical_linked <- function(raw, fixed, links, stage) {
-  scales <- names(raw)
-  ref <- paste(scale_domain(scales[1]), fixed$version$reference)
-  target <- if (stage == "internal") ref else "D"
-  converted <- purrr::imap(raw, \(x, s) {
-    kitsui_convert_path(x, kitsui_path_links(fixed, links, s, stage))
-  })
-  ends <- purrr::map_chr(converted, \(x) attr(x, "scale"))
-  if (any(ends != target)) {
-    return(kitsui_vertical_none(scales, kitsui_vertical_why(fixed, scales, links, stage)))
-  }
-  s <- do.call(rbind, unname(converted))
-  list(vertical = kits::kits_vertical(s), scale = target, from = scales, why = NULL)
-}
-
-# 畫不了的原因：缺內部連結，或（外部連結後）還沒有外部連結
-kitsui_vertical_why <- function(fixed, scales, links, stage) {
-  off <- setdiff(scales[scale_cohort(scales) != fixed$version$reference], names(links))
-  if (length(off) > 0) {
-    rest <- if (stage == "internal") "兩個世代不在同一把尺上。" else "所以換不到 D。"
-    return(paste0(paste(off, collapse = "、"), " 還沒有內部連結，", rest))
-  }
-  if (is.null(links[["D"]])) {
-    return("還沒有外部連結（到 D）。在上面建立外部連結後，這裡會畫出兩個世代在 D 上的垂直連結。")
-  }
-  paste0(paste(scales, collapse = "、"), " 還有量尺不在外部連結裡，換不到 D。")
-}
+# 垂直連結（kitsui_verticals() 等）在 pipeline_vertical.R
 
 #' 分數對照表：theta 在校準的量尺上，d 是換算後的值
 #'
@@ -429,42 +535,51 @@ kitsui_fixed_name <- function(round_label) {
   paste0("kitsui_fixed_", label, ".zip")
 }
 
-#' 固定檔的中文說明（README.txt 的內容）
+#' 固定檔的說明（README.txt 的內容）：英文（純 ASCII），解壓縮後不會是亂碼
 #'
 #' 給寫固定檔的函式放進 zip（kitsUI 讀固定檔時不看它）。
+#' 量尺、回合、連結的名稱是使用者給的，照原樣放（可能有中文）。
 #' @return 一個字串（多行）
 #' @noRd
 kitsui_fixed_readme <- function(fixed) {
   v <- fixed$version
   links <- kitsui_link_names(fixed)
-  both <- \(x) if (length(x) == 0) "（還沒有）" else paste(x, collapse = "、")
+  both <- \(x) if (length(x) == 0) "(none yet)" else paste(x, collapse = ", ")
   paste(c(
-    "kitsUI 固定檔",
+    "kitsUI fixed file",
     "",
-    "這個 zip 是 kitsUI 的固定檔。",
-    "它存著到這一回合為止的題庫、題目版本與連結。",
-    "下一回合要在 kitsUI 的「① 資料」上傳這個 zip，才能接著用同一個題庫與連結。",
-    "請不要修改或重新壓縮裡面的檔案。",
-    "固定檔寫了就不再改；每一回合會產生一個新的固定檔。",
+    "This zip is a kitsUI fixed file. It holds the item bank, item versions and links",
+    "of every round up to this one (each fixed file includes all earlier rounds).",
+    "In the next round, upload this zip in kitsUI tab 1 (Data) to keep using",
+    "the same item bank and links.",
+    "Do not modify the files in it or re-zip them.",
+    "A fixed file is never changed after it is written; each round makes a new one.",
     "",
-    paste0("回合：", both(v$rounds)),
-    paste0("參照世代：", v$reference %||% ""),
-    paste0("量尺：", both(v$scales)),
-    paste0("連結：", both(links)),
-    paste0("kits 版本：", v$kits %||% "", "；kitsUI 版本：", v$kitsUI %||% ""),
+    paste0("Rounds: ", both(v$rounds)),
+    paste0("Reference cohort: ", v$reference %||% ""),
+    paste0("Scales: ", both(v$scales)),
+    paste0("Links: ", both(links)),
+    paste0("kits version: ", v$kits %||% "", "; kitsUI version: ", v$kitsUI %||% ""),
     "",
-    "裡面的檔案：",
-    "VERSION：版本、建立日期、各回合名稱、參照世代、量尺，與每一回合資料檔的 md5。",
-    "bank.csv：題庫。每個量尺每一題每一步的 beta 與標準誤，和加進來的那一回合。",
-    "versions.csv：題目版本。偏移的題換成新版本時，原來的題號與目前的題號。",
-    "waves.csv：每個題庫校準過的波次（月齡）。",
-    "links.csv：連結的點與設定。從這些點可以重建一模一樣的連結。",
-    "checks.csv：每一回合的檢查紀錄（偏移、新版本、flag、借用另一世代題庫等）。",
+    "Files:",
+    paste0("VERSION: versions, date created, round names, reference cohort, scales,",
+           " and the md5 of each round's data file."),
+    paste0("bank.csv: item bank. Beta and its SE for each step of each item in each scale,",
+           " and the round that added it."),
+    "versions.csv: item versions. Original and current item IDs of drifted items.",
+    "waves.csv: the waves (age in months) each item bank was calibrated on.",
+    "links.csv: link points and settings. The links can be rebuilt exactly from them.",
+    "checks.csv: check log of each round (drift, new versions, flags, borrowed banks, etc.).",
+    paste0("wave_summary.csv: per scale x cohort x wave, n and the P25, median and P75 of",
+           " ability on the calibrated scale (aggregates only, no individual data).",
+           " Used for the vertical plot."),
+    paste0("pass_steps.csv: pass step of each item (a score >= step passes);",
+           " items not listed use 1. Used for the item table and the design plot."),
     "",
-    "提醒：",
-    "舊的 beta 永遠不動。",
-    "連結做好就凍結，之後每一回合都用同一條。",
-    "早先各回合的分數不會重算。",
-    "每一回合的分數表請在那一回合下載保存。"
+    "Reminders:",
+    "Old betas never change.",
+    "A link is frozen once made; every later round uses the same one.",
+    "Scores of earlier rounds are not recomputed.",
+    "Download and keep each round's scores in that round."
   ), collapse = "\n")
 }

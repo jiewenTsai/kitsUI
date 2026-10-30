@@ -139,23 +139,75 @@ ui_code_panel <- function(id, title = "用 R 怎麼做") {
   )
 }
 
-#' 下載鈕：一個圖（HTML）或一張表（CSV）
+#' 下載鈕的位置：一個 uiOutput（id 後面加 _ui）
+#'
+#' 按鈕在 server 端用 render_download_csv()、render_download_plot() 畫（R/download.R 的
+#' kit_download_button()：網址最後一段、檔名標頭、download 屬性都是同一個檔名）。
+#' @param id 按鈕的 id（含 namespace）
+#' @noRd
+ui_download <- function(id) shiny::uiOutput(paste0(id, "_ui"), inline = TRUE)
+
+# 下載鈕的樣式
+KIT_DL_CLASS <- "btn-sm btn-outline-primary"
+
+#' 下載鈕：一張表存成 UTF-8 csv（Excel 看得懂中文）
 #'
 #' 按鈕的字一律寫成「下載…（CSV）」「下載…（HTML）」。
+#' 在 renderUI() 裡呼叫（或用 render_download_csv()）。檔名在畫按鈕時決定：
+#' name 是函式時，裡面讀的 input 或 reactive 變了，按鈕就重畫。
+#' 檔案在按下載時才寫，寫的是當下畫面上的內容；表還沒有內容時寫一列說明。
+#' @param session 模組的 session；id 是按鈕的 id（不含 namespace）
+#' @param table_fun 傳回要下載的表的函式（或 reactive）
+#' @param name 檔名（不含副檔名）：字串，或傳回它的函式
 #' @noRd
-ui_download <- function(id, label) {
-  shiny::downloadButton(id, label, class = "btn-sm btn-outline-primary")
+download_csv_ui <- function(session, id, label, table_fun, name) {
+  write <- \(file) readr::write_excel_csv(csv_or_note(table_fun), file)
+  download_button_ui(session, id, label, name, "csv", write)
 }
 
-#' 下載處理：plotly 圖存成單一 html
+#' 下載鈕：plotly 圖存成單一 html（要 pandoc）
 #'
-#' name 是字串，或按下載時才呼叫的函式（檔名跟著目前的選擇變）。
-#' 找不到 pandoc 或存不了時，畫面上跳出紅色的通知（不是空白的錯誤頁）。
+#' 找不到 pandoc 時，按鈕換成不能按的鈕與一句說明。
+#' 圖還沒有內容或存不了時，畫面上跳出紅色的通知（plot_save()）。
+#' @inheritParams download_csv_ui
+#' @param plot_fun 傳回 plotly 圖的函式（或 reactive）
 #' @noRd
-download_plot <- function(plot_fun, name) {
-  shiny::downloadHandler(
-    filename = function() paste0(download_name(name), ".html"),
-    content = function(file) plot_save(plot_fun, file)
+download_plot_ui <- function(session, id, label, plot_fun, name) {
+  if (!kit_pandoc_ok()) return(ui_download_off(label, KIT_PANDOC_MISSING))
+  write <- \(file) plot_save(plot_fun, file)
+  download_button_ui(session, id, label, name, "html", write)
+}
+
+#' 放在 ui_download(ns(id)) 的位置：output[[paste0(id, "_ui")]] <- render_download_csv(...)
+#' @noRd
+render_download_csv <- function(session, id, label, table_fun, name) {
+  shiny::renderUI(download_csv_ui(session, id, label, table_fun, name))
+}
+
+#' 圖的版本（同上）
+#' @noRd
+render_download_plot <- function(session, id, label, plot_fun, name) {
+  shiny::renderUI(download_plot_ui(session, id, label, plot_fun, name))
+}
+
+#' 一個下載鈕（在 renderUI() 裡呼叫）：檔名是 download_name(name) 加上副檔名 ext
+#'
+#' 檔名拿不到時（例如還沒有量尺，req() 停下來）先不畫；拿到時 renderUI() 會自己重畫。
+#' @noRd
+download_button_ui <- function(session, id, label, name, ext, content, class = KIT_DL_CLASS) {
+  base <- tryCatch(download_name(name), error = \(e) character())
+  if (length(base) != 1 || !nzchar(base)) return(NULL)
+  kit_download_button(session, id, label, paste0(base, ".", ext), content, class = class)
+}
+
+#' 不能下載時：不能按的鈕與一句說明（例如找不到 pandoc）
+#' @noRd
+ui_download_off <- function(label, why) {
+  shiny::tags$span(
+    class = "kit-download-off",
+    shiny::tags$button(type = "button", class = "btn btn-sm btn-outline-secondary",
+                       disabled = NA, shiny::icon("download"), label),
+    shiny::tags$small(class = "kit-hint kit-warn-text", why)
   )
 }
 
@@ -176,18 +228,6 @@ plot_save <- function(p, file, pandoc_ok = kit_pandoc_ok()) {
   out <- tryCatch(kits::kits_save_plot(p, file), error = \(e) e)
   if (inherits(out, "error")) notify(kit_error_text(out, "存圖檔（HTML）"))
   invisible(file)
-}
-
-#' 下載處理：表存成 UTF-8 csv（Excel 看得懂中文）
-#'
-#' 表還沒有內容時（例如還沒按按鈕），檔案裡寫一行說明，不讓瀏覽器下載失敗。
-#' @inheritParams download_plot
-#' @noRd
-download_csv <- function(table_fun, name) {
-  shiny::downloadHandler(
-    filename = function() paste0(download_name(name), ".csv"),
-    content = function(file) readr::write_excel_csv(csv_or_note(table_fun), file)
-  )
 }
 
 #' 檔名：函式就呼叫它；只留英文字母、數字、底線與減號

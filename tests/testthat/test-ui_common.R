@@ -114,12 +114,54 @@ test_that("找不到 pandoc：頁面最上方說明；下載圖檔時停下來�
   expect_error(plot_save(p, file, pandoc_ok = FALSE), "找不到 pandoc", class = "kit_user_error")
   expect_error(plot_save(\() shiny::req(NULL), file, pandoc_ok = TRUE), "還沒有內容",
                class = "kit_user_error")
-  mock_app_fn("kit_pandoc_ok", \() FALSE)
+  # 畫按鈕時還找得到 pandoc、按下載時找不到：回 500，畫面上有通知
+  pandoc <- TRUE
+  mock_app_fn("kit_pandoc_ok", \() pandoc)
+  shiny::testServer(\(input, output, session) {
+    output$dl_ui <- render_download_plot(session, "dl", "下載圖（HTML）", \() p, "plot")
+  }, {
+    expect_match(output$dl_ui$html, "plot.html")
+    pandoc <<- FALSE
+    expect_message(res <- kit_test_download(session, "dl"), "找不到 pandoc")
+    expect_equal(res$status, 500)
+  })
+  # 找不到 pandoc：頁面最上方說明；下載鈕換成不能按的鈕與說明（沒有連結）
   expect_match(as.character(kit_ui(NULL)), "kit-pandoc-notice")
   shiny::testServer(\(input, output, session) {
-    output$dl <- download_plot(\() p, "plot")
+    output$dl_ui <- render_download_plot(session, "dl", "下載圖（HTML）", \() p, "plot")
   }, {
-    expect_error(output$dl, "找不到 pandoc")
+    html <- output$dl_ui$html
+    expect_match(html, "下載圖（HTML）")
+    expect_match(html, "找不到 pandoc：圖檔（HTML）不能下載")
+    expect_match(html, "disabled")
+    expect_no_match(html, "href")
+    expect_null(session$userData$kit_downloads)
+  })
+})
+
+test_that("下載鈕：檔名在畫按鈕時決定，跟著 input 變；CSV 位元組和 write_excel_csv() 一樣", {
+  tab <- data.frame(item_id = c("a", "b"), beta = c(0.5, NA), note = c("王", "李"))
+  shiny::testServer(\(input, output, session) {
+    output$dl_ui <- render_download_csv(session, "dl", "下載表（CSV）", \() tab,
+                                        \() paste0("item table_", input$scale))
+    output$none_ui <- render_download_csv(session, "none", "下載（CSV）", \() NULL,
+                                          \() shiny::req(input$missing))
+  }, {
+    session$setInputs(scale = "lan_M03")
+    html <- output$dl_ui$html
+    expect_match(kit_link_attr(html, session$ns("dl"), "href"), "/item_table_lan_M03\\.csv\\?")
+    expect_equal(kit_link_attr(html, session$ns("dl"), "download"), "item_table_lan_M03.csv")
+    expect_match(html, "btn-sm btn-outline-primary")
+    res <- kit_test_download(session, "dl")
+    expect_equal(res$content_type, "text/csv; charset=UTF-8")
+    old <- withr::local_tempfile(fileext = ".csv")
+    readr::write_excel_csv(tab, old)
+    expect_equal(file_bytes(res$content$file), file_bytes(old))
+    session$setInputs(scale = "motor_M03")
+    expect_match(output$dl_ui$html, "item_table_motor_M03.csv")
+    expect_equal(kit_test_download_name(session, "dl"), "item_table_motor_M03.csv")
+    # 檔名拿不到（req 停下來）時先不畫按鈕
+    expect_null(output$none_ui)
   })
 })
 

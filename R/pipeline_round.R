@@ -6,6 +6,7 @@
 #   不在題庫的題這一回合不放進來
 
 # 寫進 checks.csv 的檢查
+# 紀錄每一列有 detail（中文，畫面用）與 detail_en（英文，寫進固定檔的 checks.csv）
 KITSUI_CHECKS <- c("drift", "new version", "capped", "flag", "stop", "error", "D extended",
                    "borrowed bank", "bank choice", "no CML estimate, kept fixed",
                    "category problem, kept fixed", "category problem, left out")
@@ -25,7 +26,8 @@ KITSUI_CHECKS <- c("drift", "new version", "capped", "flag", "stop", "error", "D
 #'   例如 c("motor M03" = "motor M36")（見 kitsui_round_plan()）
 #' @param progress NULL 或 function(i, n, scale)：每個量尺開始前呼叫一次（第 i 個，共 n 個），
 #'   例如在 app 裡更新進度條
-#' @return list(items, drift, data, fixed, stopped, ok, log, plan, memo)：items、data（改名、
+#' @return list(items, drift, data, fixed, stopped, ok, log, plan, memo)：log 有 detail（中文）
+#'   與 detail_en（英文，寫進 checks.csv）；items、data（改名、
 #'   併過的矩陣）只有沒停下來的量尺；kits 出錯的量尺也算停下來（check = "error"）。fixed 是
 #'   更新後的固定檔（還沒寫出）；有量尺停下來時 ok = FALSE，fixed 帶 attr(, "stopped")，
 #'   不能寫出。各量尺以校準的量尺命名（借題庫時是另一個世代的量尺）；plan 是
@@ -51,7 +53,10 @@ kitsui_round <- function(df, fixed, round_label, flag_share = 0.2, flag_fixed = 
   ok <- purrr::discard(res, "stopped")
   log <- purrr::list_rbind(purrr::map(res, "log"))
   stopped <- names(res)[purrr::map_lgl(res, "stopped")]
-  fixed <- kitsui_fixed_update(fixed, ok, log, kitsui_sources(round_label, df, files))
+  # 各波次的能力值摘要（垂直圖用）；分數存在 memo，之後各分頁不重算
+  memo <- new.env(parent = emptyenv())
+  summary <- kitsui_round_summary(ok, kitsui_persons(df), round_label, memo)
+  fixed <- kitsui_fixed_update(fixed, ok, log, kitsui_sources(round_label, df, files), summary)
   # 新的參照世代量尺：已凍結的外部連結延伸過去（同一條線）
   ext <- kitsui_link_D_extend(fixed, round_label)
   fixed <- ext$fixed
@@ -61,7 +66,7 @@ kitsui_round <- function(df, fixed, round_label, flag_share = 0.2, flag_fixed = 
   list(
     items = purrr::map(ok, "item"), drift = purrr::compact(purrr::map(res, "drift")),
     data = purrr::map(ok, "X"), fixed = fixed, stopped = stopped,
-    ok = length(stopped) == 0, log = log, plan = plan, memo = new.env(parent = emptyenv())
+    ok = length(stopped) == 0, log = log, plan = plan, memo = memo
   )
 }
 
@@ -80,11 +85,11 @@ kitsui_round_rows <- function(pieces, part) {
 # （借題庫時可能有兩個世代的資料）
 kitsui_round_try <- function(rows, part, fixed, round_label, flag_share, flag_fixed) {
   scale <- part$scale[1]
-  # 借題庫、手動選題庫：記進 checks.csv
+  # 借題庫、手動選題庫：記進 checks.csv（說明本來就是英文）
   noted <- part[!is.na(part$detail), ]
   borrow <- tibble::tibble(round = round_label, scale = scale, item_id = NA_character_,
                            check = dplyr::if_else(noted$borrowed, "borrowed bank", "bank choice"),
-                           detail = noted$detail)
+                           detail = noted$detail, detail_en = noted$detail)
   out <- tryCatch({
     rows <- kitsui_current_ids(rows, fixed, scale)
     X <- kitsui_round_matrix(rows, unique(part$data_scale))
@@ -93,7 +98,7 @@ kitsui_round_try <- function(rows, part, fixed, round_label, flag_share, flag_fi
     kitsui_round_scale(X, scale, fixed, round_label, flag_share, flag_fixed, row_cohorts, borrowed)
   }, error = \(e) list(stopped = TRUE, log = tibble::tibble(
     round = round_label, scale = scale, item_id = NA_character_, check = "error",
-    detail = kitsui_error_detail(e)
+    detail = kitsui_error_detail(e), detail_en = kitsui_error_detail_en(e)
   )))
   out$log <- dplyr::bind_rows(borrow, out$log)
   out$waves <- tibble::tibble(scale = scale, wave_m = sort(unique(part$wave_m)),
@@ -108,10 +113,26 @@ kitsui_error_detail <- function(e) {
   paste0("kits 出錯，這個量尺停下來。kits 的訊息：", conditionMessage(e))
 }
 
+#' 停下來的原因（英文，寫進 checks.csv）：kits 的訊息原文（英文）；kitsui 自己的訊息是中文，
+#' 用它帶的 en，沒有時一句通用的英文
+#' @noRd
+kitsui_error_detail_en <- function(e) {
+  if (!inherits(e, "kit_user_error")) {
+    return(paste0("kits error, scale stopped: ", conditionMessage(e)))
+  }
+  e$en %||% "kitsUI stopped this scale (the reason is in the round log of the app)"
+}
+
 #' 一個量尺的作答矩陣（rows 已經只有這個量尺的列；兩個世代時 visit_id 不能重複）
 #' @noRd
 kitsui_round_matrix <- function(rows, data_scales) {
-  if (length(data_scales) > 1) kitsui_check_ids(rows)
+  if (length(data_scales) > 1) {
+    # visit_id 重複的錯誤加上英文（checks.csv 用）
+    tryCatch(kitsui_check_ids(rows), kit_user_error = \(e) {
+      e$en <- "two cohorts share a visit_id; they cannot go into one response matrix"
+      stop(e)
+    })
+  }
   resp <- kits::kits_resp(rows)
   X <- as.matrix(resp[attr(resp, "items")])
   rownames(X) <- resp$visit_id
@@ -140,57 +161,76 @@ kitsui_current_ids <- function(df, fixed, scale) {
 kitsui_round_scale <- function(X, scale, fixed, round_label, flag_share, flag_fixed,
                                row_cohorts = rep(scale_cohort(scale), nrow(X)),
                                borrowed = character()) {
-  row <- \(item_id, check, detail) tibble::tibble(round = round_label, scale = scale,
-                                                  item_id = item_id, check = check, detail = detail)
+  # 紀錄的列：detail 是中文（畫面），detail_en 是英文（checks.csv）
+  row <- \(item_id, check, detail, detail_en) tibble::tibble(
+    round = round_label, scale = scale, item_id = item_id, check = check, detail = detail,
+    detail_en = detail_en
+  )
+  ev_row <- \(ev) row(ev$item_id, ev$check, ev$detail, ev$detail_en)
   bank <- dplyr::filter(fixed$bank, .data$scale == !!scale)
-  if (nrow(bank) == 0) return(kitsui_round_free(X, scale, bank, row))
+  if (nrow(bank) == 0) return(kitsui_round_free(X, scale, bank, row, ev_row))
   vers <- dplyr::filter(fixed$versions, .data$scale == !!scale)
   # 併掉新步驟的缺口；分數類別有問題的題：題庫裡的固定，不在題庫的拿掉
   cat <- kitsui_cap_categories(X, bank, scale)
   X <- cat$X
-  log <- dplyr::bind_rows(row(cat$capped$item_id, "capped", cat$capped$detail),
-                          row(cat$events$item_id, cat$events$check, cat$events$detail))
+  capped <- cat$capped
+  log <- dplyr::bind_rows(row(capped$item_id, "capped", capped$detail, capped$detail_en),
+                          ev_row(cat$events))
 
   # 偏移把關：題庫的 beta 當參照（kits_drift() 從 beta 算門檻）。
   # 這一回合估不出來的題、分數類別有問題的題（kept）不判斷偏移，固定在題庫的值
   ref <- structure(bank[c("item_id", "item_score", "beta")], scale = scale)
   dr <- kitsui_drift_safe(X, ref, cat$kept)
   X <- X[, !colnames(X) %in% dr$out, drop = FALSE]
-  log <- dplyr::bind_rows(log, row(dr$events$item_id, dr$events$check, dr$events$detail))
+  log <- dplyr::bind_rows(log, ev_row(dr$events))
   drift <- dr$drift
   moved <- drift$items$item_id[drift$items$drift %in% TRUE]
   judged <- sum(!is.na(drift$items$drift))
   n_fixed <- dplyr::n_distinct(drift$fix$item_id)
   resid <- drift$items$max_abs_resid[match(moved, drift$items$item_id)]
-  log <- dplyr::bind_rows(log, row(moved, "drift", sprintf(
-    "離連結線最遠的步驟差 %.2f logit（大於 %s 個殘差標準差）", resid, kitsui_drift_cut()
-  )))
+  cut <- kitsui_drift_cut()
+  log <- dplyr::bind_rows(log, row(
+    moved, "drift",
+    sprintf("離連結線最遠的步驟差 %.2f logit（大於 %s 個殘差標準差）", resid, cut),
+    sprintf("largest step distance from the link line %.2f logit (more than %s residual SD)",
+            resid, cut)
+  ))
   counts <- sprintf("偏移 %d 題（已判斷 %d 題）；可固定 %d 題", length(moved), judged, n_fixed)
+  counts_en <- sprintf("%d drifting items (%d judged); %d items can be fixed",
+                       length(moved), judged, n_fixed)
   # 沒有可固定的題：量尺放不上題庫的尺，停下來
   if (n_fixed < 1) {
-    log <- dplyr::bind_rows(log, row(NA_character_, "stop", paste0(counts, "：沒有可固定的題")))
+    log <- dplyr::bind_rows(log, row(NA_character_, "stop", paste0(counts, "：沒有可固定的題"),
+                                     paste0(counts_en, ": no item can be fixed")))
     return(list(stopped = TRUE, drift = drift, log = log))
   }
   # 偏移題太多或可固定的題太少：flag，照常校準
-  if (length(moved) > max(1, flag_share * judged) || n_fixed < flag_fixed) {
-    why <- c(if (length(moved) > max(1, flag_share * judged)) "偏移題太多",
-             if (n_fixed < flag_fixed) sprintf("可固定的題少於 %s 題", flag_fixed))
-    detail <- paste0(counts, "（", paste(why, collapse = "、"), "），照常校準")
-    log <- dplyr::bind_rows(log, row(NA_character_, "flag", detail))
+  many <- length(moved) > max(1, flag_share * judged)
+  few <- n_fixed < flag_fixed
+  if (many || few) {
+    why <- c(if (many) "偏移題太多", if (few) sprintf("可固定的題少於 %s 題", flag_fixed))
+    why_en <- c(if (many) "too many drifting items",
+                if (few) sprintf("fewer than %s items can be fixed", flag_fixed))
+    log <- dplyr::bind_rows(log, row(
+      NA_character_, "flag",
+      paste0(counts, "（", paste(why, collapse = "、"), "），照常校準"),
+      paste0(counts_en, " (", paste(why_en, collapse = ", "), "); calibrated as usual")
+    ))
   }
 
   fit <- kitsui_fit_fixed(X, scale, round_label, drift, ref, moved, dr$kept, vers, row_cohorts)
   new <- fit$versions
   new_ids <- dplyr::distinct(new, .data$item_id, .data$current_id)
-  log <- dplyr::bind_rows(
-    log, row(fit$events$item_id, fit$events$check, fit$events$detail),
-    row(new_ids$item_id, "new version", paste(fit$moved, "->", new_ids$current_id))
-  )
+  nv <- paste(fit$moved, "->", new_ids$current_id)
+  log <- dplyr::bind_rows(log, ev_row(fit$events), row(new_ids$item_id, "new version", nv, nv))
   detail <- sprintf("固定校準：固定 %d 題", n_fixed)
+  detail_en <- sprintf("fixed calibration: %d items fixed", n_fixed)
   if (length(borrowed) > 0) {
     detail <- paste0(detail, "（", paste(borrowed, collapse = "、"), " 的資料借用另一世代題庫）")
+    detail_en <- paste0(detail_en, " (", paste(borrowed, collapse = ", "),
+                        " data use another cohort's bank)")
   }
-  log <- dplyr::bind_rows(log, row(NA_character_, "calibration", detail))
+  log <- dplyr::bind_rows(log, row(NA_character_, "calibration", detail, detail_en))
   kitsui_scale_done(fit$X, fit$item, drift, bank, new, log)
 }
 
@@ -200,24 +240,34 @@ kitsui_drift_cut <- function() eval(formals(kits::kits_drift)$cut)
 
 #' 沒有題庫：自由校準。分數類別有問題的題這一回合不放進來；拿掉以後不到 2 題時停下來
 #' @noRd
-kitsui_round_free <- function(X, scale, bank, row) {
+kitsui_round_free <- function(X, scale, bank, row, ev_row) {
   probs <- kitsui_matrix_problems(X, scale)
   log <- row(probs$item_id, "category problem, left out",
-             paste0(probs$detail_zh, KITSUI_LEFT_OUT))
+             paste0(probs$detail_zh, KITSUI_LEFT_OUT), paste0(probs$detail_en, KITSUI_LEFT_OUT_EN))
   free <- kitsui_item_free(X[, !colnames(X) %in% probs$item_id, drop = FALSE], scale)
-  log <- dplyr::bind_rows(log, row(free$events$item_id, free$events$check, free$events$detail))
+  log <- dplyr::bind_rows(log, ev_row(free$events))
   if (is.null(free$item)) {
-    stop_why <- sprintf("拿掉分數類別有問題的題以後只剩 %d 題，沒有題可以估計", ncol(free$X))
-    return(list(stopped = TRUE, log = dplyr::bind_rows(log, row(NA_character_, "stop", stop_why))))
+    left <- ncol(free$X)
+    stop_row <- row(
+      NA_character_, "stop",
+      sprintf("拿掉分數類別有問題的題以後只剩 %d 題，沒有題可以估計", left),
+      sprintf("only %d items left after leaving out score category problems; nothing to estimate",
+              left)
+    )
+    return(list(stopped = TRUE, log = dplyr::bind_rows(log, stop_row)))
   }
-  log <- dplyr::bind_rows(log, row(NA_character_, "calibration", "自由校準"))
+  log <- dplyr::bind_rows(log, row(NA_character_, "calibration", "自由校準", "free calibration"))
   kitsui_scale_done(free$X, free$item, NULL, bank, NULL, log)
 }
 
-# 寫進紀錄的說明（接在分數類別的問題後面）
+# 寫進紀錄的說明（接在分數類別的問題後面）；_EN 是寫進 checks.csv 的英文
 KITSUI_LEFT_OUT <- "：不在題庫裡，這一回合不放進來"
 KITSUI_KEPT_FIXED <- "：不判斷偏移，固定在題庫的值"
 KITSUI_NO_CML <- "這一回合的資料估不出有限的 CML 估計值（有資訊的人都通過或都沒通過）"
+KITSUI_LEFT_OUT_EN <- "; not in the bank, left out this round"
+KITSUI_KEPT_FIXED_EN <- "; not judged for drift, kept at the bank values"
+KITSUI_NO_CML_EN <- paste("no finite CML estimate in this round's data",
+                          "(everyone with information passed, or everyone failed)")
 
 #' 自由校準；kits 說某些題估不出來（分數類別的問題、沒有 CML 估計值）時，拿掉它們再估
 #' @return list(item, X, events)：item 是 NULL 時表示剩不到 2 題
@@ -242,7 +292,7 @@ kitsui_item_free <- function(X, scale) {
 #'    偏移，固定在題庫的值，也不加新的步驟（超過題庫最高步的分數併為最高步）；
 #'    不在題庫裡的這一回合不放進來（從 X 拿掉）。分數本身不改。
 #' @return list(X, capped, kept, out, events)：capped 是 kitsui_cap() 的紀錄；kept 是固定的題，
-#'   out 是拿掉的題，events 是要寫進紀錄的列（item_id、check、detail）
+#'   out 是拿掉的題，events 是要寫進紀錄的列（item_id、check、detail、detail_en）
 #' @noRd
 kitsui_cap_categories <- function(X, bank, scale) {
   first <- kitsui_cap(X, bank)
@@ -251,19 +301,21 @@ kitsui_cap_categories <- function(X, bank, scale) {
   kept <- probs$item_id[in_bank]
   out <- probs$item_id[!in_bank]
   capped <- if (length(kept) > 0) kitsui_cap(X, bank, no_new = kept) else first
-  events <- tibble::tibble(
-    item_id = probs$item_id,
-    check = dplyr::if_else(in_bank, "category problem, kept fixed", "category problem, left out"),
-    detail = paste0(probs$detail_zh, dplyr::if_else(in_bank, KITSUI_KEPT_FIXED, KITSUI_LEFT_OUT))
+  events <- kitsui_events(
+    probs$item_id,
+    dplyr::if_else(in_bank, "category problem, kept fixed", "category problem, left out"),
+    paste0(probs$detail_zh, dplyr::if_else(in_bank, KITSUI_KEPT_FIXED, KITSUI_LEFT_OUT)),
+    paste0(probs$detail_en, dplyr::if_else(in_bank, KITSUI_KEPT_FIXED_EN, KITSUI_LEFT_OUT_EN))
   )
   list(X = capped$X[, !colnames(capped$X) %in% out, drop = FALSE], capped = capped$log,
        kept = kept, out = out, events = events)
 }
 
-#' 紀錄的列（item_id、check、detail），還沒有時 0 列
+#' 紀錄的列（item_id、check、detail 中文、detail_en 英文），還沒有時 0 列
 #' @noRd
-kitsui_events <- function(item_id = character(), check = character(), detail = character()) {
-  tibble::tibble(item_id = item_id, check = check, detail = detail)
+kitsui_events <- function(item_id = character(), check = character(), detail = character(),
+                          detail_en = character()) {
+  tibble::tibble(item_id = item_id, check = check, detail = detail, detail_en = detail_en)
 }
 
 #' kits 說「某些題估不出來」的錯誤裡的題號（不是這種錯誤時長度 0）
@@ -289,11 +341,16 @@ kitsui_error_events <- function(e, bad, in_bank) {
   why <- if (no_cml) KITSUI_NO_CML else {
     paste0("kits 說分數類別有問題（kits 的訊息：", conditionMessage(e), "）")
   }
+  why_en <- if (no_cml) KITSUI_NO_CML_EN else {
+    paste0("kits reports a score category problem (kits message: ", conditionMessage(e), ")")
+  }
   kept_check <- if (no_cml) "no CML estimate, kept fixed" else "category problem, kept fixed"
   kept_how <- if (no_cml) "，不換新版本，固定在題庫的值" else KITSUI_KEPT_FIXED
+  kept_how_en <- if (no_cml) "; no new version, kept at the bank values" else KITSUI_KEPT_FIXED_EN
   kitsui_events(
     bad, dplyr::if_else(in_bank, kept_check, "category problem, left out"),
-    paste0(why, dplyr::if_else(in_bank, kept_how, KITSUI_LEFT_OUT))
+    paste0(why, dplyr::if_else(in_bank, kept_how, KITSUI_LEFT_OUT)),
+    paste0(why_en, dplyr::if_else(in_bank, kept_how_en, KITSUI_LEFT_OUT_EN))
   )
 }
 
@@ -386,7 +443,7 @@ kitsui_scale_done <- function(X, item, drift, bank, new_vers, log) {
 #' 2 分不能當新步驟，併為 1 分。
 #' @param no_new 不加新步驟的題（分數類別有問題、固定在題庫的值）：超過題庫最高步的分數
 #'   都併為最高步
-#' @return list(X, log)：log 每題一列（item_id、detail）
+#' @return list(X, log)：log 每題一列（item_id、detail、detail_en）
 #' @noRd
 kitsui_cap <- function(X, bank, no_new = character()) {
   top <- tapply(bank$item_score, bank$item_id, max)
@@ -403,12 +460,17 @@ kitsui_cap <- function(X, bank, no_new = character()) {
   }
   hit <- n > 0
   detail <- sprintf("%d 列次超過 %d 分，併為 %d 分", n[hit], k[hit], k[hit])
-  why <- dplyr::if_else(items[hit] %in% no_new, "（分數類別有問題，不加新的步驟）", "")
-  list(X = X, log = tibble::tibble(item_id = items[hit], detail = paste0(detail, why)))
+  detail_en <- sprintf("%d visits above score %d, merged into %d", n[hit], k[hit], k[hit])
+  stuck <- items[hit] %in% no_new
+  why <- dplyr::if_else(stuck, "（分數類別有問題，不加新的步驟）", "")
+  why_en <- dplyr::if_else(stuck, " (score category problem, no new steps)", "")
+  list(X = X, log = tibble::tibble(item_id = items[hit], detail = paste0(detail, why),
+                                   detail_en = paste0(detail_en, why_en)))
 }
 
 # 把這一回合沒停下來的量尺寫進固定檔
-kitsui_fixed_update <- function(fixed, ok, log, sources) {
+# summary 是這一回合各量尺 × 世代 × 波次的摘要（kitsui_round_summary()）
+kitsui_fixed_update <- function(fixed, ok, log, sources, summary = NULL) {
   stack <- \(x, name) dplyr::bind_rows(x, purrr::list_rbind(purrr::map(ok, name)))
   # 同一題、同一個世代有新版本時，只留最新的一列
   fixed$versions <- stack(fixed$versions, "versions") |>
@@ -420,7 +482,12 @@ kitsui_fixed_update <- function(fixed, ok, log, sources) {
     waves <- dplyr::anti_join(waves, fixed$waves, by = c("scale", "wave_m"))
     fixed$waves <- dplyr::bind_rows(fixed$waves, waves)
   }
-  checks <- dplyr::filter(log, .data$check %in% KITSUI_CHECKS)
+  # 摘要：之前的列都留著；同一個波次再校準時兩列都留（round 不同），畫圖用最新的
+  fixed$wave_summary <- dplyr::bind_rows(fixed$wave_summary, summary)
+  # checks.csv 寫英文（detail_en）；之前回合的列不動
+  checks <- log |>
+    dplyr::filter(.data$check %in% KITSUI_CHECKS) |>
+    dplyr::mutate(detail = .data$detail_en)
   fixed$checks <- dplyr::bind_rows(fixed$checks, checks[names(KITSUI_FIXED_COLS$checks)])
   fixed$sources <- dplyr::bind_rows(fixed$sources, sources)
   fixed$version <- utils::modifyList(fixed$version, list(

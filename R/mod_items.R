@@ -3,7 +3,8 @@
 # 圖的種類
 ITEMS_PLOTS <- c(
   "類別機率曲線" = "category", "題目與受試者分布（Wright map）" = "wright",
-  "適配度（infit、outfit）" = "fit", "觀察與預期（依波次）" = "observed"
+  "適配度（infit、outfit）" = "fit", "觀察與預期（依波次）" = "observed",
+  "偏移把關圖" = "drift"
 )
 # 一次畫幾題（類別機率曲線、觀察與預期）
 ITEMS_PAGE <- 9
@@ -22,7 +23,10 @@ mod_items_ui <- function(id) {
         "看「用哪一個題庫」：預設照月齡的規則，需要時可以改。",
         "按「開始校準」。",
         "選一個量尺，看它是自由校準還是固定校準。",
-        "看偏移表：偏移的題會換成新版本，舊的參數不動。",
+        "看「固定了哪些題」：固定的題要和題庫完全相同。",
+        paste0("看偏移表與偏移把關圖。校準的順序：先不固定任何題、只用這一波試算一次；",
+               "試算的門檻和題庫比，離線不遠的題固定成題庫的值；",
+               "偏移的題換成新版本、用這一波重新估；最後一起做固定校準。"),
         "看圖與適配度表，確認題目合理。",
         "橘底的「flag」是要特別看一下的量尺；它照常校準。",
         "沒有紅字時，按「下一步：連結」。"
@@ -183,6 +187,22 @@ mod_items_server <- function(id, data, goto) {
 
     output$scale_info <- shiny::renderUI(items_scale_info(sel()))
 
+    # 固定了哪些題：每一題的狀態，並核對固定的步驟和這一回合開始時的題庫相同
+    status <- shiny::reactive({
+      x <- sel()
+      bank <- used()$fixed$bank %||% kitsui_fixed_empty()$bank
+      bank <- dplyr::filter(bank, .data$scale == x$scale)
+      tab <- kitsui_item_status(x$item, x$drift, x$log, bank)
+      check <- if (!is.null(tab) && nrow(bank) > 0) kitsui_fixed_check(x$item, tab, bank)
+      list(tab = tab, check = check)
+    })
+    output$fixed_status <- shiny::renderUI(items_fixed_ui(status()$tab, status()$check))
+    status_csv <- shiny::reactive({
+      tab <- status()$tab
+      shiny::req(tab)
+      items_with_scale(tab[c("item_id", "status", "steps", "detail")], sel()$scale)
+    })
+
     # 偏移表：畫面上的 reason 是中文；csv 多了 scale 與 kits 的英文 reason
     drift_rows <- shiny::reactive(items_drift_rows(sel()))
     drift_csv <- shiny::reactive(items_with_scale(drift_rows(), sel()$scale))
@@ -239,12 +259,16 @@ mod_items_server <- function(id, data, goto) {
       x <- sel()
       shiny::validate(shiny::need(x$item, "這個量尺停下來了，沒有校準結果可以畫。"))
       type <- input$plot_type %||% "category"
+      if (type == "drift") {
+        shiny::validate(shiny::need(x$drift, "這個量尺沒有題庫，是自由校準，沒有偏移把關圖。"))
+      }
       p <- shiny::withProgress(message = "畫圖中…", value = 0.5, tryCatch(switch(
         type,
         wright = plot(x$item, type = "wright", scores = scores()),
         observed = plot(x$item, type = "observed", data = x$X, group = "wave",
                         persons = persons(), scores = scores(), items = shown()),
         fit = items_fit_plot(x$item$itemfit),
+        drift = kitsui_drift_plot(x$drift, status()$tab),
         plot(x$item, type = "category", items = shown())
       ), error = \(e) e))
       if (inherits(p, "error")) shiny::validate(paste("這張圖畫不出來：", conditionMessage(p)))
@@ -259,12 +283,19 @@ mod_items_server <- function(id, data, goto) {
       which <- if (type %in% ITEMS_PAGED) paste0("_", items_shown_label(plot_ids(), shown()))
       paste0("item_", sel()$scale, "_", type, which)
     }
-    output$dl_plot <- download_plot(plot_obj, plot_name)
-    output$dl_coef <- download_csv(coef_csv, name("item_coef"))
-    output$dl_drift <- download_csv(drift_csv, name("drift"))
-    output$dl_fit <- download_csv(fit_csv, name("item_fit"))
-    output$dl_log <- download_csv(\() items_log_csv(round()$log),
-                                  \() paste0("round_log_", used()$round_label))
+    # 下載鈕：檔名變了（換量尺、換圖、換題）按鈕就重畫；按下載時寫當下畫面上的圖與表
+    csv_dl <- \(id, label, table_fun, file) {
+      output[[paste0(id, "_ui")]] <- render_download_csv(session, id, label, table_fun, file)
+    }
+    output$dl_plot_ui <- render_download_plot(
+      session, "dl_plot", "下載這張圖（html，畫的是上面選的題）", plot_obj, plot_name
+    )
+    csv_dl("dl_coef", "下載題目參數（csv）", coef_csv, name("item_coef"))
+    csv_dl("dl_status", "下載每一題的狀態（csv）", status_csv, name("fixed_status"))
+    csv_dl("dl_drift", "下載偏移表（csv）", drift_csv, name("drift"))
+    csv_dl("dl_fit", "下載適配度（csv）", fit_csv, name("item_fit"))
+    csv_dl("dl_log", "下載這一回合的紀錄（csv，所有量尺）", \() items_log_csv(round()$log),
+           \() paste0("round_log_", used()$round_label))
 
     output$check <- kit_table({
       x <- sel()
@@ -279,7 +310,8 @@ mod_items_server <- function(id, data, goto) {
         x$scale, d$round_label, fixed = d$fixed, fixed_file = d$fixed_file %||% "fixed_set.zip",
         data_file = d$data_file, waves = d$waves, flag_share = input$flag_share %||% 0.2,
         flag_fixed = input$flag_fixed %||% 5, plan = plan, picks = d$picks
-      )
+      ) |>
+        kitsui_code_drift_plot()
       info <- if (!is.null(x$item)) {
         paste("#", utils::capture.output(print(kits::kits_info(x$item))))
       }
@@ -307,13 +339,18 @@ mod_items_server <- function(id, data, goto) {
 items_result_ui <- function(ns, sc, pick) {
   hint <- \(...) shiny::tags$p(class = "kit-hint", ...)
   scroll <- \(id) shiny::tags$div(class = "kit-table-scroll kit-table-tall", shiny::tableOutput(id))
-  dl <- \(id, label) shiny::tags$div(class = "kit-downloads", ui_download(id, label))
+  dl <- \(id) shiny::tags$div(class = "kit-downloads", ui_download(id))
   cut <- kitsui_drift_cut()
   min_n <- eval(formals(kits::kits_drift)$min_n)
   shiny::tagList(
     shiny::hr(),
     shiny::selectInput(ns("scale"), "看哪一個量尺", sc, pick),
     shiny::uiOutput(ns("scale_info")),
+    shiny::h4("固定了哪些題"),
+    hint("每一題一列：固定在題庫的值、換成新版本、新題，或這一回合拿掉。",
+         "固定的題用題庫的參數，這一回合不重新估計。"),
+    shiny::uiOutput(ns("fixed_status")),
+    dl(ns("dl_status")),
     shiny::h4("偏移把關"),
     hint("kits_drift() 先把這一回合的資料自由校準，得到每一步的門檻。",
          "再用 mean/sigma 畫一條線，把新的門檻換到題庫的量尺上，和題庫的門檻比。",
@@ -323,7 +360,7 @@ items_result_ui <- function(ns, sc, pick) {
          sprintf("步驟的上下各要有 %s 人才判斷；不判斷的題 drift 是空的，reason 寫原因。", min_n),
          "suggest_fix = TRUE 的題固定在題庫的值（沿用舊參數）。"),
     scroll(ns("drift")),
-    dl(ns("dl_drift"), "下載偏移表（csv）"),
+    dl(ns("dl_drift")),
     shiny::h4("題目參數"),
     hint("每一題每一個步驟一列（coef(item)）。欄位說明在表的下面。"),
     scroll(ns("coef")),
@@ -331,19 +368,19 @@ items_result_ui <- function(ns, sc, pick) {
          paste0("threshold、threshold_se：Thurstonian 門檻與標準誤（kits 裡叫 thr）；",
                 "能力值（ability）到這裡時，有一半的機會得到這個分數以上。"),
          "固定在題庫的值的步驟沒有標準誤，表上寫「固定」（csv 裡是 0）。"),
-    dl(ns("dl_coef"), "下載題目參數（csv）"),
+    dl(ns("dl_coef")),
     shiny::h4("這一回合的紀錄"),
     hint("新版本、併分數、分數類別的問題、借用另一世代題庫、停下來的原因，都會寫進固定檔的 checks.csv。",
          "status 是 warn 的列要特別看一下。"),
     shiny::tags$div(class = "kit-table-scroll", shiny::tableOutput(ns("log"))),
-    dl(ns("dl_log"), "下載這一回合的紀錄（csv，所有量尺）"),
+    dl(ns("dl_log")),
     shiny::h4("圖"),
     shiny::radioButtons(ns("plot_type"), NULL, ITEMS_PLOTS, inline = TRUE),
     shiny::uiOutput(ns("plot_help")),
     shiny::uiOutput(ns("plot_items_ui")),
     shiny::uiOutput(ns("plot_note")),
     plotly::plotlyOutput(ns("plot"), height = "520px"),
-    dl(ns("dl_plot"), "下載這張圖（html，畫的是上面選的題）"),
+    dl(ns("dl_plot")),
     shiny::h4("題目適配度"),
     hint("n 是用到的作答數。",
          "pvalue 是平均得分占最高分的比例；只有 0、1 分的題，就是通過的比例。",
@@ -352,7 +389,7 @@ items_result_ui <- function(ns, sc, pick) {
          "flag 是 kits 依 infit、outfit 給的判斷：兩個都在 0.6–1.4 之間是 ok。",
          "任一個大於 1.4 是 underfit（比模型預期亂），小於 0.6 是 overfit（比模型預期整齊）。"),
     scroll(ns("fit")),
-    dl(ns("dl_fit"), "下載適配度（csv）"),
+    dl(ns("dl_fit")),
     ui_check_panel(ns("check"), "kits 的檢查（kits_check）"),
     ui_code_panel(ns("code")),
     shiny::uiOutput(ns("next_step"))
@@ -497,7 +534,9 @@ items_scale_info <- function(x) {
 }
 
 # 這一回合的紀錄表：加上 status（flag 是 warn；stop、error 是 error；其他 ok）
+# 畫面只放中文的 detail（detail_en 是寫進固定檔的英文）
 items_log_table <- function(log) {
+  log$detail_en <- NULL
   status <- dplyr::case_when(
     log$check == "flag" ~ "warn",
     log$check %in% c("stop", "error") ~ "error",
@@ -577,6 +616,16 @@ items_coef_display <- function(co) {
   co
 }
 
+# 偏移把關圖下面的一句話
+ITEMS_DRIFT_HINT <- paste0(
+  "這張圖用的是固定之前的試算：先不固定任何題，只用這一波的資料估一次，和題庫比。",
+  "固定之後，固定的題門檻就等於題庫的值（見上面的核對）。",
+  "虛線是判斷用的線，灰色帶子是它上下的容許範圍（圖例寫幾個標準差）。",
+  "落在帶子裡的步驟，這一波的作答和題庫一致，所以可以放心固定。",
+  "帶子外的步驟偏移了，那一題換成新版本；同一題的其他步驟也一起換，所以也標成橘色。",
+  "實線是拿掉偏移的步驟之後，重新畫的線。"
+)
+
 #' 圖的說明（每種圖一兩句）
 #' @noRd
 items_plot_help <- function(type) {
@@ -588,7 +637,8 @@ items_plot_help <- function(type) {
     fit = paste("每一題的 infit（圓點）與 outfit（方塊）；灰色帶是 0.6–1.4。",
                 "點的顏色只看它自己（infit 或 outfit）在不在帶子裡。"),
     observed = paste("點是各波次的孩子實際通過（得 1 分以上）的百分比，虛線是模型預期的通過百分比。",
-                     "兩者要接近。")
+                     "兩者要接近。"),
+    drift = paste(ITEMS_DRIFT_HINT, "點的顏色是上面「固定了哪些題」的狀態。")
   )
 }
 
@@ -676,4 +726,61 @@ items_fit_plot <- function(itemfit) {
   p <- one("infit")
   p$x$data <- c(p$x$data, one("outfit")$x$data)
   p
+}
+
+#' 「固定了哪些題」：兩句話（題數、核對）、不是固定的題的表，全部固定的題收在 <details> 裡
+#' @param tab kitsui_item_status()；NULL 是停下來的量尺
+#' @param check kitsui_fixed_check()；自由校準時 NULL
+#' @noRd
+items_fixed_ui <- function(tab, check) {
+  if (is.null(tab)) {
+    return(shiny::tags$p(class = "kit-hint", "這個量尺停下來了，沒有每一題的狀態。"))
+  }
+  txt <- kitsui_status_text(tab, check)
+  calm <- tab$kind %in% c(KITSUI_STATUS_FIXED, "free")
+  top <- tab[!calm, ]
+  rest <- tab[calm, ]
+  what <- if (any(rest$kind == "free")) "自由校準" else "固定"
+  verify <- if (is.null(txt$verify)) {
+    NULL
+  } else if (txt$ok) {
+    ui_callout(shiny::tags$strong("核對："), txt$verify)
+  } else {
+    ui_alert("danger", "【固定的步驟和題庫不同】", " ", txt$verify,
+             "這些步驟應該沿用題庫的值。請把這個量尺與下面的步驟告訴維護 kitsUI 的人。",
+             shiny::tags$ul(lapply(kitsui_fixed_bad_lines(check$bad), shiny::tags$li)))
+  }
+  shiny::tagList(
+    shiny::tags$p(txt$main),
+    verify,
+    if (nrow(top) > 0) {
+      items_html_table(top)
+    } else {
+      shiny::tags$p(class = "kit-hint", "沒有偏移、新題或拿掉的題。")
+    },
+    if (nrow(rest) > 0) {
+      shiny::tags$details(
+        shiny::tags$summary(sprintf("看全部%s的題（%d 題）", what, nrow(rest))),
+        items_html_table(rest, tall = TRUE)
+      )
+    }
+  )
+}
+
+#' 每一題的狀態表（HTML）：item_id、status、steps、detail；tall 時是可以捲動的長表
+#' @noRd
+items_html_table <- function(tab, tall = FALSE) {
+  cols <- c("item_id", "status", "steps", "detail")
+  cell <- \(x) if (is.na(x)) "" else as.character(x)
+  rows <- lapply(seq_len(nrow(tab)), \(i) {
+    shiny::tags$tr(lapply(cols, \(col) shiny::tags$td(cell(tab[[col]][i]))))
+  })
+  shiny::tags$div(
+    class = paste("kit-table-scroll", if (tall) "kit-table-tall"),
+    shiny::tags$table(
+      class = "table table-sm table-striped",
+      shiny::tags$thead(shiny::tags$tr(lapply(cols, shiny::tags$th))),
+      shiny::tags$tbody(rows)
+    )
+  )
 }

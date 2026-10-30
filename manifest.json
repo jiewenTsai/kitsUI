@@ -2810,7 +2810,7 @@
       "checksum": "226d7cbec671c2e297aebc835d03041f"
     },
     "DESCRIPTION": {
-      "checksum": "7a04deed58031a8c072312fa04f96757"
+      "checksum": "2e3d27ea2e0c352dd2cdf8d98fea4818"
     },
     "inst/manual/img/t1_data_design.webp": {
       "checksum": "f7e066d8adce96794925cfd46818bdfb"
@@ -2879,10 +2879,10 @@
       "checksum": "811b41f7fb0d63afcfab87980d4df609"
     },
     "inst/manual/kitsui_manual_body.html": {
-      "checksum": "e84daadbe3be20fc58f9e5677ea9a11c"
+      "checksum": "c583eaf3c6ce265a1b4f2160917905c3"
     },
     "inst/manual/kitsui_manual.html": {
-      "checksum": "93e285d55f7909296ab70911279015fe"
+      "checksum": "a6e79b673bb922a7e2c52c14263721b7"
     },
     "NAMESPACE": {
       "checksum": "317ae8dff22b06e5d19fde44a9aaf7a7"
@@ -2895,6 +2895,9 @@
     },
     "R/constants.R": {
       "checksum": "95d818e862a6ed71bc0c45f3124606d2"
+    },
+    "R/download.R": {
+      "checksum": "dc822d008616ebbed2acffac7f55e6f3"
     },
     "R/io_data.R": {
       "checksum": "73d371fabc50b7f88a5e9b34021f312f"
@@ -2909,55 +2912,61 @@
       "checksum": "627f45f35432a5b08d03863fc0a41cea"
     },
     "R/mod_data.R": {
-      "checksum": "08796d29e90c2f21b30423fd8ab26987"
+      "checksum": "1f8ae770331419d52602df3391443c16"
     },
     "R/mod_items.R": {
-      "checksum": "66c81b0329f35f83c130c25933278142"
+      "checksum": "0bac1b33c836742934edc7b3337118f0"
     },
     "R/mod_link.R": {
-      "checksum": "0a553cd53ac2da884eb265558e22fae7"
+      "checksum": "486a8d2d8bbeb6b50fbcf887067973d3"
     },
     "R/mod_score.R": {
-      "checksum": "753f1f7e9dc3d1b4a052586a9c0646b9"
+      "checksum": "e52f5c57929bee711b299fd5be844363"
     },
     "R/pipeline_bank.R": {
       "checksum": "04ff7d019eb82c6cedb1eed1f87f09d9"
     },
     "R/pipeline_categories.R": {
-      "checksum": "d3d03ab6025a1e44444dfb9556489734"
+      "checksum": "ea37488eb0f7be62ef6f5b1179d9cedc"
     },
     "R/pipeline_code.R": {
-      "checksum": "1438277321232e06f9dc3d622de6b7d9"
+      "checksum": "020d207c97ed1f0ed8538d89011e8a06"
     },
     "R/pipeline_data.R": {
-      "checksum": "191411f93c08911678a6cf34336a14ee"
+      "checksum": "df9f98e6774be5e0a5978f715d98fe59"
     },
     "R/pipeline_fixed.R": {
-      "checksum": "9d7dbd982679c0d91bca55e3fc3f3664"
+      "checksum": "49295ecd6992a44b6d1e6f010e2e8706"
     },
     "R/pipeline_link.R": {
-      "checksum": "2ad46d692fafebfd4c1ac0d4da2dae8e"
+      "checksum": "7b23520db41a73d2a9fa6af603452ebd"
     },
     "R/pipeline_memo.R": {
       "checksum": "461107a371f52d0ed8feb09e956aad42"
     },
     "R/pipeline_round.R": {
-      "checksum": "a3ab8126d9cef464eb02e91fe0bf73ee"
+      "checksum": "4264474b1f4dda8223c4aa51156c3b0e"
     },
     "R/pipeline_score.R": {
-      "checksum": "9fef142eee89a502d64064e98241f765"
+      "checksum": "5c5c81fb663ccec3caf1835a44875213"
+    },
+    "R/pipeline_status.R": {
+      "checksum": "472f4885c98e4217fa4a450adff89343"
+    },
+    "R/pipeline_vertical.R": {
+      "checksum": "a7680bf308f583b0c845c501cf446195"
     },
     "R/run_kitsui.R": {
       "checksum": "e1f8faea2e445c16d8acd95fc65fa320"
     },
     "R/ui_common.R": {
-      "checksum": "a862528c319da9ad9f626a45f8a4eef7"
+      "checksum": "758d813d12139c7266f969e404d3fb08"
     },
     "R/utils.R": {
       "checksum": "527049a0d401817b64cbb954de521e0c"
     },
     "README.md": {
-      "checksum": "d6b7e968027861dcb2c3a31ac88bd3a9"
+      "checksum": "4637d219987c20c2edc7c3217c6c11be"
     }
   },
   "users": null

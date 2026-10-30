@@ -7,7 +7,8 @@
 #' @param df 長格式資料（domain、cohort、item_id、item_score）
 #' @return tibble：scale（資料的量尺）、item_id、problem（英文："no 0 score"、"score gap"、
 #'   "one score only"，好幾個時以 ", " 分開）、detail_zh（一句中文，例如
-#'   「lanc01 沒有人得 0 分（分數 1、2、3）」）。沒有問題時 0 列
+#'   「lanc01 沒有人得 0 分（分數 1、2、3）」）、detail_en（英文，寫進固定檔的 checks.csv；
+#'   不含題號，例如 "no score 0 (scores 1, 2, 3)"）。沒有問題時 0 列
 #' @noRd
 kitsui_category_problems <- function(df) {
   df |>
@@ -32,32 +33,42 @@ kitsui_matrix_problems <- function(X, scale) {
     kitsui_problem_rows()
 }
 
-# 每題一列（scale、item_id、scores 是排好的分數）-> 只留有問題的題，加上 problem、detail_zh
+# 每題一列（scale、item_id、scores 是排好的分數）-> 只留有問題的題，
+#   加上 problem、detail_zh、detail_en
 kitsui_problem_rows <- function(tab) {
   found <- purrr::map2(tab$item_id, tab$scores, kitsui_score_problem)
   tab |>
     dplyr::mutate(problem = purrr::map_chr(found, "problem"),
-                  detail_zh = purrr::map_chr(found, "detail")) |>
+                  detail_zh = purrr::map_chr(found, "detail"),
+                  detail_en = purrr::map_chr(found, "detail_en")) |>
     dplyr::filter(!is.na(.data$problem)) |>
-    dplyr::select("scale", "item_id", "problem", "detail_zh")
+    dplyr::select("scale", "item_id", "problem", "detail_zh", "detail_en")
 }
 
 #' 一題的分數有沒有問題
 #' @param scores 這一題出現過的分數（排好、不重複）
-#' @return list(problem, detail)：沒有問題時都是 NA
+#' @return list(problem, detail, detail_en)：沒有問題時都是 NA；detail_en 是英文、不含題號
 #' @noRd
 kitsui_score_problem <- function(item_id, scores) {
   seen <- paste0("（分數 ", paste(scores, collapse = "、"), "）")
   if (length(scores) == 1) {
     return(list(problem = "one score only",
-                detail = sprintf("%s 每個人都得 %s 分，只有一種分數", item_id, scores)))
+                detail = sprintf("%s 每個人都得 %s 分，只有一種分數", item_id, scores),
+                detail_en = sprintf("one score only: everyone has %s", scores)))
   }
   missing <- setdiff(seq(min(scores), max(scores)), scores)
   no_zero <- min(scores) > 0
   problem <- c(if (no_zero) "no 0 score", if (length(missing) > 0) "score gap")
-  if (length(problem) == 0) return(list(problem = NA_character_, detail = NA_character_))
+  if (length(problem) == 0) {
+    return(list(problem = NA_character_, detail = NA_character_, detail_en = NA_character_))
+  }
   gap <- sprintf("分數不連續，沒有人得 %s 分", paste(missing, collapse = "、"))
   what <- c(if (no_zero) "沒有人得 0 分", if (length(missing) > 0) gap)
+  # 英文：例如 "no score 0; score gap: no score 2 (scores 1, 3)"
+  gap_en <- paste("score gap: no score", paste(missing, collapse = ", "))
+  what_en <- c(if (no_zero) "no score 0", if (length(missing) > 0) gap_en)
   list(problem = paste(problem, collapse = ", "),
-       detail = paste0(item_id, " ", paste(what, collapse = "；"), seen))
+       detail = paste0(item_id, " ", paste(what, collapse = "；"), seen),
+       detail_en = paste0(paste(what_en, collapse = "; "), " (scores ",
+                          paste(scores, collapse = ", "), ")"))
 }

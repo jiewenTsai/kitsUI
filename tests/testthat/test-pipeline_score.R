@@ -90,52 +90,6 @@ test_that("題目表：三種門檻（校準的量尺、內部連結後、D）�
   expect_error(kitsui_item_table(r8$round, r8$df, lk$fixed, "soc M03"), "沒有 soc M03")
 })
 
-test_that("兩個世代的垂直連結三個版本：未連結、內部連結後、外部連結後", {
-  both <- both_cohorts()
-  r <- both$round
-  # motor M03 只有 3 個月時 kits 出錯（停下來），所以只有 lan 有兩個世代
-  expect_equal(kitsui_vertical_domains(r), "lan")
-  expect_equal(kitsui_vertical_domains(round8()$round), character())
-  v <- kitsui_verticals(r, both$df, r$fixed, "lan")
-  expect_named(v, c("none", "internal", "external"))
-  # 未連結：各世代自己的量尺，kits_vertical() 不標量尺
-  expect_s3_class(v$none$vertical, "kits_vertical")
-  expect_true(is.na(attr(v$none$vertical, "scale")))
-  expect_setequal(v$none$vertical$cohort, c("M03", "M36"))
-  expect_s3_class(plot(v$none$vertical, type = "median"), "plotly")
-  expect_null(v$internal$vertical)
-  expect_match(v$internal$why, "lan M36 還沒有內部連結")
-  expect_match(v$external$why, "lan M36 還沒有內部連結")
-
-  fixed <- kitsui_link_internal(r$fixed, "lan")$fixed
-  v <- kitsui_verticals(r, both$df, fixed, "lan")
-  expect_null(v$internal$why)
-  expect_equal(v$internal$scale, "lan M03")
-  expect_equal(attr(v$internal$vertical, "scale"), "lan M03")
-  expect_setequal(v$internal$vertical$cohort, c("M03", "M36"))
-  # M03 不換算：未連結與內部連結後相同
-  m03 <- \(x) x$median[x$cohort == "M03"]
-  expect_equal(m03(v$internal$vertical), m03(v$none$vertical))
-  expect_match(v$external$why, "還沒有外部連結")
-
-  # 有外部連結時到 D（M03 要 3、6、12 個月，錨題才夠）
-  wide <- two_cohorts_linked()
-  expect_equal(kitsui_vertical_domains(wide$round), c("lan", "motor"))
-  v <- kitsui_verticals(wide$round, wide$df, wide$fixed, "motor")
-  expect_equal(v$external$scale, "D")
-  expect_equal(nrow(v$external$vertical), 7)
-  expect_equal(v$internal$scale, "motor M03")
-  # 和評分（kitsui_score()）同一個換算
-  s <- kitsui_score(wide$round, wide$df, wide$fixed)$scores
-  s <- s[s$domain == "motor" & s$cohort == "M36" & s$wave_m == 48, ]
-  ext <- v$external$vertical
-  expect_equal(ext$median[ext$cohort == "M36" & ext$wave_m == 48], stats::median(s$d_score))
-  # 兩個世代有共同的月齡（36、48）：沒有說明
-  expect_null(v$external$note)
-  one <- kitsui_verticals(round8()$round, round8()$df, linked()$fixed, "lan")
-  expect_true(all(purrr::map_lgl(one, \(x) grepl("只有一個世代", x$why))))
-})
-
 test_that("分數對照表：ability 在校準的量尺上、ability_linked 經過內部連結、d_score 換到 D", {
   r <- round8()
   lk <- linked()
@@ -263,31 +217,10 @@ test_that("② 的標記帶到 ④；新固定檔的檔名與說明文字", {
   expect_type(text, "character")
   expect_length(text, 1)
   for (x in c("bank.csv", "links.csv", "versions.csv", "waves.csv", "checks.csv", "VERSION",
-              "lan M36、D", "不會重算")) {
+              "lan M36, D", "not recomputed")) {
     expect_match(text, x, fixed = TRUE)
   }
-  expect_match(kitsui_fixed_readme(kitsui_fixed_empty()), "連結：（還沒有）")
-})
-
-test_that("垂直連結：分數算一次（progress 每個世代一次），換算另外做；沒有共同月齡時一句說明", {
-  wide <- two_cohorts_linked()
-  persons <- kitsui_persons(wide$df)
-  seen <- character()
-  raw <- kitsui_vertical_scores(wide$round, "lan", persons, \(i, n, s) seen <<- c(seen, s))
-  expect_equal(seen, c("lan M03", "lan M36"))
-  expect_null(kitsui_vertical_scores(round8()$round, "lan", persons))
-  links <- kitsui_links(wide$fixed)
-  v <- kitsui_verticals(wide$round, wide$df, wide$fixed, "lan", links, persons, raw)
-  expect_equal(v$external$vertical, kitsui_verticals(wide$round, wide$df, wide$fixed,
-                                                     "lan")$external$vertical)
-  # 連結還沒做時，同一份分數照樣用（只是換不過去）
-  none <- kitsui_verticals(wide$round, wide$df, wide$round$fixed, "lan", list(), persons, raw)
-  expect_match(none$internal$why, "還沒有內部連結")
-  fake <- list(`lan M03` = data.frame(wave_m = c(3, 6)), `lan M36` = data.frame(wave_m = 84))
-  note <- kitsui_vertical_no_common(fake)
-  expect_match(note, "沒有共同的月齡")
-  expect_match(note, "lan M03：3、6 個月")
-  expect_null(kitsui_vertical_no_common(raw))
+  expect_match(kitsui_fixed_readme(kitsui_fixed_empty()), "Links: (none yet)", fixed = TRUE)
 })
 
 test_that("題目表依最後一把尺的門檻由小到大；kits 的 D 欄叫 ability_threshold", {
