@@ -74,10 +74,13 @@ kitsui_item_status <- function(item, drift, log, bank) {
 #' 固定在題庫的值的題：判斷過、沒有偏移的，與沒有判斷的（原因）；有新的步驟時也寫出來
 #' @noRd
 kitsui_status_fixed <- function(ids, co, drift, log, bank) {
-  items <- as.data.frame(drift$items %||% data.frame(item_id = character()))
+  # 不能判斷偏移時（drift 是 NULL）沒有偏移表：每一題的原因都在紀錄裡
+  items <- as.data.frame(drift$items %||% data.frame(item_id = character(), drift = logical(),
+                                                     reason = character()))
   at <- match(ids, items$item_id)
   drifted <- items$drift[at]
-  checks <- c("category problem, kept fixed", "no CML estimate, kept fixed")
+  checks <- c("category problem, kept fixed", "no CML estimate, kept fixed",
+              "drift not judged, kept fixed")
   kept_log <- log[log$check %in% checks, ]
   logged <- kept_log$detail[match(ids, kept_log$item_id)]
   judged <- drifted %in% FALSE & is.na(logged)

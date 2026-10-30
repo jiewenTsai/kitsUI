@@ -355,6 +355,7 @@ link_source_ui <- function(round, ns) {
   ui_callout(
     "這一回合有量尺停下來（", paste(round$stopped, collapse = "、"), "）。",
     "連結仍可以先看，但這一回合不會產生新的固定檔。",
+    "可以在 ② 把它們改成「這一回合不做」再校準一次。",
     warning = TRUE
   )
 }

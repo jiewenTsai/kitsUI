@@ -391,7 +391,8 @@ score_fixed_ui <- function(round, button_id, next_id = NULL, label = NULL) {
         "這一回合有量尺停下來（", paste(round$stopped, collapse = "、"), "），不能下載新的固定檔。"
       ),
       shiny::tags$p(class = "text-danger",
-                    "請到「② 題目校準」看停下來的原因。", "處理後重跑這一回合。"),
+                    "請到「② 題目校準」看停下來的原因。", "處理後重跑這一回合，",
+                    "或在 ② 把它們改成「這一回合不做」再校準一次。"),
       shiny::tags$button(class = "btn btn-sm btn-outline-secondary", disabled = NA, text)
     ))
   }
@@ -408,7 +409,12 @@ score_fixed_ui <- function(round, button_id, next_id = NULL, label = NULL) {
     shiny::tags$ul(
       shiny::tags$li("新的固定檔", file, "存著題庫、題目版本與連結。"),
       shiny::tags$li("下一回合要上傳這個 zip，才能接著用同一個題庫與連結。"),
-      shiny::tags$li("在這次連線裡接著做，可以直接按「用這一回合的固定檔開始下一回合」，不用下載。")
+      shiny::tags$li("在這次連線裡接著做，可以直接按「用這一回合的固定檔開始下一回合」，不用下載。"),
+      if (length(round$excluded) > 0) {
+        shiny::tags$li(class = "kit-warn-text",
+                       "這一回合不做的量尺（", paste(scale_label(round$excluded), collapse = "、"),
+                       "）沒有校準，題庫不變；固定檔的 checks.csv 記為 excluded。")
+      }
     )
   )
 }

@@ -59,7 +59,8 @@ kitsui_write_fixed <- function(fixed, zip_path) {
   stopped <- attr(fixed, "stopped")
   if (length(stopped) > 0) {
     kit_abort("這一回合有量尺停下來（", paste(stopped, collapse = "、"), "），不產生新的固定檔。",
-              "請看檢查表的原因，處理後重跑這一回合。")
+              "請看檢查表的原因，處理後重跑這一回合；",
+              "或在 ② 把它們選成「這一回合不做」再校準一次，其他量尺就可以產生固定檔。")
   }
   dir <- file.path(tempfile("fixed"), "fixed_set")
   dir.create(dir, recursive = TRUE)
