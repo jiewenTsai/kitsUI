@@ -192,6 +192,10 @@ kitsui_drift_plot <- function(drift, status) {
   pts$kind <- dplyr::coalesce(status$kind[at], "other")
   pts$status <- dplyr::coalesce(unname(KITSUI_STATUS_EN[pts$kind]), "Other")
   pts$look <- dplyr::if_else(pts$judged %in% TRUE, pts$kind, "unjudged")
+  # 判斷的步驟離判斷用的線多遠（判斷用的數字；kits 的 max_abs_resid 是對最後的線算的）
+  jd <- kitsui_drift_judging(drift)
+  pts$dist <- NA_real_
+  if (!is.null(jd)) pts$dist[pts$judged %in% TRUE] <- jd$points$resid_judging
   q <- plotly::plot_ly()
   band <- kitsui_drift_band(drift, pts)
   if (!is.null(band)) {
@@ -211,9 +215,13 @@ kitsui_drift_plot <- function(drift, status) {
     s <- pts[pts$look == k, ]
     not_judged <- dplyr::if_else(s$judged %in% TRUE, "",
                                  "<br>Step not judged (too few people above/below)")
+    dist <- if (is.null(jd)) "" else dplyr::if_else(
+      is.na(s$dist), "",
+      sprintf("<br>Distance from judging line: %.2f (limit %.2f)", abs(s$dist), jd$limit)
+    )
     hover <- sprintf(
-      "%s step %d<br>%s<br>Bank threshold (fixed value): %.2f<br>Free trial threshold: %.2f%s",
-      s$item_id, as.integer(s$item_score), s$status, s$thr_ref, s$thr_new, not_judged
+      "%s step %d<br>%s<br>Bank threshold (fixed value): %.2f<br>Free trial threshold: %.2f%s%s",
+      s$item_id, as.integer(s$item_score), s$status, s$thr_ref, s$thr_new, dist, not_judged
     )
     look <- KITSUI_DRIFT_LOOKS[[k]]
     q <- plotly::add_markers(q, x = s$thr_new, y = s$thr_ref, name = look$name %||% s$status[1],
@@ -242,16 +250,115 @@ kitsui_drift_plot <- function(drift, status) {
 #' @return list(x, y, cut)；判斷的步驟不到 3 個或重算不出 drift 的判斷時 NULL
 #' @noRd
 kitsui_drift_band <- function(drift, pts) {
+  jd <- kitsui_drift_judging(drift)
+  if (is.null(jd)) return(NULL)
+  h <- jd$limit
+  # 和 kits 的線一樣寬
+  ends <- range(c(pts$thr_new, pts$thr_ref), na.rm = TRUE)
+  mid <- jd$intercept0 + jd$slope0 * ends
+  list(x = c(ends, rev(ends), ends[1]), y = c(mid + h, rev(mid) - h, mid[1] + h), cut = jd$cut,
+       ends = ends, mid = mid)
+}
+
+#' 判斷偏移用的線（第一條線）與每個判斷的步驟離它多遠
+#'
+#' kits_drift() 用全部判斷的步驟（上下各有 min_n 人）畫一條 mean/sigma 的線，離線超過 cut 個
+#' 殘差標準差的步驟拿掉（偏移），再用留下的步驟畫最後那條線。kits 回傳的 points$resid 與
+#' items$max_abs_resid 是對最後那條線算的，而且包括沒有判斷的步驟。這裡用 kits::algo_screen()
+#' （kits_linking() 篩點用的同一個函式）重算第一條線；重算出來拿掉的步驟和 kits 的不一樣時
+#' 回傳 NULL，不顯示重算的數字。
+#' @return list(points：判斷的步驟，多一欄 resid_judging；cut、sd、limit（cut × sd）、
+#'   intercept0、slope0、n（判斷的步驟數））；或 NULL
+#' @noRd
+kitsui_drift_judging <- function(drift) {
+  if (is.null(drift)) return(NULL)
+  pts <- as.data.frame(drift$points)
   use <- pts[pts$judged %in% TRUE, ]
   cut <- drift$info$settings$cut %||% kitsui_drift_cut()
   if (nrow(use) < 3) return(NULL)
   sc <- tryCatch(kits::algo_screen(use$thr_new, use$thr_ref, use$item_id, cut = cut),
                  error = \(e) NULL)
   if (is.null(sc) || !identical(as.logical(sc$dropped), as.logical(use$dropped))) return(NULL)
-  h <- cut * stats::sd(sc$resid)
-  # 和 kits 的線一樣寬
-  ends <- range(c(pts$thr_new, pts$thr_ref), na.rm = TRUE)
-  mid <- sc$intercept0 + sc$slope0 * ends
-  list(x = c(ends, rev(ends), ends[1]), y = c(mid + h, rev(mid) - h, mid[1] + h), cut = cut,
-       ends = ends, mid = mid)
+  use$resid_judging <- sc$resid
+  s <- stats::sd(sc$resid)
+  list(points = use, cut = cut, sd = s, limit = cut * s, intercept0 = sc$intercept0,
+       slope0 = sc$slope0, n = nrow(use))
+}
+
+#' 偏移表的每一題：kits_drift() 的 items 加上步驟的資訊
+#'
+#' steps：交給 kits_drift() 比較的步驟數；steps_judged：判斷的步驟數（上下各有 min_n 人）；
+#' steps_dropped：被拿掉的步驟（分數）；max_dist_judging：判斷的步驟離判斷用的線（第一條線）
+#' 最遠的距離，這是判斷用的數字（重算不出來時是 NA）；max_dist_final：kits 的 max_abs_resid，
+#' 所有步驟（包括沒有判斷的）離最後那條線最遠的距離。drift、suggest_fix、reason 不變。
+#' @return data.frame，attr(, "judging") 是 kitsui_drift_judging()
+#' @noRd
+kitsui_drift_items <- function(drift) {
+  items <- as.data.frame(drift$items)
+  pts <- as.data.frame(drift$points)
+  jd <- kitsui_drift_judging(drift)
+  pts$resid_judging <- rep(NA_real_, nrow(pts))
+  if (!is.null(jd)) pts$resid_judging[pts$judged %in% TRUE] <- jd$points$resid_judging
+  far <- \(x) if (all(is.na(x))) NA_real_ else max(abs(x), na.rm = TRUE)
+  per <- dplyr::summarise(
+    pts,
+    steps = dplyr::n(),
+    steps_judged = sum(.data$judged %in% TRUE),
+    steps_dropped = paste(as.integer(.data$item_score[.data$dropped %in% TRUE]), collapse = ", "),
+    max_dist_judging = far(.data$resid_judging[.data$judged %in% TRUE]),
+    .by = "item_id"
+  )
+  at <- match(items$item_id, per$item_id)
+  out <- data.frame(
+    item_id = items$item_id,
+    steps = dplyr::coalesce(per$steps[at], 0L),
+    steps_judged = dplyr::coalesce(per$steps_judged[at], 0L),
+    steps_dropped = dplyr::coalesce(per$steps_dropped[at], ""),
+    max_dist_judging = per$max_dist_judging[at],
+    max_dist_final = items$max_abs_resid,
+    drift = items$drift, suggest_fix = items$suggest_fix, reason = items$reason
+  )
+  attr(out, "judging") <- jd
+  out
+}
+
+#' 偏移的題在紀錄裡的說明（中文、英文）：哪一步被拿掉、離判斷用的線多遠、界線是多少
+#' @param ids 偏移的題
+#' @return list(zh, en)，和 ids 一樣長
+#' @noRd
+kitsui_drift_detail <- function(drift, ids) {
+  if (length(ids) == 0) return(list(zh = character(), en = character()))
+  tab <- kitsui_drift_items(drift)
+  jd <- attr(tab, "judging")
+  cut <- drift$info$settings$cut %||% kitsui_drift_cut()
+  pts <- as.data.frame(drift$points)
+  one <- \(id) {
+    s <- pts[pts$item_id == id & pts$dropped %in% TRUE, ]
+    steps <- as.integer(s$item_score)
+    zh_steps <- paste0("第 ", paste(steps, collapse = "、"), " 步")
+    en_steps <- paste0(if (length(steps) > 1) "steps " else "step ", paste(steps, collapse = ", "))
+    if (is.null(jd)) {
+      return(c(
+        sprintf("%s被拿掉：離判斷用的線（拿掉之前、用全部判斷的步驟畫的線）超過 %s 個殘差標準差",
+                zh_steps, cut),
+        sprintf("%s dropped: more than %s residual SD from the judging line (drawn through all judged steps before dropping)",
+                en_steps, cut)
+      ))
+    }
+    d <- abs(jd$points$resid_judging[jd$points$item_id == id & jd$points$dropped %in% TRUE])
+    # 小數位數：距離四捨五入以後要看得出比界線大（例如 0.274 與 0.271 寫成 0.274、0.271）
+    k <- 2
+    while (k < 4 && any(round(d, k) <= round(jd$limit, k))) k <- k + 1
+    dist <- formatC(d, format = "f", digits = k)
+    limit <- formatC(jd$limit, format = "f", digits = k)
+    c(
+      sprintf("%s離判斷用的線 %s logit，超過界線 %s logit（%s 個殘差標準差，%d 個判斷的步驟算的）",
+              zh_steps, paste(dist, collapse = "、"), limit, cut, jd$n),
+      sprintf("%s %s %s logit from the judging line, beyond the limit %s logit (%s residual SD of the %d judged steps)",
+              en_steps, if (length(steps) > 1) "are" else "is", paste(dist, collapse = ", "),
+              limit, cut, jd$n)
+    )
+  }
+  both <- purrr::map(ids, one)
+  list(zh = purrr::map_chr(both, 1), en = purrr::map_chr(both, 2))
 }

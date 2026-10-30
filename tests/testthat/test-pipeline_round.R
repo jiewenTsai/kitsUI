@@ -341,10 +341,11 @@ test_that("checks.csv 一列對一列：偏移、併分數、新版本；之前�
   en <- dplyr::filter(r$fixed$checks, check == "drift", round == "48")
   expect_equal(en$item_id, drift$item_id)
   expect_equal(en$detail, drift$detail_en)
-  d <- sub("^離連結線最遠的步驟差 ([0-9.]+) logit.*$", "\\1", drift$detail)
-  expect_equal(en$detail, paste0("largest step distance from the link line ", d,
-                                 " logit (more than 2 residual SD)"))
-  expect_match(drift$detail, "（大於 2 個殘差標準差）$")
+  # 中文與英文寫同樣的步驟、距離與界線
+  num <- \(x) regmatches(x, gregexpr("[0-9]+(\\.[0-9]+)?", x))
+  expect_equal(num(en$detail), num(drift$detail))
+  expect_match(en$detail, "^steps? [0-9, ]+ (is|are) [0-9., ]+ logit from the judging line, beyond the limit")
+  expect_match(drift$detail, "^第 [0-9、]+ 步離判斷用的線 [0-9.、]+ logit，超過界線 [0-9.]+ logit（2 個殘差標準差，[0-9]+ 個判斷的步驟算的）$")
   # 新版本：本來就是 ASCII
   nv <- dplyr::filter(r$log, check == "new version")
   expect_equal(nv$detail_en, nv$detail)

@@ -239,14 +239,10 @@ kitsui_round_scale <- function(X, scale, fixed, round_label, flag_share, flag_fi
   # 不能判斷偏移（drift 是 NULL）：題庫的題都固定在題庫的值
   unjudged <- is.null(drift)
   if (unjudged) n_fixed <- length(unique(dr$kept))
-  resid <- drift$items$max_abs_resid[match(moved, drift$items$item_id)]
-  cut <- kitsui_drift_cut()
-  log <- dplyr::bind_rows(log, row(
-    moved, "drift",
-    sprintf("離連結線最遠的步驟差 %.2f logit（大於 %s 個殘差標準差）", resid, cut),
-    sprintf("largest step distance from the link line %.2f logit (more than %s residual SD)",
-            resid, cut)
-  ))
+  # 說明用判斷時的線（拿掉偏移的步驟之前）與被拿掉的步驟；kits 的 max_abs_resid 是對最後那條線、
+  # 包括沒有判斷的步驟算的，不是判斷用的數字（kitsui_drift_detail()）
+  why_moved <- kitsui_drift_detail(drift, moved)
+  log <- dplyr::bind_rows(log, row(moved, "drift", why_moved$zh, why_moved$en))
   counts <- sprintf("偏移 %d 題（已判斷 %d 題）；可固定 %d 題", length(moved), judged, n_fixed)
   counts_en <- sprintf("%d drifting items (%d judged); %d items can be fixed",
                        length(moved), judged, n_fixed)

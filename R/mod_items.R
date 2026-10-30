@@ -235,6 +235,7 @@ mod_items_server <- function(id, data, goto) {
     drift_rows <- shiny::reactive(items_drift_rows(sel()))
     drift_csv <- shiny::reactive(items_with_scale(drift_rows(), sel()$scale))
     output$drift <- kit_table(items_drift_display(drift_rows()))
+    output$drift_note <- shiny::renderUI(items_drift_note(sel()$drift))
 
     # 題目參數：畫面上固定的步驟寫「固定」；csv 保留數字
     coef_raw <- shiny::reactive({
@@ -389,10 +390,10 @@ items_result_ui <- function(ns, sc, pick) {
          "再用 mean/sigma 畫一條線，把新的門檻換到題庫的量尺上，和題庫的門檻比。",
          sprintf("離線的距離大於 %s 個標準差（所有判斷的步驟算的）的步驟會被拿掉。", cut),
          "有步驟被拿掉的題就是 drift = TRUE，會換成新版本重新估計。",
-         "max_abs_resid 是這一題各步驟離線最遠的距離（logit，題庫的量尺）。",
          sprintf("步驟的上下各要有 %s 人才判斷；不判斷的題 drift 是空的，reason 寫原因。", min_n),
-         "suggest_fix = TRUE 的題固定在題庫的值（沿用舊參數）。"),
+         "suggest_fix = TRUE 的題固定在題庫的值（沿用舊參數）。欄位說明在表的下面。"),
     scroll(ns("drift")),
+    shiny::uiOutput(ns("drift_note")),
     dl(ns("dl_drift")),
     shiny::h4("題目參數"),
     hint("每一題每一個步驟一列（coef(item)）。欄位說明在表的下面。"),
@@ -646,8 +647,9 @@ ITEMS_REASON_ZH <- c(
   "too little information" = "步驟上下的人不夠：固定在題庫的值"
 )
 
-#' 偏移表的列：kits_drift() 的 items，加上沒有交給 kits_drift() 的題庫題（分數類別有問題、
-#' 估不出來，固定在題庫的值）；reason_zh 是中文原因
+#' 偏移表的列：kits_drift() 的 items 加上步驟的資訊（kitsui_drift_items()），再加上沒有交給
+#' kits_drift() 的題庫題（分數類別有問題、估不出來，固定在題庫的值）；reason_zh 是中文原因，
+#' judging_limit 是判斷的界線（只在 csv）
 #' @param x sel()：drift、log、item、stopped
 #' @return data.frame；沒有偏移表時一列 note（自由校準，或停下來了）
 #' @noRd
@@ -663,18 +665,55 @@ items_drift_rows <- function(x) {
     }
     return(data.frame(note = note))
   }
-  items <- as.data.frame(x$drift$items)
+  items <- kitsui_drift_items(x$drift)
+  limit <- attr(items, "judging")$limit %||% NA_real_
+  attr(items, "judging") <- NULL
   checks <- c("category problem, kept fixed", "no CML estimate, kept fixed")
   kept <- x$log[x$log$check %in% checks & !x$log$item_id %in% items$item_id, ]
   k <- nrow(kept)
-  extra <- data.frame(item_id = kept$item_id, max_abs_resid = rep(NA_real_, k),
+  # 沒有交給 kits_drift() 的題：步驟數與距離都是空的
+  extra <- data.frame(item_id = kept$item_id, steps = rep(NA_integer_, k),
+                      steps_judged = rep(NA_integer_, k), steps_dropped = rep("", k),
+                      max_dist_judging = rep(NA_real_, k), max_dist_final = rep(NA_real_, k),
                       drift = rep(NA, k), suggest_fix = rep(TRUE, k), reason = kept$check)
   out <- dplyr::bind_rows(items, extra)
   zh <- unname(ITEMS_REASON_ZH[out$reason])
   zh[out$reason == ""] <- ""
   zh[out$reason %in% checks] <- kept$detail
   out$reason_zh <- dplyr::coalesce(zh, out$reason)
+  # csv 才有：判斷的界線（cut × 判斷用的線的殘差標準差；畫面上寫在表的下面）
+  out$judging_limit <- rep(limit, nrow(out))
   out
+}
+
+#' 偏移表下面的欄位說明：兩條線（判斷用的線、最後的線）與這個量尺的界線
+#' @param drift kits_drift() 或 NULL（沒有偏移表時不顯示）
+#' @noRd
+items_drift_note <- function(drift) {
+  if (is.null(drift)) return(NULL)
+  jd <- kitsui_drift_judging(drift)
+  cut <- drift$info$settings$cut %||% kitsui_drift_cut()
+  p <- \(...) shiny::tags$p(class = "kit-hint", ...)
+  limit <- if (is.null(jd)) {
+    p("這個量尺重算不出 kits 判斷用的線，所以 max_dist_judging 是空的；",
+      "被拿掉的步驟仍然看 steps_dropped。")
+  } else {
+    p(sprintf(paste0("這個量尺有 %d 個判斷的步驟，離判斷用的線的殘差標準差是 %.2f logit，",
+                     "界線是 %s × %.2f = %.2f logit。"), jd$n, jd$sd, cut, jd$sd, jd$limit))
+  }
+  shiny::tagList(
+    p("有兩條線。判斷用的線：用這個量尺所有判斷的步驟畫的線，離它超過界線",
+      sprintf("（%s 個殘差標準差）的步驟被拿掉，那一題就是偏移。", cut),
+      "最後的線：拿掉偏移的步驟以後重新畫的線，用來把這一回合的門檻換到題庫的量尺（偏移把關圖的實線）。"),
+    limit,
+    p("steps：這一題和題庫比較的步驟數；steps_judged：其中上下的人夠、有判斷的步驟數；",
+      "steps_dropped：被拿掉的步驟（分數）。",
+      "max_dist_judging：判斷的步驟離判斷用的線最遠的距離（logit），這是判斷用的數字：",
+      "偏移的題大於界線，其他判斷過的題不大於界線。",
+      "max_dist_final（kits 裡叫 max_abs_resid）：所有步驟（包括沒有判斷的）離最後的線最遠的距離，只供參考。",
+      "沒有判斷的步驟人很少、門檻不準，常常離線很遠但不算偏移；而偏移的步驟被拿掉以後，最後的線會稍微移動。",
+      "所以 max_dist_final 不能拿來和界線比，沒有偏移的題也可能比偏移的題大。")
+  )
 }
 
 #' 畫面上的偏移表：reason 換成中文
@@ -683,6 +722,7 @@ items_drift_display <- function(rows) {
   if (!"reason_zh" %in% names(rows)) return(rows)
   rows$reason <- rows$reason_zh
   rows$reason_zh <- NULL
+  rows$judging_limit <- NULL
   rows
 }
 

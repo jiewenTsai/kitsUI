@@ -28,7 +28,7 @@ test_that("偏移的題換成新版本；沒有判斷的題固定，原因來自
   expect_equal(moved$key, c("lanc03", "lanc08"))
   expect_equal(moved$item_id, c("lanc03 → lanc03_r24", "lanc08 → lanc08_r24"))
   expect_equal(unique(moved$status), "偏移 → 新版本")
-  expect_match(moved$detail, "離連結線最遠的步驟差")
+  expect_match(moved$detail, "離判斷用的線 [0-9.]+ logit，超過界線")
   status_of <- \(id) tab$status[tab$key == id]
   # 分數類別有問題（紀錄）、步驟上下的人不夠、分數比題庫高（偏移表的 reason）
   expect_equal(status_of("lana01"), "固定（不判斷偏移，沿用題庫）")
@@ -142,6 +142,9 @@ test_that("偏移把關圖：點照狀態上色，帶子外的步驟就是 kits 
   expect_true(all(grepl("^lanc0[38] step", moved$hovertext)))
   expect_match(moved$hovertext[1], "Bank threshold \\(fixed value\\)")
   expect_match(moved$hovertext[1], "Free trial threshold")
+  # 判斷的步驟寫離判斷用的線多遠與界線；沒有判斷的步驟不寫
+  expect_true(any(grepl("Distance from judging line: [0-9.]+ \\(limit [0-9.]+\\)", moved$hovertext)))
+  expect_false(any(grepl("Distance from judging line", open$hovertext)))
   # 軸與標題說清楚：點是固定之前的試算
   lay <- plotly::plotly_build(p)$x$layout
   expect_match(lay$title$text, "Drift check before fixing")
