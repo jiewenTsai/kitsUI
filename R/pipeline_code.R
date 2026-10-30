@@ -87,7 +87,7 @@ kitsui_code_round <- function(scale, round_label, fixed = NULL, fixed_file = "fi
   }
   paste(c(
     head,
-    sprintf('unzip(%s, exdir = "fixed_set", junkpaths = TRUE)', kitsui_r(fixed_file)),
+    sprintf('unzip(%s, exdir = "fixed_set")', kitsui_r(fixed_file)),
     sprintf('bank <- filter(read.csv("fixed_set/bank.csv"), scale == %s)', s),
     'versions <- read.csv("fixed_set/versions.csv", colClasses = "character")',
     sprintf("versions <- filter(versions, scale == %s)", s),
@@ -153,7 +153,7 @@ kitsui_code_link <- function(fixed, name, fixed_file = "fixed_set.zip") {
   paste(c(
     kind,
     "# 第一次用 kits_linking() 做（題庫的門檻）；點存在 links.csv，這裡從點重建",
-    sprintf('unzip(%s, exdir = "fixed_set", junkpaths = TRUE)', kitsui_r(fixed_file)),
+    sprintf('unzip(%s, exdir = "fixed_set")', kitsui_r(fixed_file)),
     sprintf('points <- filter(read.csv("fixed_set/links.csv"), %s)', sel),
     sprintf("%s <- points[%s] |>", kitsui_link_var(name), kitsui_r(cols)),
     sprintf("  kits_link_screen(cut = %s, spread = %s, unit = %s,", r$cut, kitsui_r(r$spread),
@@ -314,7 +314,7 @@ kitsui_code_vertical_earlier <- function(fixed, scales, stage, zip) {
   }
   paste(c(
     "# 之前回合的點：固定檔的 wave_summary.csv（各波次的人數、P25、中位數、P75、實際月齡的中位數）",
-    sprintf('unzip(%s, exdir = "fixed_set", junkpaths = TRUE)', kitsui_r(zip)),
+    sprintf('unzip(%s, exdir = "fixed_set")', kitsui_r(zip)),
     'ws <- read.csv("fixed_set/wave_summary.csv", colClasses = c(round = "character")) |>',
     sprintf("  filter(scale %%in%% %s) |>", kitsui_r(scales)),
     "  slice_tail(n = 1, by = c(scale, cohort, wave_m)) # 校準過兩次的波次：用最新的回合",

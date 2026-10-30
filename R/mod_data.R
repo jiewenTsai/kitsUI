@@ -226,17 +226,25 @@ mod_data_server <- function(id, goto, handover = NULL) {
       shiny::updateCheckboxGroupInput(session, "waves", selected = character())
     })
 
-    # 固定檔：讀不進來時用紅字說明，之前的固定檔留著
-    shiny::observeEvent(input$fixed_file, {
-      fx <- tryCatch(kitsui_read_fixed(input$fixed_file$datapath), error = \(e) e)
+    # 固定檔：讀不進來時用紅字說明，之前的固定檔留著。
+    # 被改過的（和核對碼不符）先擋下來；按「仍然使用」才讀，之後一直提醒
+    load_fixed <- function(allow_modified = FALSE) {
+      path <- input$fixed_file$datapath
+      fx <- tryCatch(kitsui_read_fixed(path, allow_modified), error = \(e) e)
       if (inherits(fx, "error")) {
         fixed_error(kit_error_text(fx, "讀取固定檔"))
+        fixed_modified(inherits(fx, "kit_fixed_modified"))
         return()
       }
       fixed_error(NULL)
-      fixed_rv(list(fixed = fx, name = input$fixed_file$name))
+      fixed_modified(FALSE)
+      fixed_rv(list(fixed = fx, name = input$fixed_file$name,
+                    integrity = kitsui_fixed_integrity(path)))
       from_session(NULL)
-    })
+    }
+    fixed_modified <- shiny::reactiveVal(FALSE)
+    shiny::observeEvent(input$fixed_file, load_fixed())
+    shiny::observeEvent(input$fixed_force, load_fixed(allow_modified = TRUE))
     shiny::observeEvent(input$fixed_clear, {
       fixed_rv(NULL)
       from_session(NULL)
@@ -250,7 +258,11 @@ mod_data_server <- function(id, goto, handover = NULL) {
         paste0("仍然用之前的固定檔：", fr$name %||% paste0("這次連線的第 ", from_session(), " 回合"),
                "。")
       }
-      ui_alert("danger", "【固定檔讀不進來】", shiny::tags$p(e), shiny::tags$p(keep))
+      force <- if (isTRUE(fixed_modified())) {
+        shiny::tags$p(shiny::actionButton(ns("fixed_force"), "仍然使用這個固定檔（我知道它被改過）",
+                                          class = "btn-sm btn-outline-danger"))
+      }
+      ui_alert("danger", "【固定檔讀不進來】", shiny::tags$p(e), shiny::tags$p(keep), force)
     })
 
     # ④ 交過來的固定檔：不用上傳；世代與波次清空，等使用者勾新的
@@ -372,7 +384,7 @@ mod_data_server <- function(id, goto, handover = NULL) {
         return(shiny::tags$p(class = "kit-hint", "沒有固定檔：這一回合每個量尺都是自由校準。"))
       }
       name <- fr$name %||% paste0("這次連線的第 ", from_session(), " 回合（還沒下載）")
-      data_fixed_summary(fr$fixed, name)
+      data_fixed_summary(fr$fixed, name, fr$integrity)
     })
     output$scale_example <- shiny::renderText(data_scale_example(checked()$scales))
 
@@ -569,9 +581,10 @@ data_scale_example <- function(scales) {
   paste0("量尺 = 領域 × 世代，例如 ", ex, "。")
 }
 
-#' 固定檔的內容：之前的回合、量尺、題庫、連結
+#' 固定檔的內容：之前的回合、量尺、題庫、連結、核對碼
+#' @param integrity NULL 或 kitsui_fixed_integrity()（這次連線交過來的固定檔沒有）
 #' @noRd
-data_fixed_summary <- function(fixed, name) {
+data_fixed_summary <- function(fixed, name, integrity = NULL) {
   v <- fixed$version
   bank <- dplyr::count(fixed$bank, .data$scale, name = "steps")
   items <- dplyr::summarise(fixed$bank, items = dplyr::n_distinct(.data$item_id), .by = "scale")
@@ -584,6 +597,14 @@ data_fixed_summary <- function(fixed, name) {
     shiny::tags$ul(
       li("之前的回合：", if (length(v$rounds)) paste(v$rounds, collapse = "、") else "（沒有）"),
       li("建立於 ", v$created, "，kits ", v$kits, "，參照世代 ", v$reference),
+      if (!is.null(integrity)) {
+        cls <- if (identical(integrity$status, "ok")) NULL else "kit-warn-text"
+        li(shiny::tags$span(class = cls, "核對碼：", integrity$text))
+      },
+      if (length(integrity$ignored) > 0) {
+        li(shiny::tags$span(class = "kit-warn-text", "zip 裡多出來、沒有讀的檔案：",
+                            paste(integrity$ignored, collapse = "、")))
+      },
       li("題庫：", if (nrow(bank) == 0) "（空的）" else paste(
         sprintf("%s %d 題 %d 步", bank$scale, bank$items, bank$steps), collapse = "；"
       )),

@@ -239,6 +239,7 @@ test_that("不借題庫：自己的題庫有涵蓋、內部連結還沒凍結、
   kitsui_write_fixed(bc$fixed, zip_path)
   dir <- withr::local_tempdir()
   utils::unzip(zip_path, exdir = dir)
+  old_version_file(dir)
   file.remove(file.path(dir, "waves.csv"))
   old_zip <- file.path(dir, "old.zip")
   zip::zip(old_zip, list.files(dir, full.names = TRUE), mode = "cherry-pick")
