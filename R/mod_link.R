@@ -544,7 +544,11 @@ vertical_caption <- function(stage, v) {
   text <- switch(
     stage,
     none = paste0("未連結：各世代在自己校準的量尺上（", paste(scales, collapse = "、"),
-                  "），數字不能直接比。"),
+                  "），數字不能直接比。",
+                  if (any(grepl("題庫）", v$table$cohort, fixed = TRUE))) {
+                    paste0("借用另一世代題庫的波次在那個題庫的量尺上，另成一條線，",
+                           "不和自己量尺的波次連在一起。")
+                  }),
     internal = paste0("內部連結後：", paste(setdiff(scales, v$scale), collapse = "、"), " 換到 ",
                       v$scale, " 的量尺，同一個月齡兩個世代的點應該靠在一起。"),
     external = "外部連結後：各世代都換到 D，相對位置和內部連結後相同。"

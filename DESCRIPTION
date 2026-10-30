@@ -1,6 +1,6 @@
 Package: kitsUI
 Title: KIT Scale Construction Tool
-Version: 0.3.9
+Version: 0.3.10
 Date: 2026-10-30
 Authors@R: person("Jie-Wen", "Tsai", email = "tsai.jiewen@gmail.com", role = c("aut", "cre"))
 Description: KIT scale construction tool: a Shiny application for the KIT developmental

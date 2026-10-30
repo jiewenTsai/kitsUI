@@ -263,7 +263,7 @@ kitsui_code_vertical <- function(fixed, scales, stages = names(KITSUI_VERTICAL_S
     sprintf("v_%s <- kits_vertical(rbind(", stage),
     paste0("  ", convert(stage), c(rep(",", length(scales) - 1), "")),
     "))",
-    sprintf('plot(v_%s, type = "median")', stage)
+    sprintf('plot(v_%s, type = "median", age_ticks = sort(unique(v_%s$wave_m)))', stage, stage)
   )
   code <- list(
     none = c(
@@ -272,7 +272,8 @@ kitsui_code_vertical <- function(fixed, scales, stages = names(KITSUI_VERTICAL_S
       sprintf("raw <- bind_rows(%s)", paste0("as_tibble(", vars, ")", collapse = ", ")),
       'attr(raw, "scale") <- NULL',
       "v_none <- kits_vertical(raw)",
-      'plot(v_none, type = "median")'
+      "# age_ticks：每一個波次都有刻度（kits 預設的刻度只到 96 個月）",
+      'plot(v_none, type = "median", age_ticks = sort(unique(v_none$wave_m)))'
     ),
     internal = linked("internal", "# 內部連結後：M36 換到參照世代的量尺"),
     external = linked("external", "# 外部連結後：兩個世代都換到 D")

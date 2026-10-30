@@ -159,6 +159,15 @@ test_that("這一回合只有一個世代：之前回合的點（固定檔的摘
   m36 <- purrr::keep(built, \(tr) identical(tr$name, "M36"))[[1]]
   expect_false(any(grepl("-open$", m36$marker$symbol)))
   expect_match(m36$hovertext[1], "這一回合：r8")
+  # x 軸的刻度（格線）是圖上的每一個波次
+  lay <- plotly::plotly_build(p)$x$layout
+  expect_equal(unlist(lay$xaxis$tickvals), sort(unique(tab$wave_m)))
+  # 96 個月以後的波次也有刻度（kits 預設的刻度只到 96）
+  late <- v$external
+  late$table$wave_m[late$table$source == "this"] <- c(108, 120)
+  lay <- plotly::plotly_build(kitsui_vertical_plot(late))$x$layout
+  expect_true(all(c(108, 120) %in% unlist(lay$xaxis$tickvals)))
+  expect_equal(kitsui_vertical_ticks(c(132, 3, NA, 108, 3)), c(3, 108, 132))
   # 還沒有連結時：未連結畫得出來，內部連結後說明原因
   plain <- kitsui_verticals(r8$round, r8$df, r8$round$fixed, "lan")
   expect_s3_class(kitsui_vertical_plot(plain$none), "plotly")
@@ -186,6 +195,18 @@ test_that("借用另一世代題庫（M03 60 個月用 motor M36 的題庫）：
   expect_setequal(tab$cohort[tab$source == "earlier"], c("M03", "M36"))
   expect_equal(v$internal$scale, "motor M03")
   expect_s3_class(kitsui_vertical_plot(v$internal), "plotly")
+  # 未連結：借用 motor M36 題庫的 M03 60 個月另成一條線，不和 M03 自己量尺的波次連在一起
+  none <- v$none$table
+  expect_equal(none$cohort[none$source == "this"], "M03（motor M36 題庫）")
+  expect_setequal(none$cohort[none$source == "earlier"], c("M03", "M36"))
+  built <- plotly::plotly_build(kitsui_vertical_plot(v$none))$x$data
+  names <- purrr::map_chr(built, \(tr) as.character(tr$name %||% NA)[1])
+  expect_true("M03（motor M36 題庫）" %in% names)
+  expect_match(vertical_caption("none", v$none), "另成一條線")
+  # 換算後在同一把尺上：同一個世代仍是一條線
+  expect_false(any(grepl("題庫）", v$external$table$cohort, fixed = TRUE)))
+  expect_equal(kitsui_vertical_series(c("M03", "M36"), c("motor M36", "motor M36")),
+               c("M03（motor M36 題庫）", "M36"))
 })
 
 test_that("舊的固定檔沒有摘要、第一個回合：一句清楚的說明", {

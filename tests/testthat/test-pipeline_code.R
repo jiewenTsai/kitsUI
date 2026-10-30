@@ -65,7 +65,8 @@ test_that("兩個世代垂直連結三個版本的程式碼能跑，和 app 的�
   wide <- two_cohorts_linked()
   r <- wide$round
   code <- kitsui_code_vertical(wide$fixed, c("lan M03", "lan M36"))
-  expect_match(code, 'plot\\(v_external, type = "median"\\)')
+  expect_match(code, 'plot(v_external, type = "median", age_ticks = sort(unique(v_external$wave_m)))',
+               fixed = TRUE)
   expect_match(code, "kits_convert\\(scores_M36, link_lan_M36, link_D\\)")
   # 程式需要的東西：兩個世代還沒換算的分數、③ 重建的連結
   env <- new.env(parent = globalenv())

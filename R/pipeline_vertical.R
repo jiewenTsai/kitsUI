@@ -179,11 +179,26 @@ kitsui_vertical_none <- function(scales, why) {
 # 未連結：去掉量尺的標記（各世代的量尺不同），kits_vertical() 照樣算各波次的中位數；
 # 之前回合的點也留在各自校準的量尺上
 kitsui_vertical_raw <- function(raw, earlier, label) {
-  s <- dplyr::bind_rows(purrr::map(unname(raw), tibble::as_tibble))
+  # 借用另一世代題庫的波次在別的量尺上：另成一條線，不和自己量尺的波次連在一起
+  s <- purrr::imap(raw, \(x, sc) {
+    tibble::as_tibble(x) |>
+      dplyr::mutate(cohort = kitsui_vertical_series(.data$cohort, sc))
+  }) |>
+    unname() |>
+    dplyr::bind_rows()
   attr(s, "scale") <- NULL
   v <- kits::kits_vertical(s)
+  earlier$cohort <- kitsui_vertical_series(earlier$cohort, earlier$scale)
   list(vertical = v, table = kitsui_vertical_table(v, earlier, label), scale = NA_character_,
        why = NULL)
+}
+
+#' 未連結圖的一條線：世代；用另一世代的題庫校準的波次寫成「M03（motor M36 題庫）」
+#' @noRd
+kitsui_vertical_series <- function(cohort, scale) {
+  if (length(cohort) == 0) return(as.character(cohort))
+  own <- scale_cohort(scale) == cohort
+  ifelse(own, cohort, paste0(cohort, "（", scale, " 題庫）"))
 }
 
 # 內部連結後（到參照世代的量尺）或外部連結後（到 D）：換算後用 kits 的 rbind() 合起來
@@ -254,16 +269,25 @@ kitsui_vertical_table <- function(v, earlier, label) {
 #' @noRd
 kitsui_vertical_plot <- function(v) {
   tab <- v$table
-  if (is.null(tab) || !any(tab$source == "earlier")) return(plot(v$vertical, type = "median"))
+  if (is.null(tab) || !any(tab$source == "earlier")) {
+    ticks <- kitsui_vertical_ticks(as.data.frame(v$vertical)$wave_m)
+    return(plot(v$vertical, type = "median", age_ticks = ticks))
+  }
   keep <- c("cohort", "wave_m", "n", "median", "P25", "P75")
   obj <- as.data.frame(tab[keep])
   obj$age_med <- NA_real_
   obj <- structure(obj, class = class(v$vertical), scale = attr(v$vertical, "scale"))
-  p <- plot(obj, type = "median")
+  p <- plot(obj, type = "median", age_ticks = kitsui_vertical_ticks(tab$wave_m))
   # kits 的圖可能已經 build 過（p$x$data）；沒有時改還沒 build 的 p$x$attrs
   slot <- if (length(p$x$data) > 0) "data" else "attrs"
   p$x[[slot]] <- purrr::map(p$x[[slot]], \(tr) kitsui_vertical_marks(tr, tab))
   p
+}
+
+# x 軸的刻度（也是格線）：圖上有的每一個波次。kits 預設的刻度只到 96 個月，
+# 之後的波次（例如 108、120、132）會沒有刻度與格線
+kitsui_vertical_ticks <- function(waves) {
+  sort(unique(waves[is.finite(waves)]))
 }
 
 # 一個世代的線：之前回合的點空心、較淡，滑鼠移上去多一行回合（點的順序和 tab 裡這個世代的列相同）
