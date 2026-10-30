@@ -428,15 +428,57 @@ kitsui_steps_template <- function(known, steps) {
     dplyr::arrange(.data$scale, .data$item_id)
 }
 
-#' 目前不是 1 的題：這一回合有的題列出量尺；沒有的題 scale 是 NA
-#' @return tibble：item_id、step、scale
+#' 目前不是 1 的題：這一回合有的題列出量尺與最高分數；沒有的題 scale 是 NA
+#' @return tibble：item_id、step、scale、max_score（這一回合的題在前，依題號排）
 #' @noRd
 kitsui_steps_shown <- function(known, steps) {
   scales <- dplyr::summarise(known, scale = paste(unique(.data$scale), collapse = "、"),
-                             .by = "item_id")
+                             max_score = min(.data$top), .by = "item_id")
   tibble::tibble(item_id = names(steps), step = unname(steps)) |>
     dplyr::filter(.data$step != 1) |>
-    dplyr::left_join(scales, by = "item_id")
+    dplyr::left_join(scales, by = "item_id") |>
+    dplyr::arrange(is.na(.data$scale), .data$item_id)
+}
+
+#' 收合區塊的標題：每題都是 1，或哪幾題不是 1（只算這一回合的題，最多列 3 題）
+#' @param shown kitsui_steps_shown()
+#' @noRd
+kitsui_steps_summary <- function(shown) {
+  here <- shown[!is.na(shown$scale), ]
+  if (nrow(here) == 0) return("通過步驟（每題都是 1）")
+  some <- paste0(here$item_id, "＝", here$step)
+  more <- if (length(some) > 3) "、…"
+  paste0("通過步驟（", nrow(here), " 題不是 1：", paste(utils::head(some, 3), collapse = "、"),
+         more, "）")
+}
+
+#' 選題目的清單：這一回合的每一題（原來的題號），依量尺分組；標籤帶目前的 step 與最高分數
+#' @return 具名 list：量尺 -> 具名文字向量（標籤 -> 原來的題號）
+#' @noRd
+kitsui_steps_choices <- function(known, steps) {
+  tpl <- kitsui_steps_template(known, steps)
+  if (nrow(tpl) == 0) return(list())
+  label <- sprintf("%s（目前 %d，最高 %d 分）", tpl$item_id, tpl$step, tpl$max_score)
+  split(stats::setNames(tpl$item_id, label), tpl$scale)
+}
+
+#' 在畫面上套用：選的題都設成同一個 step
+#'
+#' 要選了題、step 是 1 以上的整數；其餘的檢查（最高分數）和上傳的設定檔相同。
+#' @param ids 選的題（原來的題號）
+#' @param value 通過步驟（numericInput 的值）
+#' @return list(steps, errors)：steps 是原來的題號 -> step（有 errors 時 NULL）
+#' @noRd
+kitsui_steps_pick <- function(ids, value, known) {
+  fail <- \(...) list(steps = NULL, errors = c(...))
+  if (length(ids) == 0) return(fail("請先選題目。"))
+  num <- suppressWarnings(as.numeric(value))
+  if (length(num) != 1 || is.na(num)) return(fail("通過步驟是空白。請填 1 以上的整數。"))
+  if (num < 1 || num != round(num)) {
+    return(fail(paste0("通過步驟要是 1 以上的整數。現在是 ", format(num), "。")))
+  }
+  tab <- tibble::tibble(item_id = ids, step = as.character(num))
+  kitsui_steps_check(tab, known)[c("steps", "errors")]
 }
 
 #' 新固定檔的 pass_steps：一題一列，最新的設定

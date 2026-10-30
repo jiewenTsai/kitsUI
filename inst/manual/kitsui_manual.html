@@ -4,7 +4,7 @@
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
 <title>kitsUI 操作手冊</title>
-<meta name="description" content="KIT 量尺建構工具（kitsUI 0.3.8）的操作手冊：過去波次的基礎計分與新增波次的計分。">
+<meta name="description" content="KIT 量尺建構工具（kitsUI 0.3.9）的操作手冊：過去波次的基礎計分與新增波次的計分。">
 <link href="https://fonts.googleapis.com/css2?family=Chiron%20GoRound%20TC:wght@400;500;700&amp;display=swap" rel="stylesheet"/>
 <link href="https://fonts.googleapis.com/css2?family=M%20PLUS%20Code%20Latin:wght@400;700&amp;display=swap" rel="stylesheet"/>
 <style>@import url("font.css");:root{--bslib-bootstrap-version: 5;--bslib-preset-name: lumen;--bslib-preset-type: bootswatch}/*!
@@ -168,6 +168,48 @@
       font-size: 1.25rem;
       font-weight: 500;
       margin-bottom: 0.5rem;
+    }
+    /* 收合的設定框（④ 通過步驟）：白底框，標題和內文一樣大 */
+    .kit-fold-box {
+      background: #fff;
+      border: 1px solid #e0e0e0;
+      border-radius: 0.375rem;
+      padding: 0.6rem 1.1rem;
+      margin-bottom: 1.2rem;
+    }
+    .kit-fold-box > summary {
+      cursor: pointer;
+      font-weight: 500;
+    }
+    .kit-fold-box[open] > summary {
+      margin-bottom: 0.6rem;
+    }
+    .kit-fold-box details > summary {
+      cursor: pointer;
+      color: #2d7535;
+      font-size: 0.9rem;
+      margin-bottom: 0.5rem;
+    }
+    .kit-steps-pick {
+      display: flex;
+      flex-wrap: wrap;
+      align-items: flex-end;
+      gap: 0 1rem;
+    }
+    .kit-steps-pick .form-group,
+    .kit-steps-pick .btn {
+      margin-bottom: 0.9rem;
+    }
+    .kit-steps-table {
+      --bs-table-bg: transparent;
+      width: auto;
+      font-size: 0.9rem;
+      margin-bottom: 0.6rem;
+    }
+    .kit-steps-table td,
+    .kit-steps-table th {
+      vertical-align: middle;
+      padding-right: 1.2rem;
     }
     .kit-steps {
       margin: 0.2rem 0 0.4rem 1.2rem;
@@ -404,12 +446,12 @@ body { padding: 1rem 1.5rem 2rem; }
      · 
     使用手冊
   </p>
-  <div class="kit-app-meta">v0.3.8 · 2026-10-30 · kits 0.25.2</div>
+  <div class="kit-app-meta">v0.3.9 · 2026-10-30 · kits 0.25.2</div>
 </div>
 <div class="kit-manual">
 <div class="km-wrap">
 <header class="km-top">
-  <div class="km-eyebrow">KIT 量尺建構工具 · kitsUI 0.3.8</div>
+  <div class="km-eyebrow">KIT 量尺建構工具 · kitsUI 0.3.9</div>
   <h1>kitsUI 操作手冊</h1>
   <p class="km-lede">kitsUI 把 KIT 的作答資料校準、連結，算成每個孩子的分數。這份手冊分成兩個任務：第一次建立量尺時的<strong>基礎計分</strong>，以及之後每收到一波資料時的<strong>新增波次計分</strong>。</p>
   <div class="km-meta">
@@ -619,23 +661,24 @@ body { padding: 1rem 1.5rem 2rem; }
     <li><span class="km-col">ability_linked_threshold</span>：經過內部連結，和 ability_linked 同一把尺。M03 的量尺沒有這一欄。</li>
     <li><span class="km-col">d_threshold</span>：在 D 上，和 d_score 同一把尺。</li>
   </ul>
-  <p>讀法都一樣：孩子在某一把尺上的分數高於同一把尺上的門檻，通過這一題的機會就超過一半。題目依最後一把尺的門檻（通常是 d_threshold）由小到大排列。<span class="km-col">age50</span> 是一半孩子通過的月齡；這一回合的資料裡通過比例沒有跨過一半時是空白。</p>
+  <p>讀法都一樣：孩子在某一把尺上的分數高於同一把尺上的門檻，通過這一題的機會就超過一半。題目依最後一把尺的門檻（通常是 d_threshold）由小到大排列。<span class="km-col">age50</span> 是一半孩子通過的月齡。</p>
+  <p><span class="km-col">age50</span> 是用這一回合的資料算的：至少兩個波次、通過比例在波次之間跨過 50%，而且落在資料的月齡範圍內。只有一個波次，或每一波都已經超過（或都還沒到）50% 時，它是空的。這是刻意的：資料裡看不到通過比例跨過一半的地方，就不往外推。</p>
   <figure class="km-shot"><img src="img/t1_score_items.webp" alt="題目表（lan M36）：item_id、ability_threshold、ability_linked_threshold、d_threshold、age50，依 d_threshold 由小到大"></figure>
   <p>有題目的通過步驟不是 1 時，題目表在題號旁邊多一欄 <span class="km-col">step</span>。那一題的三種門檻和 age50 都照它算。</p>
 
   <h4 id="man-t1-steps">4. 通過步驟：得分至少幾分算通過</h4>
   <p>預設每一題得 1 分以上就算通過。有些題要更高的分數才算通過。例如之後的認知題是 0–4 分，3 分以上才算通過。這時把那一題的通過步驟設成 3。</p>
-  <p>題目表上方的<strong>通過步驟</strong>框裡設定：</p>
+  <p>題目表上方的<strong>通過步驟</strong>是收起來的區塊，因為大多數題目都用預設的 1。標題會寫目前的狀態，例如「通過步驟（每題都是 1）」或「通過步驟（2 題不是 1：lana03＝2、lana05＝2）」。有題目不是 1 時，區塊會自動打開。</p>
   <ol>
-    <li>按<strong>下載範本（CSV）</strong>。範本列出這一回合的每一題和目前的 step。</li>
-    <li>只改 <span class="km-col">step</span> 欄。<span class="km-col">scale</span>、<span class="km-col">max_score</span> 兩欄只是參考。</li>
-    <li>在「上傳設定檔」上傳改好的檔。只要 <span class="km-col">item_id</span> 和 <span class="km-col">step</span> 兩欄就可以。</li>
-    <li>框裡會寫「目前有幾題不是 1」。題目表馬上照新的設定重算。</li>
-    <li>想全部回到預設，按<strong>全部改回 1</strong>。</li>
+    <li>點標題打開區塊。</li>
+    <li>在<strong>題目</strong>選一題或好幾題，可以打字找。每個選項會寫目前的通過步驟和校準裡的最高分數。</li>
+    <li>在<strong>通過步驟</strong>填分數，按<strong>套用到選的題</strong>。題目表馬上照新的設定重算。</li>
+    <li>下面的「不是 1 的題」列出設定過的題。每一題可以按<strong>改回 1</strong>，也可以按<strong>全部改回 1</strong>。</li>
   </ol>
-  <p>上傳的檔會先檢查：</p>
+  <p>題目很多時，打開<strong>用檔案設定（題目很多時）</strong>：按<strong>下載範本（CSV）</strong>，只改 <span class="km-col">step</span> 欄，再上傳。只要 <span class="km-col">item_id</span> 和 <span class="km-col">step</span> 兩欄就可以；<span class="km-col">scale</span>、<span class="km-col">max_score</span> 兩欄只是參考。</p>
+  <p>設定會先檢查：</p>
   <ul>
-    <li><strong>紅字</strong>：設定沒有套用。例如缺 item_id 或 step 欄、step 不是 1 以上的整數、同一題列兩次而 step 不同、step 比這一題在校準裡的最高分還高。改好再上傳。</li>
+    <li><strong>紅字</strong>：設定沒有套用。例如沒選題目、step 不是 1 以上的整數、step 比這一題在校準裡的最高分還高；用檔案時還有缺 item_id 或 step 欄、同一題列兩次而 step 不同。改好再套用或上傳。</li>
     <li><strong>橘字</strong>：檔裡有這一回合沒有的題。設定照樣存進固定檔，之後的回合用得到。打錯的話，改好再上傳。</li>
   </ul>
   <div class="km-note">
@@ -828,7 +871,9 @@ body { padding: 1rem 1.5rem 2rem; }
   <h4>紅字和橘字差在哪裡？</h4>
   <p>紅字是錯誤，例如缺欄位、重複的列、得分不是整數。要先修資料再上傳。橘字是提醒，看過就可以往下做。</p>
   <h4>可以一次放好幾波新資料嗎？</h4>
-  <p>可以上傳，但建議一次只勾一波，一波一回合。這樣每一波的偏移會分開檢查，紀錄也清楚。</p>
+  <p>可以。已經收完的好幾波，建議一次勾，資料多、估得穩。以後每次新收一波，再一次只勾那一波。兩種做法的差別見<a href="#man-t2-many">一次加好幾波</a>。</p>
+  <h4>為什麼 age50 是空的？</h4>
+  <p>age50 要從這一回合的資料算：至少兩個波次，而且各波的通過比例跨過 50%。只有一個波次，或每一波都已經超過（或都還沒到）50% 時，就算不出來，不會往外推。門檻（ability_threshold 等）不受影響，照樣有值。</p>
   <h4>beta 固定了，門檻為什麼還會偏移？</h4>
   <p>偏移是在固定<strong>之前</strong>判斷的。kitsUI 先不固定任何題、只用這一波試算一次，再拿試算的門檻和題庫比。離線太遠的題才算偏移，它不會被固定，而是換成新版本。沒有偏移的題才固定；固定之後，它們的門檻就等於題庫的門檻。詳見<a href="#man-t2-items">校準的順序</a>。</p>
   <h4>通過步驟改了，分數會變嗎？</h4>
@@ -845,7 +890,7 @@ body { padding: 1rem 1.5rem 2rem; }
   <p>每一頁最下面的「用 R 怎麼做」列出這一步背後的 kits 程式碼，可以複製到 R 裡重跑。程式碼用 M PLUS Code Latin 字型。</p>
 </section>
 
-<footer>kitsUI 0.3.8（2026-10-30）· kits 0.25.2 · 截圖用 app 內建的示範資料（kits::kitm03、kits::kitm36）。</footer>
+<footer>kitsUI 0.3.9（2026-10-30）· kits 0.25.2 · 截圖用 app 內建的示範資料（kits::kitm03、kits::kitm36）。</footer>
 </main>
 </div>
 </div>

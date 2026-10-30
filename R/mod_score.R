@@ -132,7 +132,9 @@ mod_score_server <- function(id, data, items, links, goto, next_round = NULL) {
     })
     output$result <- shiny::renderUI({
       if (is.null(result())) return(NULL)
-      score_result_ui(ns, names(result()$subj))
+      # 有題不是 1 時通過步驟的區塊打開，不把設定藏起來
+      shown <- shiny::isolate(tryCatch(shown_steps(), error = \(e) NULL))
+      score_result_ui(ns, names(result()$subj), shown)
     })
 
     # 1. 分數表 ----
@@ -178,7 +180,7 @@ mod_score_server <- function(id, data, items, links, goto, next_round = NULL) {
     )
 
     # 3. 題目表 ----
-    # 通過步驟：預設用這一回合開始時固定檔的設定。使用者上傳或改回 1 之後用使用者的
+    # 通過步驟：預設用這一回合開始時固定檔的設定。使用者在畫面上改過或上傳之後用使用者的
     # （換了固定檔就回到那個固定檔的設定）
     base_steps <- shiny::reactive(items()$fixed$pass_steps)
     user_steps <- shiny::reactiveVal(NULL)
@@ -188,8 +190,28 @@ mod_score_server <- function(id, data, items, links, goto, next_round = NULL) {
       kitsui_steps_vec(base_steps())
     })
     known <- shiny::reactive(kitsui_round_item_steps(shiny::req(items())$items, fixed()$versions))
+    shown_steps <- shiny::reactive(kitsui_steps_shown(known(), steps()))
+    # 訊息：選題目、改回 1 的放在表格上面（pick）；上傳的放在「用檔案設定」裡（file）
     steps_msg <- shiny::reactiveVal(NULL)
+    say <- function(where, ui) steps_msg(list(where = where, ui = ui))
     set_steps <- function(new) user_steps(list(base = base_steps(), steps = new))
+    output$steps_summary <- shiny::renderText(kitsui_steps_summary(shown_steps()))
+    # 套用之後清單重畫：標籤換成新的 step，選的題清空；通過步驟留著剛才的值
+    output$steps_picker <- shiny::renderUI({
+      value <- shiny::isolate(input$steps_value) %||% 2
+      steps_picker_ui(ns, kitsui_steps_choices(known(), steps()), value)
+    })
+    output$steps_table <- shiny::renderUI(steps_table_ui(ns, shown_steps()))
+    output$steps_msg <- shiny::renderUI(steps_msg_at(steps_msg(), "pick"))
+    output$steps_file_msg <- shiny::renderUI(steps_msg_at(steps_msg(), "file"))
+    shiny::observeEvent(input$steps_apply, {
+      chk <- kitsui_steps_pick(input$steps_pick, input$steps_value, known())
+      if (length(chk$errors) > 0) {
+        return(say("pick", steps_error_ui(chk$errors, "選好再按「套用到選的題」。")))
+      }
+      set_steps(kitsui_steps_merge(steps(), chk$steps))
+      say("pick", ui_callout(steps_applied_text(chk$steps)))
+    })
     shiny::observeEvent(input$steps_file, {
       f <- input$steps_file
       tab <- tryCatch(kitsui_read_steps(f$datapath), error = \(e) e)
@@ -197,27 +219,35 @@ mod_score_server <- function(id, data, items, links, goto, next_round = NULL) {
         kitsui_steps_check(tab, known())
       }
       if (length(chk$errors) > 0) {
-        steps_msg(steps_error_ui(chk$errors))
+        say("file", steps_error_ui(chk$errors, "請改好再上傳。"))
         return()
       }
       set_steps(kitsui_steps_merge(steps(), chk$steps))
-      steps_msg(shiny::tagList(
+      say("file", shiny::tagList(
         ui_callout(paste0("已套用 ", f$name, "：共 ", length(chk$steps), " 題。"),
                    "檔案裡沒列的題不變。"),
         ui_warn_list("請注意", chk$warnings)
       ))
     })
+    # 表格每一列的「改回 1」（按鈕把題號送到 steps_row_reset）
+    shiny::observeEvent(input$steps_row_reset, {
+      id <- input$steps_row_reset
+      set_steps(kitsui_steps_merge(steps(), stats::setNames(1L, id)))
+      say("pick", ui_callout(paste0(id, " 改回 1 了。")))
+    })
     shiny::observeEvent(input$steps_reset, {
       set_steps(kitsui_steps_vec(NULL))
-      steps_msg(ui_callout("已經全部改回 1。"))
-    })
-    output$steps_status <- shiny::renderUI({
-      steps_status_ui(kitsui_steps_shown(known(), steps()), steps_msg())
+      say("pick", ui_callout("已經全部改回 1。"))
     })
     output$steps_template_ui <- render_download_csv(
       session, "steps_template", "下載範本（CSV）",
       \() kitsui_steps_template(known(), steps()), "pass_steps"
     )
+    # 收起來時也要畫好（打開就看得到）
+    for (id in c("steps_picker", "steps_table", "steps_msg", "steps_file_msg",
+                 "steps_template_ui")) {
+      shiny::outputOptions(output, id, suspendWhenHidden = FALSE)
+    }
     item_obj <- shiny::reactive({
       s <- shiny::req(input$item_scale)
       kitsui_item_table(shiny::req(items()), data()$df, fixed(), s, link_objs(), persons(),
@@ -417,7 +447,9 @@ item_table_note_ui <- function(tab) {
          "和 ability_linked 同一把尺。參照世代自己的量尺沒有這一欄。"),
       li("d_threshold", "：再經過外部連結，在 D 上，和 d_score 同一把尺。"),
       li("age50", "：這一回合一半的孩子通過（得分達到通過步驟）的月齡。",
-         "通過比例沒有跨過一半時是空白。"),
+         paste0("age50 要從這一回合的資料算：至少兩個波次、通過比例在波次之間跨過 50%，",
+                "而且落在資料的月齡範圍內；",
+                "只有一個波次，或每一波都已經超過（或都還沒到）50% 時是空的。")),
       if (length(drop) > 0) {
         shiny::tags$li(paste0("每一題都沒有內容的欄不列出：", paste(drop, collapse = "、"), "。"),
                        if ("DIF" %in% drop) "DIF（性別的差異試題功能）要另外做 kits_dif()，kitsUI 沒有做。",
@@ -427,65 +459,126 @@ item_table_note_ui <- function(tab) {
   )
 }
 
-#' 題目表的通過步驟：上傳設定檔（item_id、step）、下載範本、全部改回 1
+#' 題目表的通過步驟：收合區塊，標題是現在的設定
+#'
+#' 裡面依序是：一句說明、選題目套用、不是 1 的題（可以改回 1）、用檔案設定（再收一層）。
+#' 有題不是 1 時預設打開。
+#' @param shown kitsui_steps_shown()；NULL 時當作每題都是 1
 #' @noRd
-score_steps_ui <- function(ns) {
-  shiny::tags$div(
-    class = "kit-summary",
-    shiny::h5("通過步驟"),
-    shiny::tags$p("得分至少幾分算通過。預設每題都是 1。"),
-    shiny::tags$p(class = "kit-hint",
-                  "有些題要更高的分數才算通過，例如反向計分、0–4 分、3 分以上才算通過的題。",
-                  "通過步驟只影響題目表的門檻與 age50。",
-                  "校準、連結與分數都用全部的分數，不受影響。"),
-    shiny::fileInput(ns("steps_file"), "上傳設定檔（CSV，兩欄：item_id、step）", width = "26rem",
-                     accept = ".csv", buttonLabel = "選擇檔案…", placeholder = "尚未選擇檔案"),
-    shiny::tags$div(
-      class = "kit-downloads",
-      ui_download(ns("steps_template")),
-      shiny::actionButton(ns("steps_reset"), "全部改回 1",
-                          class = "btn-sm btn-outline-secondary ms-2")
-    ),
-    shiny::tags$small(class = "kit-hint",
-                      "範本列出這一回合的每一題與目前的 step。",
-                      "改 step 欄後上傳。scale、max_score 兩欄只是參考。"),
-    shiny::uiOutput(ns("steps_status"))
+score_steps_ui <- function(ns, shown = NULL) {
+  here <- if (!is.null(shown)) shown[!is.na(shown$scale), ]
+  title <- if (is.null(shown)) "通過步驟（每題都是 1）" else kitsui_steps_summary(shown)
+  shiny::tags$details(
+    class = "kit-fold-box",
+    open = if (NROW(here) > 0) NA,
+    # 標題跟著設定變（renderText 換掉裡面的字）
+    shiny::tags$summary(shiny::tags$span(id = ns("steps_summary"), class = "shiny-text-output",
+                                         title)),
+    shiny::tags$p("得分至少幾分算通過。預設每題都是 1。",
+                  "只影響題目表的門檻與 age50；校準、連結、分數都不受影響。"),
+    shiny::uiOutput(ns("steps_picker")),
+    shiny::uiOutput(ns("steps_msg")),
+    shiny::uiOutput(ns("steps_table")),
+    shiny::tags$details(
+      shiny::tags$summary("用檔案設定（題目很多時）"),
+      shiny::fileInput(ns("steps_file"), "上傳設定檔（CSV，兩欄：item_id、step）",
+                       width = "26rem", accept = ".csv", buttonLabel = "選擇檔案…",
+                       placeholder = "尚未選擇檔案"),
+      shiny::tags$div(class = "kit-downloads", ui_download(ns("steps_template"))),
+      shiny::tags$small(class = "kit-hint",
+                        "範本列出這一回合的每一題與目前的 step。",
+                        "改 step 欄後上傳。scale、max_score 兩欄只是參考。"),
+      shiny::uiOutput(ns("steps_file_msg"))
+    )
   )
 }
 
-#' 通過步驟現在的設定：不是 1 的題；上傳或改回 1 的結果
+#' 選題目、填通過步驟、套用
+#' @param choices kitsui_steps_choices()
+#' @noRd
+steps_picker_ui <- function(ns, choices, value = 2) {
+  shiny::tagList(
+    shiny::tags$div(
+      class = "kit-steps-pick",
+      shiny::selectizeInput(ns("steps_pick"), "題目", choices = choices, multiple = TRUE,
+                            width = "28rem",
+                            options = list(placeholder = "選一題或好幾題（可以打字找）")),
+      shiny::numericInput(ns("steps_value"), "通過步驟", value = value, min = 1, step = 1,
+                          width = "7rem"),
+      shiny::actionButton(ns("steps_apply"), "套用到選的題", class = "btn-sm btn-primary")
+    ),
+    shiny::tags$small(class = "kit-hint",
+                      "清單是這一回合每個量尺的全部題目，依量尺分組。",
+                      "括號裡是目前的通過步驟與校準裡的最高分數。")
+  )
+}
+
+#' 不是 1 的題：一題一列，每列可以改回 1；下面是「全部改回 1」
 #' @param shown kitsui_steps_shown()
 #' @noRd
-steps_status_ui <- function(shown, msg = NULL) {
+steps_table_ui <- function(ns, shown) {
   here <- shown[!is.na(shown$scale), ]
   away <- shown[is.na(shown$scale), ]
-  now <- if (nrow(here) == 0) "目前這一回合的每一題都是 1。" else {
-    paste0("目前有 ", nrow(here), " 題不是 1：",
-           kitsui_some(paste0(here$item_id, "（", here$step, "）")), "。")
+  # 每一列的按鈕把題號送到 steps_row_reset
+  click <- sprintf("Shiny.setInputValue('%s', this.dataset.item, {priority: 'event'})",
+                   ns("steps_row_reset"))
+  row <- \(id, step, top) {
+    shiny::tags$tr(
+      shiny::tags$td(id), shiny::tags$td(step), shiny::tags$td(top),
+      shiny::tags$td(shiny::tags$button(type = "button", class = "btn btn-sm btn-outline-secondary",
+                                        `data-item` = id, onclick = click, "改回 1"))
+    )
+  }
+  table <- if (nrow(here) == 0) shiny::tags$p("目前每一題都是 1。") else {
+    shiny::tags$table(
+      class = "table table-sm kit-steps-table",
+      shiny::tags$thead(shiny::tags$tr(shiny::tags$th("item_id"), shiny::tags$th("step"),
+                                       shiny::tags$th("最高分數"), shiny::tags$th())),
+      shiny::tags$tbody(purrr::pmap(list(here$item_id, here$step, here$max_score), row))
+    )
   }
   shiny::tagList(
-    msg,
-    shiny::tags$p(class = "mb-1", now),
+    if (nrow(here) > 0) shiny::tags$p(class = "mb-1 fw-bold", "不是 1 的題"),
+    table,
     if (nrow(away) > 0) {
-      shiny::tags$p(class = "kit-hint", paste0(
+      shiny::tags$small(class = "kit-hint", paste0(
         "另有 ", nrow(away), " 題這一回合沒有，設定照樣存進固定檔：",
         kitsui_some(paste0(away$item_id, "（", away$step, "）")), "。"
       ))
+    },
+    if (nrow(shown) > 0) {
+      shiny::tags$div(class = "mb-3", shiny::actionButton(ns("steps_reset"), "全部改回 1",
+                                                          class = "btn-sm btn-outline-secondary"))
     }
   )
 }
 
-#' 通過步驟的設定檔沒有套用：紅字說明
+#' 套用了：一句話說哪幾題設成多少
+#' @param steps 原來的題號 -> step（都一樣）
 #' @noRd
-steps_error_ui <- function(errors) {
+steps_applied_text <- function(steps) {
+  ids <- kitsui_some(names(steps))
+  if (all(steps == 1)) return(paste0("已把 ", length(steps), " 題改回 1：", ids, "。"))
+  paste0("已把 ", length(steps), " 題設成 ", steps[[1]], "：", ids, "。")
+}
+
+#' 通過步驟的訊息放在哪裡：msg 是 list(where, ui)
+#' @noRd
+steps_msg_at <- function(msg, where) if (identical(msg$where, where)) msg$ui
+
+#' 通過步驟沒有套用：紅字說明
+#' @param todo 下一步怎麼做（「請改好再上傳。」等）
+#' @noRd
+steps_error_ui <- function(errors, todo) {
   ui_alert("danger", "【通過步驟沒有套用】",
            shiny::tags$ul(lapply(errors, shiny::tags$li)),
-           shiny::tags$p(class = "mb-0", "設定沒有改。請改好再上傳。"))
+           shiny::tags$p(class = "mb-0", "設定沒有改。", todo))
 }
 
 #' 算完分數之後的畫面：分數表、分數對照表、題目表、檢查、R 程式
+#' @param steps kitsui_steps_shown()：有題不是 1 時通過步驟的區塊打開
 #' @noRd
-score_result_ui <- function(ns, scales) {
+score_result_ui <- function(ns, scales, steps = NULL) {
   shiny::tagList(
     shiny::h4("1. 分數表"),
     shiny::tags$small(class = "kit-hint",
@@ -538,7 +631,7 @@ score_result_ui <- function(ns, scales) {
       class = "kit-hint",
       "每一題一列（kits_item_table()）。欄位說明在表的下面。"
     ),
-    score_steps_ui(ns),
+    score_steps_ui(ns, steps),
     shiny::selectInput(ns("item_scale"), "哪一個量尺？", choices = scales),
     shiny::uiOutput(ns("item_table_scale")),
     shiny::tags$div(class = "kit-table-scroll kit-table-tall",

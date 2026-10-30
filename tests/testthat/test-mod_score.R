@@ -257,24 +257,153 @@ steps_upload <- function(dir, item_id, step, name = "steps.csv") {
   data.frame(name = name, size = file.size(path), type = "text/csv", datapath = path)
 }
 
-test_that("通過步驟：上傳設定檔，題目表多 step 欄、門檻照它算；寫進新的固定檔；R 程式帶 step", {
+# 通過步驟的收合區塊：<details ...> 的開頭那一段
+steps_details_tag <- function(html) {
+  regmatches(html, regexpr("<details class=\"kit-fold-box\"[^>]*>", html))
+}
+
+test_that("通過步驟：收合區塊預設收起來，標題寫每題都是 1；裡面依序是說明、選題目、表、用檔案設定", {
+  r8 <- round8()
+  lk <- linked()
+  shiny::testServer(mod_score_server, args = score_args(r8$round, r8$df, lk$fixed), {
+    session$setInputs(run = 1)
+    html <- output$result$html
+    tag <- steps_details_tag(html)
+    expect_length(tag, 1)
+    expect_false(grepl("open", tag))
+    expect_match(html, "通過步驟（每題都是 1）")
+    expect_equal(output$steps_summary, "通過步驟（每題都是 1）")
+    at <- \(x) regexpr(x, html, fixed = TRUE)[1]
+    expect_true(at("得分至少幾分算通過。預設每題都是 1。") > at("kit-fold-box"))
+    expect_match(html, "只影響題目表的門檻與 age50；校準、連結、分數都不受影響。")
+    expect_true(at("steps_picker") < at("steps_table"))
+    expect_true(at("steps_table") < at("用檔案設定（題目很多時）"))
+    expect_true(at("用檔案設定（題目很多時）") < at("steps_file"))
+    # 清單：這一回合每個量尺的題，依量尺分組；標籤帶目前的 step 與最高分數
+    picker <- output$steps_picker$html
+    expect_match(picker, "lanb08（目前 1，最高 3 分）")
+    expect_match(picker, "套用到選的題")
+    expect_match(picker, "依量尺分組")
+    expect_match(output$steps_table$html, "目前每一題都是 1。")
+    # 每一題都是 1 時沒有「全部改回 1」
+    expect_false(grepl("steps_reset", output$steps_table$html))
+  })
+})
+
+test_that("通過步驟：選兩題套用 2，題目表、R 程式、固定檔、交給下一回合的都照它", {
   r8 <- round8()
   lk <- linked()
   got <- NULL
-  dir <- withr::local_tempdir()
   args <- score_args(r8$round, r8$df, lk$fixed)
   args$next_round <- function(fixed, round) got <<- fixed
   shiny::testServer(mod_score_server, args = args, {
-    session$setInputs(run = 1)
-    html <- output$result$html
-    expect_match(html, "通過步驟")
-    expect_match(html, "得分至少幾分算通過。預設每題都是 1。")
-    expect_match(html, "全部改回 1")
-    session$setInputs(item_scale = "lan M36", subj_scale = "lan M36")
+    session$setInputs(run = 1, item_scale = "lan M36", subj_scale = "lan M36")
     expect_false("step" %in% names(item_table()))
-    expect_match(output$steps_status$html, "每一題都是 1")
     before <- item_obj()
+    session$setInputs(steps_pick = c("lanb08", "lanc02"), steps_value = 2)
+    session$setInputs(steps_apply = 1)
+    expect_match(output$steps_msg$html, "已把 2 題設成 2：lanb08、lanc02。")
+    expect_equal(output$steps_summary, "通過步驟（2 題不是 1：lanb08＝2、lanc02＝2）")
+    # 清單的標籤換成新的 step
+    expect_match(output$steps_picker$html, "lanb08（目前 2，最高 3 分）")
+    # 不是 1 的題：一題一列，每列有「改回 1」，下面有「全部改回 1」
+    table <- output$steps_table$html
+    expect_match(table, "不是 1 的題")
+    expect_match(table, "最高分數")
+    expect_equal(lengths(regmatches(table, gregexpr("data-item=", table))), 2)
+    expect_match(table, "data-item=\"lanc02\"")
+    expect_match(table, "steps_row_reset")
+    expect_match(table, "全部改回 1")
+    # 題目表與門檻
+    tab <- item_table()
+    expect_equal(names(tab)[1:2], c("item_id", "step"))
+    expect_equal(tab$step[tab$item_id %in% c("lanb08", "lanc02")], c(2, 2))
+    co <- coef(r8$round$items[["lan M36"]])
+    expect_equal(tab$ability_threshold[tab$item_id == "lanb08"],
+                 co$thr[co$item_id == "lanb08" & co$item_score == 2])
+    expect_false(isTRUE(all.equal(item_obj()$D, before$D)))
+    # R 程式
+    expect_match(output$code, "lanb08 = 2")
+    expect_match(output$code, "lanc02 = 2")
+    expect_match(output$code, "kits_item_table\\(item, data = cbind\\(ages, X\\), step = steps\\)")
+    # 新的固定檔與交給下一回合的固定檔
+    back <- kitsui_read_fixed(kit_test_dl_file(output, session, "fixed_dl"))
+    expect_equal(back$pass_steps$item_id, c("lanb08", "lanc02"))
+    expect_equal(back$pass_steps$step, c(2L, 2L))
+    expect_equal(unique(back$pass_steps$round), "r8")
+    expect_equal(back$links, lk$fixed$links)
+    session$setInputs(next_round = 1)
+    expect_equal(got$pass_steps, back$pass_steps)
+    # 再算一次：區塊打開，標題照樣
+    session$setInputs(run = 2)
+    expect_match(steps_details_tag(output$result$html), "open")
+    expect_match(output$result$html, "通過步驟（2 題不是 1：lanb08＝2、lanc02＝2）")
+  })
+})
 
+test_that("通過步驟：太高、不是整數、空白、沒選題目時不改，紅字說明", {
+  r8 <- round8()
+  lk <- linked()
+  shiny::testServer(mod_score_server, args = score_args(r8$round, r8$df, lk$fixed), {
+    session$setInputs(run = 1, item_scale = "lan M36")
+    session$setInputs(steps_pick = "lanb08", steps_value = 2, steps_apply = 1)
+    expect_equal(steps(), c(lanb08 = 2L))
+    try_step <- function(ids, value, n) {
+      session$setInputs(steps_pick = ids, steps_value = value, steps_apply = n)
+      output$steps_msg$html
+    }
+    msg <- try_step(c("lanb09", "lanc02"), 4, 2)
+    expect_match(msg, "通過步驟沒有套用")
+    expect_match(msg, "lanb09（設定 4，最高 3 分）、lanc02（設定 4，最高 3 分）")
+    expect_match(msg, "設定沒有改。")
+    expect_match(msg, "選好再按「套用到選的題」。")
+    expect_match(try_step("lanb09", 1.5, 3), "通過步驟要是 1 以上的整數。現在是 1.5。")
+    expect_match(try_step("lanb09", 0, 4), "通過步驟要是 1 以上的整數。現在是 0。")
+    expect_match(try_step("lanb09", NA, 5), "通過步驟是空白")
+    expect_match(try_step(character(), 2, 6), "請先選題目。")
+    # 設定、題目表都沒變
+    expect_equal(steps(), c(lanb08 = 2L))
+    expect_equal(item_table()$step[item_table()$item_id == "lanb09"], 1)
+    expect_equal(output$steps_summary, "通過步驟（1 題不是 1：lanb08＝2）")
+  })
+})
+
+test_that("通過步驟：每一列改回 1、全部改回 1；最後固定檔原樣", {
+  r8 <- round8()
+  lk <- linked()
+  shiny::testServer(mod_score_server, args = score_args(r8$round, r8$df, lk$fixed), {
+    session$setInputs(run = 1, item_scale = "lan M36", subj_scale = "lan M36")
+    before <- item_obj()
+    session$setInputs(steps_pick = c("lanb08", "lanb09", "lanc02"), steps_value = 3)
+    session$setInputs(steps_apply = 1)
+    expect_equal(output$steps_summary, "通過步驟（3 題不是 1：lanb08＝3、lanb09＝3、lanc02＝3）")
+    # 一列改回 1
+    session$setInputs(steps_row_reset = "lanb09")
+    expect_match(output$steps_msg$html, "lanb09 改回 1 了。")
+    expect_equal(steps(), c(lanb08 = 3L, lanc02 = 3L))
+    expect_false(grepl("data-item=\"lanb09\"", output$steps_table$html))
+    expect_equal(item_table()$step[item_table()$item_id == "lanb09"], 1)
+    # 4 題以上時標題只列 3 題
+    session$setInputs(steps_pick = c("lanc01", "lanb01"), steps_value = 2, steps_apply = 2)
+    expect_match(output$steps_summary, "^通過步驟（4 題不是 1：.*、…）$")
+    # 全部改回 1
+    session$setInputs(steps_reset = 1)
+    expect_match(output$steps_msg$html, "已經全部改回 1")
+    expect_equal(output$steps_summary, "通過步驟（每題都是 1）")
+    expect_match(output$steps_table$html, "目前每一題都是 1。")
+    expect_false("step" %in% names(item_table()))
+    expect_equal(item_obj()$D, before$D)
+    expect_false(grepl("step = steps", output$code))
+    expect_identical(fixed_out(), lk$fixed)
+  })
+})
+
+test_that("通過步驟：用檔案設定（收在裡面）照樣能上傳、下載範本；錯誤只在那裡顯示", {
+  r8 <- round8()
+  lk <- linked()
+  dir <- withr::local_tempdir()
+  shiny::testServer(mod_score_server, args = score_args(r8$round, r8$df, lk$fixed), {
+    session$setInputs(run = 1, item_scale = "lan M36", subj_scale = "lan M36")
     # 範本：這一回合的每一題、目前的 step
     tpl <- readr::read_csv(kit_test_dl_file(output, session, "steps_template"),
                            show_col_types = FALSE)
@@ -283,57 +412,37 @@ test_that("通過步驟：上傳設定檔，題目表多 step 欄、門檻照它
     expect_true(all(tpl$step == 1))
 
     session$setInputs(steps_file = steps_upload(dir, c("lanb08", "cogD01"), c(2, 3)))
-    status <- output$steps_status$html
-    expect_match(status, "已套用 steps.csv：共 2 題")
-    expect_match(status, "目前有 1 題不是 1：lanb08（2）")
-    expect_match(status, "校準裡沒有這幾題：cogD01")
-    expect_match(status, "另有 1 題這一回合沒有")
-    tab <- item_table()
-    expect_equal(names(tab)[1:2], c("item_id", "step"))
-    expect_equal(tab$step[tab$item_id == "lanb08"], 2)
-    co <- coef(r8$round$items[["lan M36"]])
-    expect_equal(tab$ability_threshold[tab$item_id == "lanb08"],
-                 co$thr[co$item_id == "lanb08" & co$item_score == 2])
-    expect_false(isTRUE(all.equal(item_obj()$D, before$D)))
+    msg <- output$steps_file_msg$html
+    expect_match(msg, "已套用 steps.csv：共 2 題")
+    expect_match(msg, "校準裡沒有這幾題：cogD01")
+    expect_null(output$steps_msg)
+    expect_equal(output$steps_summary, "通過步驟（1 題不是 1：lanb08＝2）")
+    expect_match(output$steps_table$html, "另有 1 題這一回合沒有.*cogD01（3）")
+    expect_equal(item_table()$step[item_table()$item_id == "lanb08"], 2)
     expect_match(output$item_table_note$html, "通過步驟")
     tpl <- readr::read_csv(kit_test_dl_file(output, session, "steps_template"),
                            show_col_types = FALSE)
     expect_equal(tpl$step[tpl$item_id == "lanb08"], 2)
-    # R 程式
-    expect_match(output$code, "lanb08 = 2")
-    expect_match(output$code, "kits_item_table\\(item, data = cbind\\(ages, X\\), step = steps\\)")
-    # 新的固定檔與交給下一回合的固定檔
     back <- kitsui_read_fixed(kit_test_dl_file(output, session, "fixed_dl"))
     expect_equal(back$pass_steps$item_id, c("lanb08", "cogD01"))
     expect_equal(back$pass_steps$step, c(2L, 3L))
-    expect_equal(unique(back$pass_steps$round), "r8")
-    expect_equal(back$links, lk$fixed$links)
-    session$setInputs(next_round = 1)
-    expect_equal(got$pass_steps, back$pass_steps)
 
     # 不合規的檔案：紅字，設定不變
     session$setInputs(steps_file = steps_upload(dir, "lanb08", 7))
-    status <- output$steps_status$html
-    expect_match(status, "通過步驟沒有套用")
-    expect_match(status, "lanb08（設定 7，最高 3 分）")
-    expect_match(status, "設定沒有改")
+    msg <- output$steps_file_msg$html
+    expect_match(msg, "通過步驟沒有套用")
+    expect_match(msg, "lanb08（設定 7，最高 3 分）")
+    expect_match(msg, "設定沒有改。")
+    expect_match(msg, "請改好再上傳。")
     expect_equal(item_table()$step[item_table()$item_id == "lanb08"], 2)
     bad <- steps_upload(dir, "lanb08", 2)
     readr::write_csv(tibble::tibble(id = "lanb08"), bad$datapath)
     session$setInputs(steps_file = bad)
-    expect_match(output$steps_status$html, "缺少：item_id、step")
-
-    # 全部改回 1
-    session$setInputs(steps_reset = 1)
-    expect_match(output$steps_status$html, "已經全部改回 1")
-    expect_false("step" %in% names(item_table()))
-    expect_equal(item_obj()$D, before$D)
-    expect_false(grepl("step = steps", output$code))
-    expect_identical(fixed_out(), lk$fixed)
+    expect_match(output$steps_file_msg$html, "缺少：item_id、step")
   })
 })
 
-test_that("通過步驟：預設用這一回合開始時固定檔的設定（新版本沿用）", {
+test_that("通過步驟：預設用這一回合開始時固定檔的設定（新版本沿用）；區塊打開", {
   r8 <- round8()
   lk <- linked()
   round <- r8$round
@@ -344,12 +453,22 @@ test_that("通過步驟：預設用這一回合開始時固定檔的設定（新
   shiny::testServer(mod_score_server, args = score_args(round, r8$df, start), {
     session$setInputs(run = 1, item_scale = "lan M36")
     expect_equal(item_table()$step[item_table()$item_id == "lanb08"], 3)
-    expect_match(output$steps_status$html, "lanb08（3）")
+    html <- output$result$html
+    expect_match(steps_details_tag(html), "open")
+    expect_match(html, "通過步驟（1 題不是 1：lanb08＝3）")
+    expect_match(output$steps_table$html, "data-item=\"lanb08\"")
+    expect_match(output$steps_picker$html, "lanb08（目前 3，最高 3 分）")
     # 沒有改：固定檔原樣（回合仍是 r7）
     expect_identical(fixed_out(), start)
-    session$setInputs(steps_reset = 1)
+    session$setInputs(steps_row_reset = "lanb08")
     back <- kitsui_read_fixed(kit_test_dl_file(output, session, "fixed_dl"))
     expect_equal(back$pass_steps$step, 1L)
     expect_equal(back$pass_steps$round, "r8")
   })
+})
+
+test_that("題目表的欄位說明：age50 什麼時候是空的", {
+  html <- as.character(item_table_note_ui(data.frame(item_id = "a", age50 = NA)))
+  expect_match(html, "至少兩個波次、通過比例在波次之間跨過 50%")
+  expect_match(html, "只有一個波次，或每一波都已經超過（或都還沒到）50% 時是空的。")
 })

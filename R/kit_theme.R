@@ -236,6 +236,48 @@ kit_css <- function() {
       font-weight: 500;
       margin-bottom: 0.5rem;
     }
+    /* 收合的設定框（④ 通過步驟）：白底框，標題和內文一樣大 */
+    .kit-fold-box {
+      background: #fff;
+      border: 1px solid %6$s;
+      border-radius: 0.375rem;
+      padding: 0.6rem 1.1rem;
+      margin-bottom: 1.2rem;
+    }
+    .kit-fold-box > summary {
+      cursor: pointer;
+      font-weight: 500;
+    }
+    .kit-fold-box[open] > summary {
+      margin-bottom: 0.6rem;
+    }
+    .kit-fold-box details > summary {
+      cursor: pointer;
+      color: %1$s;
+      font-size: 0.9rem;
+      margin-bottom: 0.5rem;
+    }
+    .kit-steps-pick {
+      display: flex;
+      flex-wrap: wrap;
+      align-items: flex-end;
+      gap: 0 1rem;
+    }
+    .kit-steps-pick .form-group,
+    .kit-steps-pick .btn {
+      margin-bottom: 0.9rem;
+    }
+    .kit-steps-table {
+      --bs-table-bg: transparent;
+      width: auto;
+      font-size: 0.9rem;
+      margin-bottom: 0.6rem;
+    }
+    .kit-steps-table td,
+    .kit-steps-table th {
+      vertical-align: middle;
+      padding-right: 1.2rem;
+    }
     .kit-steps {
       margin: 0.2rem 0 0.4rem 1.2rem;
       padding: 0;

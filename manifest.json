@@ -2810,7 +2810,7 @@
       "checksum": "226d7cbec671c2e297aebc835d03041f"
     },
     "DESCRIPTION": {
-      "checksum": "2e3d27ea2e0c352dd2cdf8d98fea4818"
+      "checksum": "c986bd58f5bd56dadcb84c72f51998c7"
     },
     "inst/manual/img/t1_data_design.webp": {
       "checksum": "f7e066d8adce96794925cfd46818bdfb"
@@ -2879,10 +2879,10 @@
       "checksum": "811b41f7fb0d63afcfab87980d4df609"
     },
     "inst/manual/kitsui_manual_body.html": {
-      "checksum": "c583eaf3c6ce265a1b4f2160917905c3"
+      "checksum": "de1d7e5dde9092d03c6f7b0332be435f"
     },
     "inst/manual/kitsui_manual.html": {
-      "checksum": "a6e79b673bb922a7e2c52c14263721b7"
+      "checksum": "85b9bc2f4520929d0df7975ecb9e3c84"
     },
     "NAMESPACE": {
       "checksum": "317ae8dff22b06e5d19fde44a9aaf7a7"
@@ -2903,7 +2903,7 @@
       "checksum": "73d371fabc50b7f88a5e9b34021f312f"
     },
     "R/kit_theme.R": {
-      "checksum": "265587ad9ca46a94425928738f621c5a"
+      "checksum": "a6f743eb8ef10bb95f98be18bf682463"
     },
     "R/kitsUI-package.R": {
       "checksum": "4ffd9e6da95e61fd880674093b54b9d5"
@@ -2921,7 +2921,7 @@
       "checksum": "486a8d2d8bbeb6b50fbcf887067973d3"
     },
     "R/mod_score.R": {
-      "checksum": "e52f5c57929bee711b299fd5be844363"
+      "checksum": "7c228f7009bdd7f74ade3800dd4e94f1"
     },
     "R/pipeline_bank.R": {
       "checksum": "04ff7d019eb82c6cedb1eed1f87f09d9"
@@ -2948,7 +2948,7 @@
       "checksum": "4264474b1f4dda8223c4aa51156c3b0e"
     },
     "R/pipeline_score.R": {
-      "checksum": "5c5c81fb663ccec3caf1835a44875213"
+      "checksum": "ea7b20da549b7eabeff6ced9f1157e65"
     },
     "R/pipeline_status.R": {
       "checksum": "472f4885c98e4217fa4a450adff89343"
@@ -2966,7 +2966,7 @@
       "checksum": "527049a0d401817b64cbb954de521e0c"
     },
     "README.md": {
-      "checksum": "4637d219987c20c2edc7c3217c6c11be"
+      "checksum": "904f58558e6dcdad309936246d533637"
     }
   },
   "users": null
