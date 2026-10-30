@@ -212,11 +212,12 @@ kitsui_parse_picks <- function(picks, choices) {
 #' @param data 這個來源的全部資料（還沒選）
 #' @param picks 勾選的世代 × 波次（"M03 3"）；只寫月齡時是所有世代的這個月齡
 #' @param choices kitsui_pick_choices(data)；NULL 時在這裡算
+#' @param reference 參照世代：量尺表把它排在前面
 #' @return list(df, scales, persons, picks, problems, hint, notes, dropped)：persons 是
 #'   kitsui_persons(df)；picks 是勾到的 choices；problems 是紅色的中文訊息；hint 是還沒勾時的
 #'   提示；notes 是橘色的提醒（wave_m 空白的列、像遺漏碼的分數）；dropped 是拿掉的約定以外的欄
 #' @noRd
-kitsui_data_select <- function(data, picks, choices = NULL) {
+kitsui_data_select <- function(data, picks, choices = NULL, reference = KITSUI_REF_COHORT) {
   miss <- setdiff(KITSUI_REQUIRED, names(data))
   if (length(miss) > 0) {
     return(list(problems = paste0("資料缺少這些欄位：", paste(miss, collapse = "、"),
@@ -246,7 +247,8 @@ kitsui_data_select <- function(data, picks, choices = NULL) {
     },
     kitsui_note_codes(df)
   )
-  list(df = df, scales = kitsui_scales(df), persons = kitsui_persons(df), picks = sel,
+  scales <- dplyr::arrange(kitsui_scales(df), .data$cohort != reference, .data$scale)
+  list(df = df, scales = scales, persons = kitsui_persons(df), picks = sel,
        problems = character(), notes = notes, dropped = dropped)
 }
 
@@ -333,6 +335,28 @@ kitsui_note_waves <- function(plan, fixed) {
          paste(sprintf("%s 的 %s 個月（第 %s 回合）", hit$data_scale, format(hit$wave_m, trim = TRUE),
                        hit$round), collapse = "、"),
          "。再校準一次，同一批孩子會有兩份分數。")
+}
+
+#' 要用題庫固定校準，但這一回合的題沒有一題在那個題庫裡（題號都不一樣）：② 一定停下來
+#' （kits："No item of the new data is in `ref`"），在 ① 就先說
+#' @param plan kitsui_round_plan()
+#' @return 中文訊息；沒有時長度 0
+#' @noRd
+kitsui_note_no_common <- function(df, plan, fixed) {
+  use <- dplyr::distinct(plan[plan$scale %in% fixed$bank$scale, ], .data$data_scale, .data$scale)
+  if (nrow(use) == 0) return(character())
+  have <- dplyr::distinct(df, .data$domain, .data$cohort, .data$item_id)
+  have$data_scale <- scale_key(have$domain, have$cohort)
+  bad <- purrr::map_lgl(seq_len(nrow(use)), \(i) {
+    items <- have$item_id[have$data_scale == use$data_scale[i]]
+    bank <- fixed$bank$item_id[fixed$bank$scale == use$scale[i]]
+    vers <- fixed$versions$current_id[fixed$versions$scale == use$scale[i]]
+    !any(items %in% c(bank, vers))
+  })
+  if (!any(bad)) return(character())
+  sprintf(paste0("%s：%s 的題庫裡沒有這一回合的任何一題（題號都不一樣），② 會停下來。",
+                 "請確認題號和之前的回合相同；或在 ② 把它選成「這一回合不做」。"),
+          use$data_scale[bad], use$scale[bad])
 }
 
 #' 固定檔不是這次連線最新的一回合（④ 交過更新的一回合時）

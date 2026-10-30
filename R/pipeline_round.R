@@ -150,12 +150,16 @@ kitsui_round_try <- function(rows, part, fixed, round_label, flag_share, flag_fi
   out
 }
 
-#' 停下來的原因（中文）：kitsui 自己的訊息原文；kits 的訊息前面加一句中文
+#' 停下來的原因（中文）：kitsui 自己的訊息原文；kits 的訊息前面加一句中文，常見的錯誤再加
+#' 白話的說明（kitsui_kits_zh()）。kits 的原文接在「kits 的訊息：」後面（畫面收在 details 裡）
 #' @noRd
 kitsui_error_detail <- function(e) {
   if (inherits(e, "kit_user_error")) return(conditionMessage(e))
-  paste0("kits 出錯，這個量尺停下來。kits 的訊息：", conditionMessage(e))
+  paste0("kits 出錯，這個量尺停下來。", kitsui_kits_zh(conditionMessage(e)),
+         KITSUI_KITS_SAYS, conditionMessage(e))
 }
+# 紀錄裡 kits 原文前面的字（kitsui_error_ui() 照它切開）
+KITSUI_KITS_SAYS <- "kits 的訊息："
 
 #' 停下來的原因（英文，寫進 checks.csv）：kits 的訊息原文（英文）；kitsui 自己的訊息是中文，
 #' 用它帶的 en，沒有時一句通用的英文

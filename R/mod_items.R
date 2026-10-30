@@ -458,7 +458,7 @@ items_status <- function(res, skip_id = NULL) {
       shiny::tags$ul(lapply(seq_len(nrow(why)), \(i) {
         kind <- if (why$check[i] == "error") "kits 出錯" else "停下來"
         shiny::tags$li(shiny::tags$strong(why$scale[i]), "（", kind, "）：",
-                       why$detail[i])
+                       kitsui_error_ui(why$detail[i]))
       })),
       if (n_ok > 0) shiny::tags$p(sprintf("其他 %d 個量尺有校準結果，可以先看。", n_ok)),
       if (!is.null(skip_id) && length(skip) > 0) {

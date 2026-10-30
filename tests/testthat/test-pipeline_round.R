@@ -103,11 +103,11 @@ test_that("kits 出錯的量尺停下來並記下原因（中文），其他量�
   expect_equal(names(r$items), "motor M03")
   err <- dplyr::filter(r$log, check == "error")
   expect_equal(err$scale, "sim M03")
-  expect_match(err$detail, "^kits 出錯，這個量尺停下來。kits 的訊息：Every person-wave answered")
+  expect_match(err$detail, "^kits 出錯，這個量尺停下來。每個列次都只剩一題.*kits 的訊息：Every person-wave answered")
   en <- dplyr::filter(r$fixed$checks, check == "error")
   expect_equal(en$scale, "sim M03")
   # checks.csv 是英文：kits 的訊息原文
-  msg <- sub("^kits 出錯，這個量尺停下來。kits 的訊息：", "", err$detail)
+  msg <- sub("^.*kits 的訊息：", "", err$detail)
   expect_equal(en$detail, paste0("kits error, scale stopped: ", msg))
   zip_path <- withr::local_tempfile(fileext = ".zip")
   expect_error(kitsui_write_fixed(r$fixed, zip_path), "sim M03", class = "kit_user_error")
@@ -487,4 +487,33 @@ test_that("這一回合不做的量尺：不校準、題庫不動、checks.csv �
   expect_match(html, "這一回合不做 sim M03，再校準一次")
   expect_error(kitsui_write_fixed(stopped$fixed, zip_path), "這一回合不做",
                class = "kit_user_error")
+})
+
+test_that("kits 的英文錯誤：常見的翻成白話中文，原文收在 details 裡", {
+  expect_match(kitsui_kits_zh("Every person-wave answered only one item, so CML has no information"),
+               "這一回合不做")
+  expect_match(kitsui_kits_zh("Column(s) item_score2 of `data` change within a person-wave; x"),
+               "同一個列次")
+  expect_match(kitsui_kits_zh("No item of the new data is in `ref`."), "沒有共同的題")
+  expect_null(kitsui_kits_zh("something else"))
+  e <- simpleError("Every person-wave answered only one item, so CML has no information.")
+  d <- kitsui_error_detail(e)
+  expect_match(d, "^kits 出錯，這個量尺停下來。每個列次都只剩一題.*kits 的訊息：Every person-wave")
+  # checks.csv 仍是 kits 的原文（英文）
+  expect_equal(kitsui_error_detail_en(e),
+               "kits error, scale stopped: Every person-wave answered only one item, so CML has no information.")
+  html <- as.character(kitsui_error_ui(d))
+  expect_match(html, "<details")
+  expect_match(html, "<summary>kits 的原文</summary>")
+  expect_match(html, "<code>Every person-wave answered only one item")
+  expect_equal(kitsui_error_ui("沒有可固定的題"), "沒有可固定的題")
+})
+
+test_that("① 先說：題庫裡沒有這一回合的任何一題", {
+  fixed <- lan_chain()[["3"]]$fixed
+  d <- kitsui_demo("M03", 6, "lan")
+  expect_length(kitsui_note_no_common(d, kitsui_round_plan(d, fixed), fixed), 0)
+  d$item_id <- paste0("new_", d$item_id)
+  note <- kitsui_note_no_common(d, kitsui_round_plan(d, fixed), fixed)
+  expect_match(note, "^lan M03：lan M03 的題庫裡沒有這一回合的任何一題")
 })

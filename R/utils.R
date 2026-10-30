@@ -92,3 +92,49 @@ kit_pandoc_ok <- function() {
   if (requireNamespace("rmarkdown", quietly = TRUE)) return(rmarkdown::pandoc_available())
   nzchar(Sys.which("pandoc"))
 }
+
+# kits 的英文錯誤 -> 白話中文 ----
+
+# 常見的 kits 錯誤（照順序比對 conditionMessage()，第一個符合的用）：pattern 是正規表示式，
+# zh 是給使用者看的一兩句（說原因與怎麼辦）。kits 的原文另外收在「kits 的原文」裡
+KITSUI_KITS_ERRORS <- tibble::tribble(
+  ~pattern, ~zh,
+  "Fewer than 2 items of the new data have a 0 score",
+  "這一回合能自由校準的題不到 2 題（要有人得 0 分、至少兩種分數），不能判斷偏移。",
+  "^Only [0-9]+ item step\\(s\\) have at least `min_n`",
+  "每個步驟上下各要有 30 人才判斷偏移，這一回合夠的步驟不到 3 個（人太少）。",
+  "Every person-wave answered only one item",
+  paste0("每個列次都只剩一題可以估計（其他題固定在題庫的值或拿掉了），CML 估不出來：",
+         "每個人至少要有兩題。可以在 ② 把這個量尺選成「這一回合不做」，等資料多一些再做。"),
+  "At least 2 item steps are needed",
+  "可以估計的題步驟不到 2 個（其他題都固定在題庫的值或拿掉了），沒有東西可以校準。",
+  "Every item is fixed and has no 0 score or only one score",
+  "每一題都固定在題庫的值，而且沒有人得 0 分或只有一種分數，沒有東西可以校準。",
+  "No item of the new data is in `ref`",
+  "題庫和這一回合的資料沒有共同的題（題號都不一樣），不能固定校準。請確認題號和之前的回合相同。",
+  "change within a person-wave",
+  paste0("同一個列次（visit_id）的幾列，某些欄（例如 wave_m、cohort、age_m、sex）的值不一樣。",
+         "同一個列次的這些欄要相同。"),
+  "same item more than once",
+  "同一個列次同一題有好幾列。每個列次每一題只能有一列。",
+  "no finite CML estimate",
+  "有題估不出有限的 CML 估計值（有資訊的人都通過，或都沒通過）。",
+  "gap in their observed scores|Scores must be consecutive",
+  "有題的分數不連續（中間少了分數），要先把分數改成連續的 0、1、2…。",
+  "separate groups that share no item",
+  "作答設計沒有連在一起：有幾組題沒有被同一批人一起作答，不能放在同一把尺上。",
+  "Hessian of the calibration is singular",
+  "資訊不夠，算不出標準誤（人或題太少，或分數太集中）。",
+  "undefined columns selected",
+  "kitsUI 找不到要用的欄或題。請把這個量尺與資料告訴維護 kitsUI 的人。"
+)
+
+#' kits 的英文錯誤翻成白話中文
+#' @param msg kits 的錯誤訊息（英文）
+#' @return 一兩句中文；不是常見的錯誤時 NULL
+#' @noRd
+kitsui_kits_zh <- function(msg) {
+  hit <- which(purrr::map_lgl(KITSUI_KITS_ERRORS$pattern, \(p) grepl(p, msg)))
+  if (length(hit) == 0) return(NULL)
+  KITSUI_KITS_ERRORS$zh[hit[1]]
+}

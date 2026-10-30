@@ -323,6 +323,7 @@ mod_data_server <- function(id, goto, handover = NULL) {
       ck <- checked()
       c(
         if (!is.null(ck$df)) kitsui_note_waves(plan(), fixed()),
+        if (!is.null(ck$df)) kitsui_note_no_common(ck$df, plan(), fixed()),
         kitsui_note_stale(fixed()$version$rounds, latest_round()),
         if (is_upload()) kitsui_note_sources(upload()$files, fixed()),
         kitsui_note_dropped(unique(c(if (is_upload()) upload()$dropped, ck$dropped))),
@@ -392,7 +393,9 @@ mod_data_server <- function(id, goto, handover = NULL) {
     design_plot <- shiny::reactive({
       r <- design_resp()
       shiny::validate(shiny::need(!inherits(r, "error"), paste(
-        "這個量尺的作答有問題（kits_resp 的訊息）：", if (inherits(r, "error")) conditionMessage(r)
+        "這個量尺的作答有問題：", if (inherits(r, "error")) {
+          paste0(kitsui_kits_zh(conditionMessage(r)), "（kits_resp 的訊息：", conditionMessage(r), "）")
+        }
       )))
       # 通過比例照固定檔的通過步驟（示範資料、沒有固定檔時每題都是 1）
       plot(kitsui_resp_pass(r, kitsui_steps_vec(fixed()$pass_steps)))
@@ -482,6 +485,9 @@ data_category_note <- function(problems) {
 #' @param plan NULL 或 kitsui_round_plan()
 #' @noRd
 data_scale_table <- function(scales, fixed, plan = NULL) {
+  # 參照世代排在前面（固定檔的參照世代）
+  ref <- fixed$version$reference %||% KITSUI_REF_COHORT
+  scales <- scales[order(scale_cohort(scales$scale) != ref, scales$scale), ]
   mode <- ifelse(scales$scale %in% fixed$bank$scale, "固定校準（有題庫）", "自由校準（沒有題庫）")
   borrow <- purrr::map_chr(scales$scale, \(s) data_borrow_text(plan[plan$data_scale == s, ]))
   data.frame(

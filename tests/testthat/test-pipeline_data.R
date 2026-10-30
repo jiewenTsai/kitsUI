@@ -311,3 +311,15 @@ test_that("世代名稱有空白、領域名稱有逗號：① 與 ② 一致，
   expect_match(code, 'paste(domain, cohort) == "lan, words old cohort"', fixed = TRUE)
   expect_match(code, 'scale = "lan, words old\\u00a0cohort"', fixed = TRUE)
 })
+
+test_that("量尺表：參照世代排在前面", {
+  d <- kitsui_demo(waves = c(3, 36), domains = "lan")
+  expect_equal(kitsui_data_select(d, kitsui_pick_choices(d)$value)$scales$scale,
+               c("lan M03", "lan M36"))
+  expect_equal(kitsui_data_select(d, kitsui_pick_choices(d)$value, reference = "M36")$scales$scale,
+               c("lan M36", "lan M03"))
+  fx <- kitsui_fixed_empty()
+  fx$version$reference <- "M36"
+  plan <- kitsui_round_plan(d, fx)
+  expect_equal(data_scale_table(kitsui_scales(d), fx, plan)$scale, c("lan M36", "lan M03"))
+})
