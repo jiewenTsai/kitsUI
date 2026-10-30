@@ -12,6 +12,11 @@ test_that("說明框、提示框、下一步", {
   expect_match(g, "kit-guide-note")
   expect_match(g, "<li>二</li>")
   expect_false(grepl("kit-guide-note", as.character(mod_guide("目的", "一", "結果"))))
+  # 預設收起：只看到「這一頁做什麼」一句，步驟在收起來的內容裡
+  expect_match(g, '^<details class="kit-guide kit-guide-page">')
+  expect_false(grepl("<details[^>]*open", g))
+  expect_match(g, "<summary>\\s*<strong>這一頁做什麼：</strong>\\s*目的")
+  expect_match(g, 'class="kit-guide-body"')
   expect_match(as.character(ui_callout("x", warning = TRUE)), "kit-callout kit-callout-warn")
   expect_match(as.character(ui_alert("danger", "【停】", "x")), "alert-danger")
   expect_match(as.character(ui_next_step("好了", "go", "下一步")), "id=\"go\"")

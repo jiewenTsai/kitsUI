@@ -1,17 +1,23 @@
 # 各分頁共用的小元件：說明框、提示框、檢查結果、R 程式、下載鈕
 
-#' 分頁說明框（這一頁做什麼、步驟、會得到；note 是一行補充）
+#' 分頁說明框：預設收起，只看到「這一頁做什麼」一句；按「看步驟」才展開步驟、會得到、補充
 #' @noRd
 mod_guide <- function(goal, steps, output, note = NULL) {
-  shiny::tags$div(
-    class = "kit-guide",
-    shiny::tags$p(shiny::tags$strong("這一頁做什麼："), goal),
-    shiny::tags$div(
-      shiny::tags$strong("步驟："),
-      shiny::tags$ol(class = "kit-steps", lapply(steps, shiny::tags$li))
+  shiny::tags$details(
+    class = "kit-guide kit-guide-page",
+    shiny::tags$summary(
+      shiny::tags$strong("這一頁做什麼："), goal,
+      shiny::tags$span(class = "kit-guide-more")
     ),
-    shiny::tags$p(shiny::tags$strong("會得到："), output),
-    if (!is.null(note)) shiny::tags$p(class = "kit-guide-note", note)
+    shiny::tags$div(
+      class = "kit-guide-body",
+      shiny::tags$div(
+        shiny::tags$strong("步驟："),
+        shiny::tags$ol(class = "kit-steps", lapply(steps, shiny::tags$li))
+      ),
+      shiny::tags$p(shiny::tags$strong("會得到："), output),
+      if (!is.null(note)) shiny::tags$p(class = "kit-guide-note", note)
+    )
   )
 }
 
