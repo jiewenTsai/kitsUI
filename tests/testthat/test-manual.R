@@ -1,0 +1,21 @@
+test_that("使用手冊：找得到檔案，最後一頁用 iframe 顯示", {
+  dir <- kit_manual_dir()
+  expect_false(is.null(dir))
+  expect_true(file.exists(file.path(dir, KIT_MANUAL_FILE)))
+  html <- as.character(kit_manual_ui())
+  expect_match(html, "<iframe", fixed = TRUE)
+  expect_match(html, "kitsui-manual/kitsui_manual.html", fixed = TRUE)
+  expect_match(html, "target=\"_blank\"", fixed = TRUE)
+  tabs <- as.character(kit_ui(NULL))
+  expect_match(tabs, "data-value=\"manual\"", fixed = TRUE)
+  expect_true(regexpr("④ 受試者評分", tabs) < regexpr("使用手冊", tabs))
+})
+
+test_that("使用手冊：單一 html，圖片內嵌，沒有本機路徑", {
+  page <- readLines(file.path(kit_manual_dir(), KIT_MANUAL_FILE), encoding = "UTF-8", warn = FALSE)
+  page <- paste(page, collapse = "\n")
+  expect_match(page, "<meta charset=\"utf-8\">", fixed = TRUE)
+  expect_false(grepl("{{", page, fixed = TRUE))
+  expect_match(page, "data:image/webp;base64,", fixed = TRUE)
+  expect_false(grepl("/home/|/tmp/|C:\\\\Users", page))
+})

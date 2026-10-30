@@ -2804,19 +2804,22 @@
       "checksum": "ab29909152db0bbb48563f3595e1487e"
     },
     ".Rbuildignore": {
-      "checksum": "9dda0f6f6edbe2aeb4e70ecaa465c17d"
+      "checksum": "cb49fd89bf1edd8db59ae2b63e72f458"
     },
     "app.R": {
       "checksum": "226d7cbec671c2e297aebc835d03041f"
     },
     "DESCRIPTION": {
-      "checksum": "ead7d2da490b8be7400677e856fb5e05"
+      "checksum": "192fe420860416e4b9fcd0823ad30e00"
+    },
+    "inst/manual/kitsui_manual.html": {
+      "checksum": "efa852a001f7aa70511c014465d7ec93"
     },
     "NAMESPACE": {
       "checksum": "317ae8dff22b06e5d19fde44a9aaf7a7"
     },
     "R/app.R": {
-      "checksum": "9b55f3cbc1debfa8d9cc08fe0af2f8b0"
+      "checksum": "1ee66dbd47419091537578f9fbb931a1"
     },
     "R/cloud.R": {
       "checksum": "089fbb01441aba32929888d59ee03953"
@@ -2828,10 +2831,13 @@
       "checksum": "73d371fabc50b7f88a5e9b34021f312f"
     },
     "R/kit_theme.R": {
-      "checksum": "9ba17daaf398b37cb3aed30cdad27a45"
+      "checksum": "3040945f646ed09acc7539614143ce55"
     },
     "R/kitsUI-package.R": {
       "checksum": "4ffd9e6da95e61fd880674093b54b9d5"
+    },
+    "R/manual.R": {
+      "checksum": "e2a0178be2e14056192d73754d1393b4"
     },
     "R/mod_data.R": {
       "checksum": "9b8a30b4d533471b5ec4eadaddc543ac"
@@ -2882,7 +2888,7 @@
       "checksum": "527049a0d401817b64cbb954de521e0c"
     },
     "README.md": {
-      "checksum": "35212faed0a04161132d55f3a58d78fb"
+      "checksum": "f998c24d7b4362adce7fd23414afdc59"
     }
   },
   "users": null

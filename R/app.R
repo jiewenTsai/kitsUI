@@ -20,6 +20,7 @@ kit_set_options <- function() {
     shiny.autoload.r = FALSE
   )
   kit_setup_pandoc()
+  kit_setup_manual()
 }
 
 #' 在預設瀏覽器開啟網址
@@ -48,7 +49,8 @@ kit_ui <- function(request) {
       shiny::tabPanel("① 資料", value = "data", mod_data_ui("data")),
       shiny::tabPanel("② 題目校準", value = "items", mod_items_ui("items")),
       shiny::tabPanel("③ 連結", value = "link", mod_link_ui("link")),
-      shiny::tabPanel("④ 受試者評分", value = "score", mod_score_ui("score"))
+      shiny::tabPanel("④ 受試者評分", value = "score", mod_score_ui("score")),
+      shiny::tabPanel("使用手冊", value = "manual", kit_manual_ui())
     ),
     if (kit_is_cloud()) kit_cloud_footer()
   )

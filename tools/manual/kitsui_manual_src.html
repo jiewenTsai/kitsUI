@@ -1,0 +1,421 @@
+<title>kitsUI 操作手冊</title>
+<meta name="description" content="KIT 量尺建構工具（kitsUI 0.3.4）的操作手冊：過去波次的基礎計分與新增波次的計分。">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=LXGW+WenKai+TC:wght@400;700&family=Noto+Sans+TC:wght@400;500;700&family=JetBrains+Mono:wght@400;600&display=swap">
+<style>
+:root {
+  --ground: #f6f8f4;
+  --paper: #ffffff;
+  --ink: #1d2a1f;
+  --ink-2: #4a5a4c;
+  --ink-3: #6f7d70;
+  --rule: #dfe6dc;
+  --green: #2e7d32;
+  --green-soft: #e8f2e6;
+  --t1: #2e7d32;
+  --t1-soft: #e6f1e4;
+  --t2: #1f6f8b;
+  --t2-soft: #e3eff4;
+  --warn: #a35a00;
+  --warn-soft: #fdf1e0;
+  --code-bg: #eef2ec;
+  --shadow: 0 1px 2px rgba(29, 42, 31, .06), 0 6px 20px rgba(29, 42, 31, .07);
+  --display: "LXGW WenKai TC", "Noto Serif TC", "PingFang TC", serif;
+  --body: "Noto Sans TC", "PingFang TC", "Microsoft JhengHei", system-ui, sans-serif;
+  --mono: "JetBrains Mono", ui-monospace, "SFMono-Regular", Menlo, monospace;
+}
+@media (prefers-color-scheme: dark) {
+  :root:not([data-theme="light"]) {
+    color-scheme: dark;
+    --ground: #141a15; --paper: #1b231c; --ink: #e5ece3; --ink-2: #b5c2b3; --ink-3: #8e9b8c;
+    --rule: #2d3a2f; --green: #7cc480; --green-soft: #1f2e21;
+    --t1: #7cc480; --t1-soft: #1f2e21; --t2: #6fbfdc; --t2-soft: #182a31;
+    --warn: #f0b062; --warn-soft: #2e2416; --code-bg: #243026;
+    --shadow: 0 1px 2px rgba(0, 0, 0, .3), 0 6px 20px rgba(0, 0, 0, .25);
+  }
+}
+:root[data-theme="dark"] {
+  color-scheme: dark;
+  --ground: #141a15; --paper: #1b231c; --ink: #e5ece3; --ink-2: #b5c2b3; --ink-3: #8e9b8c;
+  --rule: #2d3a2f; --green: #7cc480; --green-soft: #1f2e21;
+  --t1: #7cc480; --t1-soft: #1f2e21; --t2: #6fbfdc; --t2-soft: #182a31;
+  --warn: #f0b062; --warn-soft: #2e2416; --code-bg: #243026;
+  --shadow: 0 1px 2px rgba(0, 0, 0, .3), 0 6px 20px rgba(0, 0, 0, .25);
+}
+* { box-sizing: border-box; }
+html { scroll-behavior: smooth; }
+@media (prefers-reduced-motion: reduce) { html { scroll-behavior: auto; } }
+body {
+  background: var(--ground); color: var(--ink);
+  font-family: var(--body); font-size: 16px; line-height: 1.8;
+  padding-inline: 20px; padding-block: 0 80px;
+}
+.wrap {
+  max-width: 1180px; margin: 0 auto;
+  display: grid; grid-template-columns: 220px minmax(0, 1fr); gap: 48px;
+}
+@media (max-width: 900px) { .wrap { grid-template-columns: minmax(0, 1fr); gap: 0; } nav.toc { display: none; } }
+
+/* 頁首 */
+header.top { grid-column: 1 / -1; padding-block: 44px 22px; border-bottom: 1px solid var(--rule); margin-bottom: 8px; }
+.eyebrow { font-size: 13px; letter-spacing: .12em; color: var(--green); font-weight: 700; }
+h1 { font-family: var(--display); font-size: clamp(34px, 5vw, 48px); line-height: 1.2; margin: 6px 0 10px; text-wrap: balance; }
+.lede { color: var(--ink-2); max-width: 46em; margin: 0; }
+.meta { margin-top: 14px; font-size: 14px; color: var(--ink-3); display: flex; flex-wrap: wrap; gap: 6px 18px; }
+.meta a { color: var(--green); }
+
+/* 目錄 */
+nav.toc { position: sticky; top: env(safe-area-inset-top, 0px); align-self: start; padding-top: 28px; font-size: 14px; max-height: 100vh; overflow-y: auto; }
+nav.toc .h { font-size: 12px; letter-spacing: .1em; color: var(--ink-3); margin: 18px 0 6px; font-weight: 700; }
+nav.toc a { display: block; color: var(--ink-2); text-decoration: none; padding: 3px 0 3px 10px; border-left: 2px solid transparent; line-height: 1.5; }
+nav.toc a:hover, nav.toc a:focus-visible { color: var(--ink); border-left-color: var(--rule); }
+nav.toc a.t1 { border-left-color: var(--t1); }
+nav.toc a.t2 { border-left-color: var(--t2); }
+
+main { min-width: 0; padding-top: 12px; }
+section { margin-top: 56px; }
+h2 { font-family: var(--display); font-size: 30px; line-height: 1.3; margin: 0 0 14px; text-wrap: balance; }
+h3 { font-size: 20px; margin: 40px 0 8px; line-height: 1.4; text-wrap: balance; display: flex; align-items: baseline; gap: 10px; flex-wrap: wrap; }
+h4 { font-size: 16px; margin: 26px 0 4px; }
+p, ul, ol { max-width: 44em; }
+p { margin: 8px 0; }
+ul, ol { padding-left: 1.4em; margin: 8px 0; }
+li { margin: 3px 0; }
+code, .col { font-family: var(--mono); font-size: .86em; background: var(--code-bg); padding: 1px 5px; border-radius: 4px; }
+strong { font-weight: 700; }
+a { color: var(--green); }
+a:focus-visible, button:focus-visible { outline: 2px solid var(--green); outline-offset: 2px; }
+
+/* 任務標籤 */
+.task-tag { display: inline-block; font-size: 13px; font-weight: 700; letter-spacing: .06em; padding: 2px 10px; border-radius: 999px; }
+.task-tag.t1 { color: var(--t1); background: var(--t1-soft); }
+.task-tag.t2 { color: var(--t2); background: var(--t2-soft); }
+.task-head { border-top: 4px solid var(--t1); padding-top: 20px; }
+.task-head.t2 { border-top-color: var(--t2); }
+.step-no { font-family: var(--mono); font-size: 14px; font-weight: 600; color: var(--paper); background: var(--t1); border-radius: 6px; padding: 1px 8px; }
+.t2 .step-no { background: var(--t2); }
+
+/* 對照表 */
+.table-wrap { overflow-x: auto; margin: 16px 0; }
+table { border-collapse: collapse; width: 100%; font-size: 15px; background: var(--paper); box-shadow: var(--shadow); border-radius: 8px; overflow: hidden; }
+th, td { text-align: left; vertical-align: top; padding: 10px 14px; border-bottom: 1px solid var(--rule); line-height: 1.6; }
+th { font-size: 13px; color: var(--ink-3); font-weight: 700; letter-spacing: .04em; background: var(--paper); }
+tr:last-child td { border-bottom: 0; }
+td:first-child { color: var(--ink-2); white-space: nowrap; }
+th.t1 { color: var(--t1); } th.t2 { color: var(--t2); }
+.req { color: var(--green); font-weight: 700; }
+
+/* 截圖 */
+figure.shot { margin: 18px 0 26px; }
+figure.shot img { display: block; width: 100%; max-width: 100%; height: auto; border: 1px solid var(--rule); border-radius: 8px; box-shadow: var(--shadow); background: #fff; }
+figure.shot figcaption { font-size: 14px; color: var(--ink-3); margin-top: 8px; max-width: 52em; }
+figure.shot.narrow img { max-width: 760px; }
+
+/* 提示框 */
+.note { border-radius: 8px; padding: 12px 16px; margin: 16px 0; max-width: 46em; background: var(--green-soft); }
+.note.warn { background: var(--warn-soft); }
+.note.warn strong { color: var(--warn); }
+.note.t2 { background: var(--t2-soft); }
+.note p, .note ul { margin: 4px 0; }
+
+.keep { display: grid; grid-template-columns: repeat(auto-fit, minmax(240px, 1fr)); gap: 14px; margin: 16px 0; max-width: 46em; }
+.keep div { background: var(--paper); border: 1px solid var(--rule); border-radius: 8px; padding: 12px 16px; }
+.keep .k { font-family: var(--mono); font-size: 14px; font-weight: 600; color: var(--ink); word-break: break-all; }
+.keep .v { font-size: 14px; color: var(--ink-2); margin-top: 4px; line-height: 1.6; }
+
+dl.terms { display: grid; grid-template-columns: max-content 1fr; gap: 6px 18px; max-width: 46em; margin: 12px 0; }
+dl.terms dt { font-weight: 700; }
+dl.terms dd { margin: 0; color: var(--ink-2); }
+@media (max-width: 520px) { dl.terms { grid-template-columns: 1fr; } dl.terms dd { margin-bottom: 8px; } }
+footer { margin-top: 64px; padding-top: 18px; border-top: 1px solid var(--rule); font-size: 14px; color: var(--ink-3); }
+</style>
+
+<div class="wrap">
+<header class="top">
+  <div class="eyebrow">KIT 量尺建構工具 · kitsUI 0.3.4</div>
+  <h1>kitsUI 操作手冊</h1>
+  <p class="lede">kitsUI 把 KIT 的作答資料校準、連結，算成每個孩子的分數。這份手冊分成兩個任務：第一次建立量尺時的<strong>基礎計分</strong>，以及之後每收到一波資料時的<strong>新增波次計分</strong>。</p>
+  <div class="meta">
+    <span>雲端版：<a target="_blank" rel="noopener" href="https://jiewentsai-kitsui.share.connect.posit.cloud/">jiewentsai-kitsui.share.connect.posit.cloud</a></span>
+    <span>原始碼：<a target="_blank" rel="noopener" href="https://github.com/jiewenTsai/kitsUI">github.com/jiewenTsai/kitsUI</a></span>
+    <span>截圖用的是 app 內建的示範資料</span>
+    <span>app 的最後一頁「使用手冊」也是這份手冊</span>
+  </div>
+</header>
+
+<nav class="toc" aria-label="目錄">
+  <div class="h">開始之前</div>
+  <a href="#two">兩個任務的差別</a>
+  <a href="#data">資料格式</a>
+  <a href="#terms">名詞</a>
+  <div class="h">任務一：基礎計分</div>
+  <a class="t1" href="#t1-data">① 資料</a>
+  <a class="t1" href="#t1-items">② 題目校準</a>
+  <a class="t1" href="#t1-link">③ 連結</a>
+  <a class="t1" href="#t1-score">④ 受試者評分</a>
+  <a class="t1" href="#t1-keep">要保存的檔案</a>
+  <div class="h">任務二：新增波次</div>
+  <a class="t2" href="#t2-data">① 資料＋固定檔</a>
+  <a class="t2" href="#t2-items">② 題目校準與偏移</a>
+  <a class="t2" href="#t2-link">③ 連結（沿用）</a>
+  <a class="t2" href="#t2-score">④ 受試者評分</a>
+  <a class="t2" href="#t2-next">再下一波</a>
+  <div class="h">其他</div>
+  <a href="#faq">常見問題</a>
+</nav>
+
+<main>
+
+<section id="two" style="margin-top:8px">
+  <h2>兩個任務的差別</h2>
+  <p>kitsUI 有四個分頁：① 資料、② 題目校準、③ 連結、④ 受試者評分。兩個任務都依序走過這四頁，但每一頁做的事不同。</p>
+  <div class="table-wrap">
+  <table>
+    <thead><tr><th></th><th class="t1">任務一：過去波次的基礎計分</th><th class="t2">任務二：新增波次的計分</th></tr></thead>
+    <tbody>
+      <tr><td>什麼時候做</td><td>第一次建立量尺。只做一次。</td><td>每收到新的一波就做一次。</td></tr>
+      <tr><td>① 資料</td><td>放進所有過去的波次。不用固定檔。</td><td>放進新的波次，再上傳上一回合的固定檔（zip）。</td></tr>
+      <tr><td>② 題目校準</td><td>每個量尺自由校準。</td><td>舊題固定在題庫的值，先檢查偏移，只估新的步驟。</td></tr>
+      <tr><td>③ 連結</td><td>建立內部連結（M36 → M03）和外部連結（M03 → D）。</td><td>連結已經凍結，直接沿用，不用按任何按鈕。</td></tr>
+      <tr><td>④ 受試者評分</td><td>算出過去所有列次的分數。</td><td>只算新波次的分數。舊分數不重算。</td></tr>
+      <tr><td>做完要保存</td><td>分數表 R1、固定檔 R1。</td><td>分數表 R2、固定檔 R2（之後 R3、R4…）。</td></tr>
+    </tbody>
+  </table>
+  </div>
+  <div class="note">
+    <p><strong>為什麼要分兩個任務？</strong>量尺建好之後就不再變動。每一波新資料都接在同一把尺上，所以早先發出的分數永遠不會改。固定檔就是這把尺：它記錄題庫、題目版本和連結。</p>
+  </div>
+</section>
+
+<section id="data">
+  <h2>資料格式</h2>
+  <p>資料是<strong>長格式</strong>：一列是一個孩子在一個波次的一題作答。可以一次上傳好幾個檔，只要欄位一樣。檔案支援 CSV、壓縮過的 CSV.GZ 和 SPSS 的 SAV。單一檔案上限 200 MB；大的 CSV 請先壓成 .csv.gz。</p>
+  <div class="table-wrap">
+  <table>
+    <thead><tr><th>欄位</th><th>必填</th><th>意思</th></tr></thead>
+    <tbody>
+      <tr><td><span class="col">visit_id</span></td><td class="req">是</td><td>列次編號：一個孩子的一個波次一個編號。兩個世代不能重複。</td></tr>
+      <tr><td><span class="col">subj_id</span></td><td>否</td><td>孩子編號：同一個孩子的各波次相同。分數表會帶著它。</td></tr>
+      <tr><td><span class="col">cohort</span></td><td class="req">是</td><td>世代，例如 M03、M36。參照世代是 M03。</td></tr>
+      <tr><td><span class="col">sex</span></td><td>否</td><td>性別，例如 boy、girl。</td></tr>
+      <tr><td><span class="col">wave_m</span></td><td class="req">是</td><td>波次（施測月齡），例如 3、6、12。</td></tr>
+      <tr><td><span class="col">age_m</span></td><td>否</td><td>實際月齡。題目表的通過年齡要用它。</td></tr>
+      <tr><td><span class="col">item_id</span></td><td class="req">是</td><td>題號，例如 lana01。</td></tr>
+      <tr><td><span class="col">item_score</span></td><td class="req">是</td><td>得分：0、1、2…。沒有作答的題不用放。</td></tr>
+      <tr><td><span class="col">domain</span></td><td class="req">是</td><td>領域，例如 lan、motor、cog。外部連結的錨題用 lan、motor、cog 這三個名稱。</td></tr>
+    </tbody>
+  </table>
+  </div>
+  <p>① 資料頁選「上傳檔案」後，可以下載<strong>欄位範例檔</strong>，照著它的欄位整理就好。世代和領域都由資料提供，kitsUI 不會從檔名猜。</p>
+  <div class="note warn"><p><strong>雲端版只能放去識別化的資料。</strong>有姓名、身分證號等資料時，請改用本機版（<code>kitsUI::run_kitsui()</code>，或在 Windows 雙擊 <code>run.bat</code>）。</p></div>
+</section>
+
+<section id="terms">
+  <h2>名詞</h2>
+  <dl class="terms">
+    <dt>量尺</dt><dd>領域 × 世代，例如 lan M03。每個量尺分開校準。</dd>
+    <dt>列次</dt><dd>一個孩子的一次施測（一個 visit_id）。</dd>
+    <dt>回合</dt><dd>按一次「開始校準」處理的資料。任務一是 R1，之後每一波各一回合：R2、R3…</dd>
+    <dt>固定檔</dt><dd>④ 頁下載的 zip。記錄題庫、題目版本、連結和檢查紀錄。下一回合一定要用它。</dd>
+    <dt>內部連結</dt><dd>把 M36 的量尺換到 M03 的量尺上（每個領域一條）。</dd>
+    <dt>外部連結</dt><dd>用錨題把 M03 的量尺換到 D 量尺上（所有領域共用一條）。</dd>
+    <dt>偏移</dt><dd>舊題在新的一波變難或變簡單。偏移的題會換成新版本（題號加上 <code>_r名稱</code>），舊參數不動。</dd>
+    <dt>借用另一世代題庫</dt><dd>自己世代的題庫沒有校準過這個月齡、另一個世代有時，就用另一個世代的題庫校準。</dd>
+    <dt>作答組合</dt><dd>一個波次裡最多孩子作答的那一組題目。分數對照表只算用這個作答組合的孩子。</dd>
+    <dt>flag</dt><dd>需要特別看一下的量尺或題目（不是錯誤，照樣往下做）。</dd>
+    <dt>能力值 ability</dt><dd>每個世代在自己量尺上的分數（logit），還沒連結。</dd>
+    <dt>量尺分數 d_score</dt><dd>經過內部、外部連結，換到 D 量尺上的分數。報告和跨世代比較用它。</dd>
+  </dl>
+</section>
+
+<!-- ================= 任務一 ================= -->
+<section id="t1">
+  <div class="task-head">
+    <span class="task-tag t1">任務一</span>
+    <h2 style="margin-top:8px">過去波次的基礎計分</h2>
+    <p>第一次使用時做一次。把手上所有已經收完的波次一起放進來，建立量尺和連結，算出每個孩子的分數，最後下載固定檔。</p>
+    <p>示範情境：語言、動作兩個領域；M03 世代 3–48 個月、M36 世代 36–72 個月。</p>
+  </div>
+
+  <h3 id="t1-data"><span class="step-no">①</span> 資料：選資料、勾波次</h3>
+  <ol>
+    <li><strong>資料來源</strong>選「上傳檔案」，一次選好所有過去波次的檔案（截圖用的是「示範資料」）。</li>
+    <li><strong>這一回合的世代與波次</strong>勾所有過去的波次。可以按「全選」。勾完停 1 秒才開始檢查。</li>
+    <li><strong>上一回合的固定檔</strong>留空。顯示「沒有（第一回合）」。</li>
+    <li><strong>這一回合的名稱</strong>用預設的 R1 就好。</li>
+    <li>右邊的<strong>量尺</strong>表列出這一回合要校準的量尺。calibration 都是「自由校準（沒有題庫）」。</li>
+    <li>藍框寫「資料沒問題」時，按<strong>下一步：題目校準</strong>。</li>
+  </ol>
+  <figure class="shot"><img src="{{t1_data_pick}}" alt="① 資料頁：左邊勾了 M03 3–48 和 M36 36–72，右邊的量尺表列出四個量尺，下方是「下一步：題目校準」按鈕" loading="lazy"><figcaption>左邊選資料和波次，右邊確認量尺。紅字是錯誤，要先修資料；橘字是提醒，看過就可以往下做。</figcaption></figure>
+  <p>同一頁往下有<strong>作答設計</strong>圖：每一格是一個波次、一題的通過比例，空白表示那一波沒有施測。可以用它確認題目和波次有沒有放錯。</p>
+  <figure class="shot narrow"><img src="{{t1_data_design}}" alt="作答設計熱圖：橫軸是題號，縱軸是波次，顏色是通過比例" loading="lazy"><figcaption>作答設計（lan M03）。上方的選單可以換量尺；圖可以下載成 HTML。</figcaption></figure>
+
+  <h3 id="t1-items"><span class="step-no">②</span> 題目校準</h3>
+  <ol>
+    <li><strong>用哪一個題庫</strong>：第一回合每個量尺都是「自由校準（自己的題庫是空的）」，不用改。</li>
+    <li>按<strong>開始校準</strong>。</li>
+  </ol>
+  <figure class="shot"><img src="{{t1_items_bank}}" alt="用哪一個題庫：四個量尺都是自由校準，下方是開始校準按鈕" loading="lazy"></figure>
+  <p>做完會出現綠色的「完成」，下面是每個量尺的摘要。用「看哪一個量尺」切換量尺；藍框列出列次、題數，以及偏移、估不出來、分數類別有問題的題數。</p>
+  <figure class="shot"><img src="{{t1_items_done}}" alt="校準完成：四個量尺都自由校準，lan M03 的摘要是 3111 列次、24 題，偏移 0 題" loading="lazy"><figcaption>flag 欄有字的量尺要特別看一下。</figcaption></figure>
+
+  <h4>題目參數</h4>
+  <p>每一題的每一個得分步驟一列。<span class="col">difficulty</span> 是步驟難度（kits 裡叫 beta）；<span class="col">threshold</span> 是 Thurstonian 門檻：能力值到這裡時，有一半的機會得到這個分數以上（kits 裡叫 thr）。欄位說明寫在表的下面。</p>
+  <figure class="shot"><img src="{{t1_items_coef}}" alt="題目參數表：item_id、item_score、difficulty、difficulty_se、threshold、threshold_se" loading="lazy"></figure>
+
+  <h4>圖與適配度</h4>
+  <p>圖有四種：類別機率曲線、題目與受試者分布（Wright map）、適配度、觀察與預期（依波次）。題目多時可以分頁看，或自己選題。</p>
+  <figure class="shot"><img src="{{t1_items_plot}}" alt="類別機率曲線：每題一小圖，曲線是各得分的機率" loading="lazy"></figure>
+  <p>適配度表的 <span class="col">infit</span>、<span class="col">outfit</span> 接近 1 最好。都在 0.6–1.4 之間時 flag 是 ok；任一個大於 1.4 是 overfit 以外的 underfit（比模型預期亂），小於 0.6 是 overfit（比模型預期整齊）。</p>
+  <figure class="shot"><img src="{{t1_items_fit}}" alt="題目適配度表：n、pvalue、rir、infit、outfit、flag" loading="lazy"></figure>
+  <p>沒有紅字時，按頁尾的<strong>下一步：連結</strong>。</p>
+
+  <h3 id="t1-link"><span class="step-no">③</span> 連結：只在第一回合建立</h3>
+  <h4>1. 內部連結（M36 → M03）</h4>
+  <ol>
+    <li>在「哪一個量尺要做內部連結？」選一個 M36 量尺（例如 lan M36）。</li>
+    <li>按<strong>建立內部連結</strong>。</li>
+    <li>換下一個 M36 量尺（例如 motor M36），再按一次。每個領域各做一次。</li>
+  </ol>
+  <p>做好的連結會顯示公式，例如 <code>lan M03 = 1.00 + 0.94 × lan M36</code>，以及 linking error。連結圖裡每一個點是一個兩個世代共同的題目步驟；點越貼近直線，連結越可靠。橘色叉叉是篩選時拿掉的點。</p>
+  <figure class="shot"><img src="{{t1_link_internal}}" alt="內部連結：公式 lan M03 = 1.00 + 0.94 × lan M36，下方是連結圖" loading="lazy"></figure>
+
+  <h4>2. 外部連結（M03 → D）</h4>
+  <p>外部連結用錨題，把 M03 的量尺換到 D。所有領域共用一條，只要按一次<strong>建立外部連結</strong>。錨題總數至少要 3 題；只有一個領域、錨題又不夠時，按鈕不會出現，畫面會說明原因。</p>
+  <figure class="shot"><img src="{{t1_link_external}}" alt="外部連結：lan M03 有 2 個錨題、motor M03 有 25 個；公式 D = 64.41 + 7.12 × M03" loading="lazy"><figcaption>示範資料的外部連結：D = 64.41 + 7.12 × M03。檢查表的 note 是提醒，不是錯誤。</figcaption></figure>
+
+  <h4>3. 兩個世代的垂直連結</h4>
+  <p>三個分頁：未連結、內部連結後、外部連結後。每個波次畫中位數，線段是 P25 到 P75。連結後，同一個月齡兩個世代的點應該靠在一起。</p>
+  <figure class="shot narrow"><img src="{{t1_link_vertical}}" alt="垂直連結圖（外部連結後）：M03 和 M36 在 36、48 個月的點重疊" loading="lazy"></figure>
+
+  <p>頁尾的<strong>固定檔裡的連結</strong>列出做好的連結。三條都在（兩條內部、一條外部）時，按<strong>下一步：受試者評分</strong>。</p>
+  <figure class="shot"><img src="{{t1_link_fixed}}" alt="固定檔裡的連結：lan M36、motor M36 兩條內部連結和一條外部連結 D" loading="lazy"></figure>
+
+  <h3 id="t1-score"><span class="step-no">④</span> 受試者評分</h3>
+  <ol>
+    <li>按<strong>計算這一回合的分數</strong>。</li>
+    <li>出現「這一回合做完了：請現在就存兩個檔案」時，按<strong>下載這一回合的分數表（CSV）</strong>和<strong>下載新的固定檔（ZIP）</strong>。</li>
+  </ol>
+  <figure class="shot"><img src="{{t1_score_done}}" alt="這一回合做完了：下載這一回合的分數表、下載新的固定檔、用這一回合的固定檔開始下一回合" loading="lazy"><figcaption>早先各回合的分數之後不會重算，所以分數表要現在下載保存。</figcaption></figure>
+
+  <h4>1. 分數表</h4>
+  <p>上方的表說明每個量尺的換算路線，例如 <code>lan M36 → lan M03 → D</code>。下方每個列次每個量尺一列，可以用 visit_id 或 subj_id 找人。點開「每一欄是什麼」看所有欄位的說明。</p>
+  <div class="table-wrap">
+  <table>
+    <thead><tr><th>欄位</th><th>意思</th></tr></thead>
+    <tbody>
+      <tr><td><span class="col">visit_id</span>、<span class="col">subj_id</span></td><td>列次編號與孩子編號。</td></tr>
+      <tr><td><span class="col">bank</span></td><td>校準用的題庫。借用另一世代題庫時，這裡是那個世代的量尺。</td></tr>
+      <tr><td><span class="col">raw</span></td><td>原始分數（通過的步驟數）。</td></tr>
+      <tr><td><span class="col">ability</span>、<span class="col">ability_se</span></td><td>能力值與標準誤：各世代分開校準，沒有經過連結（logit）。</td></tr>
+      <tr><td><span class="col">d_score</span>、<span class="col">d_score_se</span></td><td>量尺分數與標準誤：經過內部、外部連結，換到 D 之後的值。</td></tr>
+      <tr><td><span class="col">se_link</span></td><td>連結本身的誤差（D 的單位）。</td></tr>
+      <tr><td><span class="col">se_total</span></td><td>測量誤差與連結誤差合起來：√(d_score_se² + se_link²)。</td></tr>
+    </tbody>
+  </table>
+  </div>
+  <figure class="shot"><img src="{{t1_score_table}}" alt="分數表：visit_id、subj_id、cohort、wave_m、ability、ability_se、d_score、d_score_se、se_link、se_total" loading="lazy"></figure>
+
+  <h4>2. 分數對照表</h4>
+  <p>每個波次的每個原始分數，對應到三把尺上的分數。截圖選的是 lan M36：</p>
+  <ul>
+    <li><span class="col">ability</span>：在 M36 自己的量尺上，各世代分開估計。</li>
+    <li><span class="col">ability_linked</span>：經過內部連結，換到參照世代 M03 的量尺上。M03 是參照世代，所以 M03 的量尺沒有這兩欄。</li>
+    <li><span class="col">d_score</span>：再經過外部連結，換到 D 上。</li>
+  </ul>
+  <figure class="shot"><img src="{{t1_score_raw}}" alt="分數對照表（lan M36）：wave_m、raw、ability、ability_linked、d_score、se_link、se_total、n、pct" loading="lazy"></figure>
+
+  <h4>3. 題目表</h4>
+  <p>每一題第一步的門檻，也放在同樣的三把尺上：</p>
+  <ul>
+    <li><span class="col">ability_threshold</span>：在校準的量尺上，和 ability 同一把尺。</li>
+    <li><span class="col">ability_linked_threshold</span>：經過內部連結，和 ability_linked 同一把尺。M03 的量尺沒有這一欄。</li>
+    <li><span class="col">d_threshold</span>：在 D 上，和 d_score 同一把尺。</li>
+  </ul>
+  <p>讀法都一樣：孩子在某一把尺上的分數高於同一把尺上的門檻，通過這一題的機會就超過一半。題目依最後一把尺的門檻（通常是 d_threshold）由小到大排列。<span class="col">age50</span> 是一半孩子通過的月齡；這一回合的資料裡通過比例沒有跨過一半時是空白。</p>
+  <figure class="shot"><img src="{{t1_score_items}}" alt="題目表（lan M36）：item_id、ability_threshold、ability_linked_threshold、d_threshold、age50，依 d_threshold 由小到大" loading="lazy"></figure>
+
+  <h3 id="t1-keep">任務一要保存的檔案</h3>
+  <div class="keep">
+    <div><div class="k">kitsui_fixed_R1.zip</div><div class="v">固定檔。下一波一定要用它。不要解壓縮後修改內容。</div></div>
+    <div><div class="k">分數表（R1）</div><div class="v">所有過去波次的分數。之後不會重算。</div></div>
+  </div>
+</section>
+
+<!-- ================= 任務二 ================= -->
+<section id="t2" class="t2">
+  <div class="task-head t2">
+    <span class="task-tag t2">任務二</span>
+    <h2 style="margin-top:8px">未來新增波次的計分</h2>
+    <p>每收到一波新的資料就做一次。舊題的參數和連結都不動，只把新的一波接到同一把尺上。</p>
+    <p>示範情境：M03 世代的 60 個月是新的一波，用任務一下載的 <code>kitsui_fixed_R1.zip</code>。</p>
+  </div>
+
+  <h3 id="t2-data"><span class="step-no">①</span> 資料：新波次＋上一回合的固定檔</h3>
+  <ol>
+    <li><strong>資料來源</strong>上傳新的資料。檔案裡有好幾個波次也沒關係，下一步只勾要更新的那一波。</li>
+    <li><strong>這一回合的世代與波次</strong>只勾新的一波（示範：M03 的 60）。</li>
+    <li><strong>上一回合的固定檔</strong>按「選擇 zip…」，上傳上一回合的固定檔。右邊會出現固定檔的內容：之前的回合、題庫、連結。</li>
+    <li><strong>這一回合的名稱</strong>自動變成下一個（R2）。</li>
+    <li>看過橘色提醒和「借用另一世代題庫」，按<strong>下一步：題目校準</strong>。</li>
+  </ol>
+  <figure class="shot"><img src="{{t2_data}}" alt="任務二的 ① 資料頁：只勾 M03 60，上傳了 kitsui_fixed_R1.zip，右邊有得分不完整的提醒、借用另一世代題庫的說明和固定檔的內容" loading="lazy"></figure>
+  <div class="note warn">
+    <p><strong>橘色提醒：得分不完整。</strong>新的一波常有題目沒有人得 0 分，或少了中間的分數。kitsUI 會自動處理並列出來：題庫裡有的題，固定在題庫的值；題庫裡沒有的題，這一回合先不估。作答本身不會被改動。</p>
+  </div>
+  <div class="note t2">
+    <p><strong>借用另一世代題庫。</strong>示範的 M03 題庫只校準過 3–48 個月；60 個月只有 M36 的題庫有。所以 M03 的 60 個月用 M36 的題庫校準，分數再經 M36 → M03 → D 換算。這是自動判斷的；要改的話，在 ② 的 bank 欄選別的題庫。</p>
+  </div>
+
+  <h3 id="t2-items"><span class="step-no">②</span> 題目校準：舊題固定、檢查偏移</h3>
+  <p><strong>用哪一個題庫</strong>的 why 欄會寫為什麼選這個題庫。確認後按<strong>開始校準</strong>。</p>
+  <figure class="shot"><img src="{{t2_items_bank}}" alt="用哪一個題庫：lan M03 和 motor M03 的 60 個月借用 M36 題庫" loading="lazy"></figure>
+  <p>這一回合是<strong>固定校準</strong>：舊題固定在題庫的值。摘要會列出偏移的題、換成新版本的題、分數類別有問題的題。</p>
+  <p><strong>偏移把關</strong>的表是每一題的檢查：<span class="col">max_abs_resid</span> 是這一題離連結線最遠的距離；<span class="col">drift</span> 是 TRUE 的題會換成新版本，重新估計。</p>
+  <figure class="shot"><img src="{{t2_items_done}}" alt="固定校準完成：lan M36 固定 12 題、偏移 1 題；偏移把關表列出每題的 max_abs_resid 與 drift" loading="lazy"></figure>
+  <p><strong>這一回合的紀錄</strong>列出每一個處理：借用題庫、分數類別有問題而固定的題、偏移的題和它的新名字（例如 <code>lanc09 → lanc09_rR2</code>）。這份紀錄也會寫進新的固定檔。</p>
+  <figure class="shot"><img src="{{t2_items_log}}" alt="這一回合的紀錄：borrowed bank、category problem kept fixed、drift、new version" loading="lazy"></figure>
+  <div class="note warn">
+    <p><strong>flag 的條件：</strong>偏移的題超過已判斷題的 20%（至少 1 題），或可以固定的題少於 5 題。量尺被 flag 時照樣往下做，但請記在報告裡。條件可以在 ② 頁的「進階設定」改。</p>
+  </div>
+
+  <h3 id="t2-link"><span class="step-no">③</span> 連結：沿用，不用按</h3>
+  <p>內部連結和外部連結在任務一已經凍結。這一頁只會顯示「這條連結之前的回合就做好了，已經凍結」。直接按頁尾的<strong>下一步：受試者評分</strong>。</p>
+  <figure class="shot"><img src="{{t2_link_top}}" alt="這條連結之前的回合就做好了（在這一回合開始時的固定檔裡），已經凍結" loading="lazy"></figure>
+  <figure class="shot"><img src="{{t2_link_fixed}}" alt="固定檔裡的連結：三條連結都是之前的回合、R1 做的" loading="lazy"><figcaption>made 欄是「之前的回合」，round 欄是 R1：這一回合沒有重做連結。</figcaption></figure>
+
+  <h3 id="t2-score"><span class="step-no">④</span> 受試者評分</h3>
+  <p>和任務一一樣：按<strong>計算這一回合的分數</strong>，再下載分數表和新的固定檔（<code>kitsui_fixed_R2.zip</code>）。分數表只有新波次的孩子。</p>
+  <figure class="shot"><img src="{{t2_score_done}}" alt="任務二的計算完成：共 898 列，下載分數表與新的固定檔" loading="lazy"></figure>
+
+  <h3 id="t2-next">再下一波</h3>
+  <p>下一波用剛下載的 <code>kitsui_fixed_R2.zip</code>，從任務二的 ① 再做一次，名稱會變成 R3。每一回合都用<strong>最新</strong>的固定檔。</p>
+  <div class="keep">
+    <div><div class="k">kitsui_fixed_R2.zip</div><div class="v">新的固定檔，包含 R1 和 R2 的一切。R1 的固定檔可以留著備份。</div></div>
+    <div><div class="k">分數表（R2）</div><div class="v">新波次的分數。把每一回合的分數表上下疊起來，就是全部孩子的分數。</div></div>
+  </div>
+  <div class="note t2">
+    <p><strong>同一次連線接著做：</strong>④ 的「用這一回合的固定檔開始下一回合」會把固定檔直接交給 ①，不用下載再上傳。但固定檔還是要下載保存。</p>
+  </div>
+</section>
+
+<section id="faq">
+  <h2>常見問題</h2>
+  <h4>紅字和橘字差在哪裡？</h4>
+  <p>紅字是錯誤，例如缺欄位、重複的列、得分不是整數。要先修資料再上傳。橘字是提醒，看過就可以往下做。</p>
+  <h4>可以一次放好幾波新資料嗎？</h4>
+  <p>可以上傳，但建議一次只勾一波，一波一回合。這樣每一波的偏移會分開檢查，紀錄也清楚。</p>
+  <h4>一個 M36 量尺沒做內部連結會怎樣？</h4>
+  <p>它的分數會停在 M36 自己的量尺上，d_score 是空白。③ 頁會提醒還有哪些量尺沒做。</p>
+  <h4>下載圖（HTML）失敗？</h4>
+  <p>本機版下載圖要用 pandoc。裝了 RStudio 或 Quarto 就有。雲端版不受影響。</p>
+  <h4>不小心關掉頁面？</h4>
+  <p>有結果時，離開頁面前瀏覽器會先問一次。關掉之後要從 ① 重新做這一回合；已經下載的固定檔和分數表不受影響。</p>
+  <h4>想看 R 程式碼？</h4>
+  <p>每一頁最下面的「用 R 怎麼做」列出這一步背後的 kits 程式碼，可以複製到 R 裡重跑。</p>
+</section>
+
+<footer>kitsUI 0.3.4（2026-10-30）· kits 0.25.2 · 截圖用 app 內建的示範資料（kits::kitm03、kits::kitm36）。</footer>
+</main>
+</div>

@@ -351,6 +351,15 @@ kit_css <- function() {
     .kit-codes-parsed {
       margin: -0.5rem 0 1rem;
     }
+    .kit-manual-frame {
+      display: block;
+      width: 100%%;
+      height: calc(100vh - 12rem);
+      min-height: 32rem;
+      border: 1px solid %6$s;
+      border-radius: 8px;
+      background: #fff;
+    }
   ", cols$primary, cols$primary_light, cols$accent,
      cols$subtitle, cols$text_muted, cols$border))
 }
