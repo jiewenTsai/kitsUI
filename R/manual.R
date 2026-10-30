@@ -83,7 +83,7 @@ kit_manual_css <- function() {
       gap: 0.5rem; align-items: baseline; }
     .kit-manual h4 { font-size: 1rem; margin-top: 1.25rem; }
     .kit-manual p, .kit-manual ul, .kit-manual ol { max-width: 48em; }
-    .kit-manual .km-col { font-family: SFMono-Regular, Menlo, Consolas, monospace;
+    .kit-manual .km-col { font-family: var(--bs-font-monospace);
       font-size: 0.85em; background: #eef2ec; padding: 0 0.3em; border-radius: 4px; }
     .kit-manual .km-req { color: PRIMARY; font-weight: 700; }
     .kit-manual .km-table-wrap { overflow-x: auto; margin: 1rem 0; }

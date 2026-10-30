@@ -2,7 +2,7 @@
 <meta name="description" content="KIT 量尺建構工具（kitsUI 0.3.5）的操作手冊：過去波次的基礎計分與新增波次的計分。">
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=LXGW+WenKai+TC:wght@400;700&family=Noto+Sans+TC:wght@400;500;700&family=JetBrains+Mono:wght@400;600&display=swap">
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=LXGW+WenKai+TC:wght@400;700&family=Noto+Sans+TC:wght@400;500;700&family=M+PLUS+Code+Latin:wght@400;600&display=swap">
 <style>
 :root {
   --ground: #f6f8f4;
@@ -23,7 +23,7 @@
   --shadow: 0 1px 2px rgba(29, 42, 31, .06), 0 6px 20px rgba(29, 42, 31, .07);
   --display: "LXGW WenKai TC", "Noto Serif TC", "PingFang TC", serif;
   --body: "Noto Sans TC", "PingFang TC", "Microsoft JhengHei", system-ui, sans-serif;
-  --mono: "JetBrains Mono", ui-monospace, "SFMono-Regular", Menlo, monospace;
+  --mono: "M PLUS Code Latin", ui-monospace, "SFMono-Regular", Menlo, monospace;
 }
 @media (prefers-color-scheme: dark) {
   :root:not([data-theme="light"]) {
@@ -191,6 +191,7 @@ footer { margin-top: 64px; padding-top: 18px; border-top: 1px solid var(--rule);
 <section id="data">
   <h2>資料格式</h2>
   <p>資料是<strong>長格式</strong>：一列是一個孩子在一個波次的一題作答。可以一次上傳好幾個檔，只要欄位一樣。檔案支援 CSV、壓縮過的 CSV.GZ 和 SPSS 的 SAV。單一檔案上限 200 MB；大的 CSV 請先壓成 .csv.gz。</p>
+  <p>資料是寬格式（一題一欄）、欄名不一樣，或分數不是從 0 開始時，先到 <a href="https://jiewentsai-kitjoin.share.connect.posit.cloud/" target="_blank" rel="noopener noreferrer">kitJoin</a> 的「⑥ 轉成 kits 作答檔」轉好再上傳。① 資料頁的上傳說明和紅字裡也有「開啟 kitJoin」按鈕。</p>
   <div class="table-wrap">
   <table>
     <thead><tr><th>欄位</th><th>必填</th><th>意思</th></tr></thead>

@@ -2810,7 +2810,7 @@
       "checksum": "226d7cbec671c2e297aebc835d03041f"
     },
     "DESCRIPTION": {
-      "checksum": "52e575f2af651d1c2645566f4b0e88d1"
+      "checksum": "f86befa8b64911d5f8aa1232dfcbc178"
     },
     "inst/manual/img/t1_data_design.webp": {
       "checksum": "f7e066d8adce96794925cfd46818bdfb"
@@ -2879,10 +2879,10 @@
       "checksum": "811b41f7fb0d63afcfab87980d4df609"
     },
     "inst/manual/kitsui_manual_body.html": {
-      "checksum": "fc33ad2c4b053e25f0d656f57e27ec67"
+      "checksum": "e84daadbe3be20fc58f9e5677ea9a11c"
     },
     "inst/manual/kitsui_manual.html": {
-      "checksum": "d84145f0c844edba6a6891e9553652c9"
+      "checksum": "93e285d55f7909296ab70911279015fe"
     },
     "NAMESPACE": {
       "checksum": "317ae8dff22b06e5d19fde44a9aaf7a7"
@@ -2894,22 +2894,22 @@
       "checksum": "089fbb01441aba32929888d59ee03953"
     },
     "R/constants.R": {
-      "checksum": "fc6a39000b4774f49780f4b8756f6f3a"
+      "checksum": "95d818e862a6ed71bc0c45f3124606d2"
     },
     "R/io_data.R": {
       "checksum": "73d371fabc50b7f88a5e9b34021f312f"
     },
     "R/kit_theme.R": {
-      "checksum": "9ba17daaf398b37cb3aed30cdad27a45"
+      "checksum": "0452ac66a75fcb187539170d71882a20"
     },
     "R/kitsUI-package.R": {
       "checksum": "4ffd9e6da95e61fd880674093b54b9d5"
     },
     "R/manual.R": {
-      "checksum": "0b599f45da22f8a02761ae8c3e5b867f"
+      "checksum": "627f45f35432a5b08d03863fc0a41cea"
     },
     "R/mod_data.R": {
-      "checksum": "9b8a30b4d533471b5ec4eadaddc543ac"
+      "checksum": "08796d29e90c2f21b30423fd8ab26987"
     },
     "R/mod_items.R": {
       "checksum": "66c81b0329f35f83c130c25933278142"
@@ -2951,13 +2951,13 @@
       "checksum": "e1f8faea2e445c16d8acd95fc65fa320"
     },
     "R/ui_common.R": {
-      "checksum": "cb9ef3edac203fb890a03ca2e50c8009"
+      "checksum": "a862528c319da9ad9f626a45f8a4eef7"
     },
     "R/utils.R": {
       "checksum": "527049a0d401817b64cbb954de521e0c"
     },
     "README.md": {
-      "checksum": "f998c24d7b4362adce7fd23414afdc59"
+      "checksum": "d6b7e968027861dcb2c3a31ac88bd3a9"
     }
   },
   "users": null

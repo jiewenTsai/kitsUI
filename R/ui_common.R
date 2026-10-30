@@ -57,6 +57,26 @@ ui_alert <- function(type, head, ...) {
   )
 }
 
+#' 開啟 kitJoin 雲端版的按鈕（新分頁）
+#' @noRd
+ui_kitjoin_button <- function(label = "開啟 kitJoin", class = "btn-outline-primary") {
+  shiny::tags$a(
+    href = KITJOIN_URL, target = "_blank", rel = "noopener noreferrer",
+    class = paste("btn kit-ext-btn", class), shiny::icon("arrow-up-right-from-square"), label
+  )
+}
+
+#' 資料不合格式時的一句話：到 kitJoin ⑥ 轉好再上傳
+#' @noRd
+ui_kitjoin_hint <- function(class = "btn-sm btn-outline-primary", hint_class = "kit-hint") {
+  shiny::tags$p(
+    class = hint_class,
+    "資料是寬格式（一題一欄）、欄名不一樣，或分數不是從 0 開始？",
+    "可以先到 kitJoin 的「⑥ 轉成 kits 作答檔」轉好，再回來上傳。",
+    ui_kitjoin_button(class = class)
+  )
+}
+
 #' 下一步：一句話與一個切換分頁的按鈕
 #' @noRd
 ui_next_step <- function(text, button_id, label) {

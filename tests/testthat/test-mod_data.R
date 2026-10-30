@@ -111,7 +111,25 @@ test_that("上傳 CSV；缺欄位時說明缺什麼", {
     session$setInputs(file = upload_input(bad, "bad.csv"))
     expect_null(session$getReturned()())
     expect_match(output$problems$html, "domain")
+    # 上傳的檔案沒通過：紅字裡有開啟 kitJoin 的按鈕（新分頁）
+    expect_match(output$problems$html, KITJOIN_URL, fixed = TRUE)
+    expect_match(output$problems$html, "target=\"_blank\"", fixed = TRUE)
   })
+})
+
+test_that("紅字只有名稱不合規時，不提 kitJoin", {
+  shiny::testServer(mod_data_server, args = list(goto = \(tab) NULL), {
+    session$setInputs(source = "demo", domains = "lan", waves = "M03 3", round_label = "第一回合")
+    session$elapse(1001)
+    expect_match(output$problems$html, "英文字母與數字")
+    expect_false(grepl(KITJOIN_URL, output$problems$html, fixed = TRUE))
+  })
+})
+
+test_that("上傳說明有 kitJoin 的按鈕", {
+  html <- as.character(mod_data_ui("data"))
+  expect_match(html, KITJOIN_URL, fixed = TRUE)
+  expect_match(html, "⑥ 轉成 kits 作答檔", fixed = TRUE)
 })
 
 test_that("上一回合的固定檔：讀入、顯示內容、改成固定校準、預設名稱是下一個 R", {
@@ -208,6 +226,7 @@ test_that("得分不完整的題：橘色提醒（不是紅字），說 ② 怎�
     expect_match(html, "固定在題庫的值")
     expect_match(html, "這一回合先不估它")
     expect_match(html, "作答的分數不會被改動")
+    expect_match(html, KITJOIN_URL, fixed = TRUE)
     expect_null(output$problems)
     expect_false(grepl("資料沒問題", output$next_step$html))
     expect_match(output$next_step$html, "橘色的提醒")

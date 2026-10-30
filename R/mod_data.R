@@ -76,6 +76,7 @@ data_choices_ui <- function(ns) {
         "大的 CSV 可以先壓縮成 .csv.gz 再上傳。",
         "好幾個檔案時，每個檔案的欄位要一樣。"
       ),
+      ui_kitjoin_hint(),
       shiny::uiOutput(ns("upload_info")),
       data_columns_guide(),
       shiny::tags$div(class = "kit-downloads",
@@ -298,9 +299,13 @@ mod_data_server <- function(id, goto, handover = NULL) {
     })
 
     output$problems <- shiny::renderUI({
-      p <- c(checked()$problems, label_problem())
+      data_p <- checked()$problems
+      p <- c(data_p, label_problem())
       if (length(p) == 0) return(NULL)
-      ui_alert("danger", "【資料還不能用】", shiny::tags$ul(lapply(p, shiny::tags$li)))
+      # 上傳的檔案沒通過：提示可以到 kitJoin 轉
+      to_kitjoin <- is_upload() && !is.null(input$file) && length(data_p) > 0
+      ui_alert("danger", "【資料還不能用】", shiny::tags$ul(lapply(p, shiny::tags$li)),
+               if (to_kitjoin) ui_kitjoin_hint("btn-sm btn-light", hint_class = "mb-0"))
     })
     output$hint <- shiny::renderUI({
       h <- checked()$hint
@@ -438,7 +443,9 @@ data_category_note <- function(problems) {
     items,
     shiny::tags$p("② 校準時，題庫裡有這一題，就固定在題庫的值。",
                   "題庫裡沒有這一題，這一回合先不估它。"),
-    shiny::tags$p("作答的分數不會被改動。")
+    shiny::tags$p("作答的分數不會被改動。",
+                  "要平移或合併分數，可以在 kitJoin「⑥ 轉成 kits 作答檔」的題目設定改好再上傳。",
+                  ui_kitjoin_button(class = "btn-sm btn-outline-primary"))
   )
 }
 
