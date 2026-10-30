@@ -196,13 +196,16 @@ kitsui_vertical_raw <- function(raw, earlier, label) {
        why = NULL)
 }
 
-#' 未連結圖的一條線：世代；用另一世代的題庫校準的波次寫成「M03（motor M36 題庫）」
+#' 未連結圖的一條線：世代；用另一世代的題庫校準的波次寫成「M03 (motor M36 bank)」（圖上用英文）
 #' @noRd
 kitsui_vertical_series <- function(cohort, scale) {
   if (length(cohort) == 0) return(as.character(cohort))
   own <- scale_cohort(scale) == cohort
-  ifelse(own, cohort, paste0(cohort, "（", scale, " 題庫）"))
+  ifelse(own, cohort, paste0(cohort, " (", scale, " bank)"))
 }
+
+# 這條線是借用另一世代題庫的波次嗎（kitsui_vertical_series() 寫的名字）
+kitsui_vertical_borrowed <- function(series) grepl(" bank)", series, fixed = TRUE)
 
 # 內部連結後（到參照世代的量尺）或外部連結後（到 D）：換算後用 kits 的 rbind() 合起來
 kitsui_vertical_linked <- function(raw, earlier, fixed, links, stage, label) {
@@ -290,19 +293,31 @@ kitsui_vertical_plot <- function(v) {
   p
 }
 
-# 點的 x：實際月齡的中位數；沒有的列（0.3.11 以前的固定檔、資料沒有 age_m）用名義月齡。
-# 全部都沒有時是 NA（kits 的圖就整張用名義月齡）
+# 點的 x：實際月齡的中位數。一張圖只用一種月齡：有一列沒有實際月齡（0.3.11 以前的固定檔、
+# 資料沒有 age_m）時，整張圖都用名義月齡（全部 NA，kits 的圖就畫在波次上）
 kitsui_vertical_age <- function(tab) {
   age <- as.numeric(tab$age_med %||% NA_real_)
-  if (all(!is.finite(age))) return(rep(NA_real_, nrow(tab)))
-  dplyr::if_else(is.finite(age), age, as.numeric(tab$wave_m))
+  if (!all(is.finite(age))) return(rep(NA_real_, nrow(tab)))
+  age
 }
 
-# x 軸的標題：畫在實際月齡時寫清楚是各波次的實際月齡中位數
+# 這張圖用實際月齡嗎（每一列都有實際月齡的中位數）
+kitsui_vertical_actual <- function(tab) {
+  age <- as.numeric(tab$age_med %||% NA_real_)
+  length(age) > 0 && all(is.finite(age))
+}
+
+# x 軸的標題寫清楚是實際月齡還是名義月齡（圖上用英文）。
+# kits 的圖用實際月齡時寫 "Age (months)"，用名義月齡（波次）時寫 "Wave (months)"
+KITSUI_AGE_AXIS <- c(
+  "Age (months)" = "Age (months; median actual age of each wave)",
+  "Wave (months)" = "Age (months; nominal age of each wave)"
+)
 kitsui_vertical_axis <- function(p) {
   title <- p$x$layout$xaxis$title %||% p$x$layoutAttrs[[1]]$xaxis$title
-  if (!identical(title, "Age (months)")) return(p)
-  plotly::layout(p, xaxis = list(title = "月齡（各波次實際月齡的中位數）"))
+  if (is.list(title)) title <- title$text
+  if (!is.character(title) || !title %in% names(KITSUI_AGE_AXIS)) return(p)
+  plotly::layout(p, xaxis = list(title = unname(KITSUI_AGE_AXIS[title])))
 }
 
 # x 軸的刻度（也是格線）：圖上有的每一個波次。kits 預設的刻度只到 96 個月，
@@ -320,7 +335,8 @@ kitsui_vertical_marks <- function(tr, tab) {
   tr$marker$symbol <- paste0(tr$marker$symbol, ifelse(old, "-open", ""))
   tr$marker$opacity <- ifelse(old, 0.6, 1)
   tr$hovertext <- paste0(tr$hovertext, ifelse(
-    old, paste0("<br>之前的回合（固定檔）：", rows$round), paste0("<br>這一回合：", rows$round)
+    old, paste0("<br>Earlier round (fixed file): ", rows$round),
+    paste0("<br>This round: ", rows$round)
   ))
   tr
 }

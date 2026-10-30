@@ -545,7 +545,7 @@ vertical_caption <- function(stage, v) {
     stage,
     none = paste0("未連結：各世代在自己校準的量尺上（", paste(scales, collapse = "、"),
                   "），數字不能直接比。",
-                  if (any(grepl("題庫）", v$table$cohort, fixed = TRUE))) {
+                  if (any(kitsui_vertical_borrowed(v$table$cohort))) {
                     paste0("借用另一世代題庫的波次在那個題庫的量尺上，另成一條線，",
                            "不和自己量尺的波次連在一起。")
                   }),
@@ -555,16 +555,18 @@ vertical_caption <- function(stage, v) {
   )
   if (!any(v$table$source == "earlier")) return(text)
   rounds <- unique(v$table$round[v$table$source == "earlier"])
-  age <- as.numeric(v$table$age_med)
-  where <- if (all(!is.finite(age))) {
-    "沒有實際月齡，所以 x 軸用波次。"
+  where <- if (kitsui_vertical_actual(v$table)) {
+    "x 軸是實際月齡：點畫在各波次實際月齡的中位數。"
   } else {
+    age <- as.numeric(v$table$age_med %||% NA_real_)
     old <- unique(v$table$round[v$table$source == "earlier" & !is.finite(age)])
-    paste0("點畫在各波次實際月齡的中位數。",
-           if (length(old) > 0) {
-             paste0("之前回合 ", paste(old, collapse = "、"), " 的固定檔沒有實際月齡",
-                    "（kitsUI 0.3.11 以前做的），那些點畫在名義月齡。")
-           })
+    if (length(old) > 0) {
+      paste0("x 軸是名義月齡（波次）：之前回合 ", paste(old, collapse = "、"),
+             " 的固定檔沒有實際月齡（kitsUI 0.3.11 以前做的），一張圖不混用兩種月齡。",
+             "要畫在實際月齡，用 kitsUI 0.3.11 以後重做那一回合，再用新的固定檔做這一回合。")
+    } else {
+      "x 軸是名義月齡（波次）：這一回合的資料沒有實際月齡（age_m）。"
+    }
   }
   paste0(text, "實心的點是這一回合。",
          "空心、較淡的點是之前的回合（", paste(rounds, collapse = "、"), "），來自固定檔。",

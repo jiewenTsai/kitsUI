@@ -126,26 +126,31 @@ test_that("偏移把關圖：點照狀態上色，帶子外的步驟就是 kits 
   p <- kitsui_drift_plot(drift, x$tab)
   expect_s3_class(p, "plotly")
   names <- purrr::map_chr(p$x$data, \(tr) as.character(tr$name)[1])
-  expect_match(names[1], "灰色帶子")
+  expect_match(names[1], "Grey band")
   # 帶子的中線（判斷用的虛線），然後是 kits 拿掉偏移步驟之後的線
-  expect_match(names[2], "判斷用的線")
+  expect_match(names[2], "Judging line")
   expect_identical(p$x$data[[2]]$line$dash, "dash")
   expect_match(names[3], "Final line")
-  expect_true(all(c("固定（沿用題庫）", "偏移 → 新版本", "沒有判斷的步驟（上下的人不夠）") %in%
+  expect_true(all(c("Fixed (bank value)", "Drifted -> new version",
+                    "Step not judged (too few people above/below)") %in%
                     names))
   # 沒有判斷的步驟：hover 寫題的狀態（例如 lana03 步驟上下的人不夠，固定在題庫的值）
-  open <- p$x$data[[match("沒有判斷的步驟（上下的人不夠）", names)]]
-  expect_true(any(grepl("^lana03 步驟 1<br>固定（不判斷偏移，沿用題庫）", open$hovertext)))
-  expect_true(all(grepl("這個步驟沒有判斷", open$hovertext)))
-  moved <- p$x$data[[match("偏移 → 新版本", names)]]
-  expect_true(all(grepl("^lanc0[38] 步驟", moved$hovertext)))
-  expect_match(moved$hovertext[1], "題庫的門檻")
-  expect_match(moved$hovertext[1], "自由試算的門檻（固定前）")
+  open <- p$x$data[[match("Step not judged (too few people above/below)", names)]]
+  expect_true(any(grepl("^lana03 step 1<br>Fixed \\(not judged, bank value\\)", open$hovertext)))
+  expect_true(all(grepl("Step not judged", open$hovertext)))
+  moved <- p$x$data[[match("Drifted -> new version", names)]]
+  expect_true(all(grepl("^lanc0[38] step", moved$hovertext)))
+  expect_match(moved$hovertext[1], "Bank threshold \\(fixed value\\)")
+  expect_match(moved$hovertext[1], "Free trial threshold")
   # 軸與標題說清楚：點是固定之前的試算
   lay <- plotly::plotly_build(p)$x$layout
-  expect_match(lay$title$text, "固定之前的檢查")
-  expect_match(lay$xaxis$title$text, "自由試算的門檻（固定前")
-  expect_match(lay$yaxis$title$text, "題庫的門檻（固定的值）")
+  expect_match(lay$title$text, "Drift check before fixing")
+  expect_match(lay$xaxis$title$text, "free trial this round \\(before fixing")
+  expect_match(lay$yaxis$title$text, "Bank threshold \\(fixed value\\)")
+  # 圖上的字都是英文（題號等使用者的資料除外）
+  txt <- c(unlist(lay[c("title", "xaxis", "yaxis")]), names,
+           unlist(purrr::map(p$x$data, "hovertext")))
+  expect_false(any(grepl("[\u3000-\u9fff]", txt)))
   # 帶子：判斷的步驟在帶子外 <=> 被拿掉
   pts <- as.data.frame(drift$points)
   band <- kitsui_drift_band(drift, pts)

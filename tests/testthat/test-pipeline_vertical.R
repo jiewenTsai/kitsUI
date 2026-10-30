@@ -60,7 +60,7 @@ test_that("摘要和 kits_vertical() 的 n、P25、中位數、P75 完全相同�
   expect_identical(ws$age_med, kv$age_med)
 })
 
-test_that("垂直圖都畫在實際月齡的中位數；舊的固定檔沒有實際月齡時，那些點畫在名義月齡", {
+test_that("垂直圖畫在實際月齡的中位數；有一回合沒有實際月齡時，整張用名義月齡（不混用）", {
   r8 <- round8()
   lk <- linked()
   v <- kitsui_verticals(r8$round, r8$df, lk$fixed, "lan")$external
@@ -69,15 +69,21 @@ test_that("垂直圖都畫在實際月齡的中位數；舊的固定檔沒有實
   built <- plotly::plotly_build(kitsui_vertical_plot(v))$x
   xs <- unlist(purrr::map(purrr::keep(built$data, \(tr) tr$name %in% c("M03", "M36")), "x"))
   expect_setequal(round(xs, 8), round(tab$age_med, 8))
-  expect_equal(built$layout$xaxis$title, "月齡（各波次實際月齡的中位數）")
-  expect_match(vertical_caption("external", v), "點畫在各波次實際月齡的中位數")
-  # 舊的固定檔（0.3.11 以前）：之前回合沒有 age_med，退回名義月齡，說明寫出來
+  expect_equal(built$layout$xaxis$title, "Age (months; median actual age of each wave)")
+  expect_match(vertical_caption("external", v), "x 軸是實際月齡")
+  # 舊的固定檔（0.3.11 以前）：之前回合沒有 age_med，整張圖退回名義月齡，軸與說明寫出來
   old_fixed <- lk$fixed
   old_fixed$wave_summary$age_med <- NA_real_
   w <- kitsui_verticals(r8$round, r8$df, old_fixed, "lan")$external
   t2 <- w$table
-  expect_equal(kitsui_vertical_age(t2)[t2$source == "earlier"], t2$wave_m[t2$source == "earlier"])
-  expect_equal(kitsui_vertical_age(t2)[t2$source == "this"], t2$age_med[t2$source == "this"])
+  expect_true(all(is.finite(t2$age_med[t2$source == "this"])))
+  expect_true(all(is.na(kitsui_vertical_age(t2))))
+  expect_false(kitsui_vertical_actual(t2))
+  built2 <- plotly::plotly_build(kitsui_vertical_plot(w))$x
+  xs2 <- unlist(purrr::map(purrr::keep(built2$data, \(tr) tr$name %in% c("M03", "M36")), "x"))
+  expect_setequal(xs2, t2$wave_m)
+  expect_equal(built2$layout$xaxis$title, "Age (months; nominal age of each wave)")
+  expect_match(vertical_caption("external", w), "x 軸是名義月齡")
   expect_match(vertical_caption("external", w), "沒有實際月齡（kitsUI 0.3.11 以前做的）")
   # 全部都沒有實際月齡：整張用名義月齡
   expect_true(all(is.na(kitsui_vertical_age(data.frame(age_med = NA, wave_m = c(3, 6))))))
@@ -181,10 +187,10 @@ test_that("這一回合只有一個世代：之前回合的點（固定檔的摘
   m03 <- purrr::keep(built, \(tr) identical(tr$name, "M03"))[[1]]
   expect_true(all(grepl("-open$", m03$marker$symbol)))
   expect_true(all(m03$marker$opacity < 1))
-  expect_match(m03$hovertext[1], "之前的回合（固定檔）：3")
+  expect_match(m03$hovertext[1], "Earlier round \\(fixed file\\): 3")
   m36 <- purrr::keep(built, \(tr) identical(tr$name, "M36"))[[1]]
   expect_false(any(grepl("-open$", m36$marker$symbol)))
-  expect_match(m36$hovertext[1], "這一回合：r8")
+  expect_match(m36$hovertext[1], "This round: r8")
   # x 軸的刻度（格線）是圖上的每一個波次
   lay <- plotly::plotly_build(p)$x$layout
   expect_equal(unlist(lay$xaxis$tickvals), sort(unique(tab$wave_m)))
@@ -223,16 +229,16 @@ test_that("借用另一世代題庫（M03 60 個月用 motor M36 的題庫）：
   expect_s3_class(kitsui_vertical_plot(v$internal), "plotly")
   # 未連結：借用 motor M36 題庫的 M03 60 個月另成一條線，不和 M03 自己量尺的波次連在一起
   none <- v$none$table
-  expect_equal(none$cohort[none$source == "this"], "M03（motor M36 題庫）")
+  expect_equal(none$cohort[none$source == "this"], "M03 (motor M36 bank)")
   expect_setequal(none$cohort[none$source == "earlier"], c("M03", "M36"))
   built <- plotly::plotly_build(kitsui_vertical_plot(v$none))$x$data
   names <- purrr::map_chr(built, \(tr) as.character(tr$name %||% NA)[1])
-  expect_true("M03（motor M36 題庫）" %in% names)
+  expect_true("M03 (motor M36 bank)" %in% names)
   expect_match(vertical_caption("none", v$none), "另成一條線")
   # 換算後在同一把尺上：同一個世代仍是一條線
-  expect_false(any(grepl("題庫）", v$external$table$cohort, fixed = TRUE)))
+  expect_false(any(kitsui_vertical_borrowed(v$external$table$cohort)))
   expect_equal(kitsui_vertical_series(c("M03", "M36"), c("motor M36", "motor M36")),
-               c("M03（motor M36 題庫）", "M36"))
+               c("M03 (motor M36 bank)", "M36"))
 })
 
 test_that("舊的固定檔沒有摘要、第一個回合：一句清楚的說明", {

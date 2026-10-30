@@ -489,19 +489,19 @@ footer { margin-top: 64px; padding-top: 18px; border-top: 1px solid var(--rule);
   <figure class="shot"><img src="{{t2_items_done}}" alt="固定校準完成：lan M36 固定 12 題、偏移 1 題；偏移把關表列出每題的 max_abs_resid 與 drift" loading="lazy"></figure>
 
   <h4 id="t2-drift">偏移把關圖</h4>
-  <p>在「圖」選<strong>偏移把關圖</strong>。它畫的是上面第 2 步的比較：</p>
+  <p>在「圖」選<strong>偏移把關圖</strong>。它畫的是上面第 2 步的比較。圖上的字都是英文，下面括號裡是圖上的寫法：</p>
   <ul>
-    <li><strong>橫軸</strong>：這一回合自由試算的門檻（固定前）。</li>
-    <li><strong>縱軸</strong>：題庫的門檻（固定的值）。</li>
-    <li><strong>虛線</strong>：判斷用的線。<strong>灰色帶子</strong>是它上下的容許範圍（± cut 個標準差，圖例寫幾個）。</li>
-    <li><strong>實線</strong>：拿掉偏移的步驟之後，重新畫的線。</li>
+    <li><strong>橫軸</strong>：這一回合自由試算的門檻（固定前）（Threshold, free trial this round）。</li>
+    <li><strong>縱軸</strong>：題庫的門檻（固定的值）（Bank threshold）。</li>
+    <li><strong>虛線</strong>：判斷用的線（Judging line）。<strong>灰色帶子</strong>（Grey band）是它上下的容許範圍（± cut 個標準差，圖例寫幾個）。</li>
+    <li><strong>實線</strong>：拿掉偏移的步驟之後，重新畫的線（Final line）。</li>
   </ul>
   <p>點的顏色是「固定了哪些題」的狀態：</p>
   <ul>
-    <li><strong>藍色圓點</strong>：固定。落在帶子裡，這一波的作答和題庫一致，可以放心固定。</li>
-    <li><strong>橘色叉叉</strong>：偏移 → 新版本。帶子外的步驟偏移了，那一題換成新版本。同一題的其他步驟也一起換，所以全部標成橘色。</li>
-    <li><strong>灰色菱形</strong>：固定，但不判斷偏移的題（例如分數類別有問題），沿用題庫的值。</li>
-    <li><strong>灰色空心圓</strong>：沒有判斷的步驟。這個分數上下的人太少，不判斷；在帶子外也不算偏移。</li>
+    <li><strong>藍色圓點</strong>：固定（Fixed (bank value)）。落在帶子裡，這一波的作答和題庫一致，可以放心固定。</li>
+    <li><strong>橘色叉叉</strong>：偏移 → 新版本（Drifted -&gt; new version）。帶子外的步驟偏移了，那一題換成新版本。同一題的其他步驟也一起換，所以全部標成橘色。</li>
+    <li><strong>灰色菱形</strong>：固定，但不判斷偏移的題（例如分數類別有問題），沿用題庫的值（Fixed (not judged, bank value)）。</li>
+    <li><strong>灰色空心圓</strong>：沒有判斷的步驟（Step not judged）。這個分數上下的人太少，不判斷；在帶子外也不算偏移。</li>
   </ul>
   <p>把滑鼠移到點上，會顯示題號、步驟、狀態和兩個門檻。</p>
   <div class="note t2">
@@ -523,7 +523,8 @@ footer { margin-top: 64px; padding-top: 18px; border-top: 1px solid var(--rule);
   <ul>
     <li>這一回合的點，用這一回合的分數畫。</li>
     <li>之前回合的點，來自固定檔的 <code>wave_summary.csv</code>（各波次的人數、P25、中位數、P75），再用現在的連結換算。</li>
-    <li>每一回合的圖都把點畫在各波次<strong>實際月齡的中位數</strong>，例如 M36 的 84 個月施測時實際是 86.5 個月。實際月齡和名義月齡差超過 1 個月的波次，標題下會註明。kitsUI 0.3.11 以前做的固定檔沒有實際月齡，那些點畫在名義月齡，圖的說明會寫出是哪一回合。</li>
+    <li>月齡有兩種：<strong>名義月齡</strong>是波次（<span class="col">wave_m</span>，例如 84 個月那一波）；<strong>實際月齡</strong>是施測時孩子真正的月齡（<span class="col">age_m</span>），例如 M36 的 84 個月那一波，實際是 86.5 個月。圖把點畫在各波次實際月齡的中位數，x 軸寫 <code>Age (months; median actual age of each wave)</code>。實際月齡和名義月齡差超過 1 個月的波次，標題下會註明。</li>
+    <li>一張圖只用一種月齡，不混用。固定檔只存各波次的摘要，不存每個孩子的 <span class="col">age_m</span>；實際月齡的中位數（<code>wave_summary.csv</code> 的 <span class="col">age_med</span> 欄）從 kitsUI 0.3.11 開始才存。所以之前回合的固定檔是 0.3.11 以前做的，或這一回合的資料沒有 <span class="col">age_m</span> 時，整張圖改用名義月齡，x 軸寫 <code>Age (months; nominal age of each wave)</code>，圖的說明會寫出原因。要畫在實際月齡，就用 0.3.11 以後的版本重做那一回合，再用新的固定檔做這一回合。</li>
     <li>圖上分得出「這一回合」和「之前的回合」。滑鼠移到點上，會顯示是哪一個回合。</li>
   </ul>
   <p>新的一波應該接在之前回合的點旁邊。突然跳高或跳低時，回 ② 看看有沒有偏移。</p>

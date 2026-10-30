@@ -10,6 +10,15 @@ KITSUI_STATUS <- c(
   fixed = "固定（沿用題庫）",
   free = "自由校準"
 )
+# 圖上的字（圖的標題、軸、圖例、滑鼠提示都用英文）
+KITSUI_STATUS_EN <- c(
+  moved = "Drifted -> new version",
+  out = "Dropped this round",
+  new = "New item (estimated this round)",
+  kept = "Fixed (not judged, bank value)",
+  fixed = "Fixed (bank value)",
+  free = "Free calibration"
+)
 # 固定在題庫的值的狀態
 KITSUI_STATUS_FIXED <- c("kept", "fixed")
 # 固定的步驟和題庫差多少算不同
@@ -161,7 +170,8 @@ KITSUI_DRIFT_LOOKS <- list(
   moved = list(col = "#D55E00", symbol = "x"),
   kept = list(col = "#7F7F7F", symbol = "diamond"),
   other = list(col = "#000000", symbol = "square"),
-  unjudged = list(col = "#7F7F7F", symbol = "circle-open", name = "沒有判斷的步驟（上下的人不夠）")
+  unjudged = list(col = "#7F7F7F", symbol = "circle-open",
+                  name = "Step not judged (too few people above/below)")
 )
 
 #' 偏移把關圖：kits 的 plot(drift)（新的門檻對題庫的門檻、連結線），點改成 kitsUI 的狀態上色，
@@ -177,7 +187,7 @@ kitsui_drift_plot <- function(drift, status) {
   pts <- as.data.frame(drift$points)
   at <- match(pts$item_id, status$key)
   pts$kind <- dplyr::coalesce(status$kind[at], "other")
-  pts$status <- dplyr::coalesce(status$status[at], "其他")
+  pts$status <- dplyr::coalesce(unname(KITSUI_STATUS_EN[pts$kind]), "Other")
   pts$look <- dplyr::if_else(pts$judged %in% TRUE, pts$kind, "unjudged")
   q <- plotly::plot_ly()
   band <- kitsui_drift_band(drift, pts)
@@ -185,21 +195,23 @@ kitsui_drift_plot <- function(drift, status) {
     q <- plotly::add_trace(
       q, x = band$x, y = band$y, type = "scatter", mode = "lines", fill = "toself",
       fillcolor = "rgba(127,127,127,0.18)", line = list(width = 0), hoverinfo = "skip",
-      name = sprintf("灰色帶子：判斷用的線 ± %s 個標準差", band$cut)
+      name = sprintf("Grey band: judging line \u00b1 %s SD", band$cut)
     )
     # 帶子的中線：判斷偏移用的線（拿掉偏移的步驟之前）；實線是拿掉之後的線
     q <- plotly::add_trace(
       q, x = band$ends, y = band$mid, type = "scatter", mode = "lines", hoverinfo = "skip",
       line = list(color = "rgba(90,90,90,0.9)", width = 1.5, dash = "dash"),
-      name = "判斷用的線（全部判斷的步驟）"
+      name = "Judging line (all judged steps)"
     )
   }
   for (k in intersect(names(KITSUI_DRIFT_LOOKS), unique(pts$look))) {
     s <- pts[pts$look == k, ]
-    not_judged <- dplyr::if_else(s$judged %in% TRUE, "", "<br>這個步驟沒有判斷（上下的人不夠）")
-    hover <- sprintf("%s 步驟 %d<br>%s<br>題庫的門檻（固定的值）%.2f<br>自由試算的門檻（固定前）%.2f%s",
-                     s$item_id,
-                     as.integer(s$item_score), s$status, s$thr_ref, s$thr_new, not_judged)
+    not_judged <- dplyr::if_else(s$judged %in% TRUE, "",
+                                 "<br>Step not judged (too few people above/below)")
+    hover <- sprintf(
+      "%s step %d<br>%s<br>Bank threshold (fixed value): %.2f<br>Free trial threshold: %.2f%s",
+      s$item_id, as.integer(s$item_score), s$status, s$thr_ref, s$thr_new, not_judged
+    )
     look <- KITSUI_DRIFT_LOOKS[[k]]
     q <- plotly::add_markers(q, x = s$thr_new, y = s$thr_ref, name = look$name %||% s$status[1],
                              marker = list(color = look$col, symbol = look$symbol, size = 8),
@@ -212,12 +224,14 @@ kitsui_drift_plot <- function(drift, status) {
     identical(tr$fill, "toself") || identical(tr$mode, "lines")
   })
   p$x$data <- c(mine[is_band], lines, mine[!is_band])
-  # 軸與標題寫清楚：點是固定之前的試算，不是固定之後的參數
+  # 軸與標題寫清楚：點是固定之前的試算，不是固定之後的參數（圖上的字都用英文）
   plotly::layout(
     p,
-    title = list(text = "偏移把關：固定之前的檢查"),
-    xaxis = list(title = list(text = "這一回合自由試算的門檻（固定前，這一波自己的量尺）")),
-    yaxis = list(title = list(text = "題庫的門檻（固定的值）"))
+    title = list(text = "Drift check before fixing"),
+    xaxis = list(title = list(
+      text = "Threshold, free trial this round (before fixing, own scale)"
+    )),
+    yaxis = list(title = list(text = "Bank threshold (fixed value)"))
   )
 }
 

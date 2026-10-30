@@ -353,7 +353,7 @@ test_that("固定了哪些題：狀態、核對、全部固定的題、csv；偏
     p <- plot_obj()
     expect_s3_class(p, "plotly")
     names <- purrr::map_chr(p$x$data, \(tr) as.character(tr$name)[1])
-    expect_true("偏移 → 新版本" %in% names)
+    expect_true("Drifted -> new version" %in% names)
     expect_match(output$plot_help$html, "落在帶子裡的步驟")
     expect_equal(download_name(plot_name), "item_lan_M03_drift")
     expect_match(output$code, "drift <- kits_drift\\(.*\\)\nplot\\(drift\\)")
