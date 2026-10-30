@@ -1,7 +1,8 @@
 #' KIT Shiny 主題與版面元件
 #'
 #' 配色參考 KIT 資料跨波次串連平臺（https://kitwaves.hdfs.ntnu.edu.tw/）。
-#' Bootswatch Brite 尚未納入 bslib，改以 Lumen 為底並覆寫 KIT 品牌色。
+#' 以 Bootswatch Brite 為底（bslib 0.11.0 起才有），套 KIT 的顏色與 neo-brutalism 樣式
+#' （kit_css_brite()，在 R/kit_brite.R；kitJoin 與 kitsUI 共用同一份）。
 
 #' @return A [bslib::bs_theme()] object.
 #' @export
@@ -11,7 +12,7 @@ kit_theme <- function() {
   # 未指定 wght 時只提供 400，需列出 CSS 用到的字重
   kit_font <- bslib::font_collection(
     bslib::font_google(
-      "Chiron GoRound TC", local = FALSE, wght = c(400, 500, 700)
+      "Chiron GoRound TC", local = FALSE, wght = c(400, 500, 700, 900)
     ),
     "sans-serif"
   )
@@ -22,18 +23,29 @@ kit_theme <- function() {
   )
 
   bslib::bs_theme(
-    bootswatch = "lumen",
+    version = 5,
+    bootswatch = "brite",
     primary = "#2d7535",
     secondary = "#616161",
     success = "#2d7535",
     info = "#2778c4",
-    warning = "#c6d033",
+    warning = "#d9730d",
     danger = "#d9534f",
     base_font = kit_font,
+    # 全文統一用圓體；標題靠字重（700）和內文分開
     heading_font = kit_font,
     code_font = code_font,
     "navbar-bg" = "#2d7535",
-    "body-bg" = "#f5f5f5"
+    "body-bg" = "#faf7f0",
+    "headings-font-weight" = 700,
+    # neo-brutalism：2px 近黑線條（Brite 預設 2px 純黑）
+    "border-width" = "2px",
+    "border-color" = "#141414",
+    # 連結用 KIT 綠（萊姆色當文字太淡）
+    "link-color" = "#2d7535",
+    "link-hover-color" = "#1d4f23",
+    # 內文 1rem（Brite 預設 0.875rem）；html 的基準字級在 kit_css_brite() 設成 17px
+    "font-size-base" = "1rem"
   )
 }
 
@@ -423,7 +435,7 @@ kit_css <- function() {
       margin: -0.5rem 0 1rem;
     }
   ", cols$primary, cols$primary_light, cols$accent,
-     cols$subtitle, cols$text_muted, cols$border), kit_css_guide(cols$primary)))
+     cols$subtitle, cols$text_muted, cols$border), kit_css_guide(cols$primary), kit_css_brite()))
 }
 
 #' 分頁說明框收合的樣式（kit_css() 的 sprintf() 格式字串有 8192 字元的上限，所以另外接上）
