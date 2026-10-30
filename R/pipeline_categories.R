@@ -15,7 +15,7 @@ kitsui_category_problems <- function(df) {
     dplyr::filter(!is.na(.data$item_score)) |>
     dplyr::summarise(scores = list(sort(unique(.data$item_score))),
                      .by = c("domain", "cohort", "item_id")) |>
-    dplyr::mutate(scale = paste(.data$domain, .data$cohort)) |>
+    dplyr::mutate(scale = scale_key(.data$domain, .data$cohort)) |>
     dplyr::arrange(match(.data$scale, kitsui_scales(df)$scale), .data$item_id) |>
     dplyr::select("scale", "item_id", "scores") |>
     kitsui_problem_rows()

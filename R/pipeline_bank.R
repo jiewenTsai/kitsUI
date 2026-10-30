@@ -21,7 +21,7 @@
 kitsui_round_plan <- function(df, fixed, bank_choice = NULL) {
   order <- kitsui_scales(df)$scale
   dplyr::distinct(df, .data$domain, .data$cohort, .data$wave_m) |>
-    dplyr::mutate(data_scale = paste(.data$domain, .data$cohort)) |>
+    dplyr::mutate(data_scale = scale_key(.data$domain, .data$cohort)) |>
     dplyr::arrange(match(.data$data_scale, order), .data$wave_m) |>
     dplyr::select("data_scale", "wave_m") |>
     purrr::pmap(\(data_scale, wave_m) kitsui_plan_wave(fixed, data_scale, wave_m)) |>
@@ -65,7 +65,7 @@ kitsui_plan_wave <- function(fixed, scale, wave) {
 #' （參照世代自己的題庫不用連結）。參照世代的排第一，其他依名稱
 #' @noRd
 kitsui_bank_candidates <- function(fixed, scale) {
-  ref <- paste(scale_domain(scale), fixed$version$reference)
+  ref <- scale_key(scale_domain(scale), fixed$version$reference)
   banks <- sort(unique(fixed$bank$scale))
   banks <- banks[scale_domain(banks) == scale_domain(scale) & banks != scale]
   internal <- fixed$links[fixed$links$kind == "internal", ]

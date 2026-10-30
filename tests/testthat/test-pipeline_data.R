@@ -279,3 +279,35 @@ test_that("看起來是遺漏碼的分數：簡短提醒，指到 kitJoin ②", 
   p <- kitsui_score_problem("x", c(0, 1, 2, 3, 98))
   expect_equal(p$detail, "x 分數不連續，沒有人得 4–97 分（分數 0、1、2、3、98）")
 })
+
+test_that("世代名稱有空白、領域名稱有逗號：① 與 ② 一致，校準、連結、固定檔、分數都可以做", {
+  d <- kitsui_demo(waves = c(3, 36, 48), domains = "lan")
+  d$cohort[d$cohort == "M36"] <- "old cohort"
+  d$domain <- "lan, words"
+  ck <- kitsui_data_check(d, kitsui_pick_choices(d)$value, "R1", NULL)
+  expect_length(ck$problems, 0)
+  old <- ck$scales$scale[2]
+  expect_equal(scale_domain(old), "lan, words")
+  expect_equal(scale_cohort(old), "old cohort")
+  expect_equal(scale_label(old), "lan, words old cohort")
+  # 沒有空白的世代：量尺名稱和以前一樣
+  expect_equal(ck$scales$scale[1], "lan, words M03")
+  expect_equal(scale_key("lan", "M36"), "lan M36")
+  r <- suppressMessages(kitsui_round(ck$df, kitsui_fixed_empty(), "R1"))
+  expect_true(r$ok)
+  expect_setequal(names(r$items), ck$scales$scale)
+  li <- kitsui_link_internal(r$fixed, "lan, words", "old cohort")
+  expect_false(is.null(li$link))
+  zip_path <- withr::local_tempfile(fileext = ".zip")
+  kitsui_write_fixed(li$fixed, zip_path)
+  back <- kitsui_read_fixed(zip_path)
+  expect_identical(back$version$scales, li$fixed$version$scales)
+  expect_equal(kitsui_internal_scales(back), old)
+  sc <- kitsui_score(r, ck$df, back)$scores
+  expect_false(anyNA(sc$ability_linked[sc$cohort == "old cohort"]))
+  expect_equal(kitsui_split_scales("lan, words M03, lan M36", back), c("lan, words M03", "lan M36"))
+  # 產生的 R 程式：資料用一般的空白，量尺名稱的不斷行空白寫成  
+  code <- kitsui_code_round(old, "R1")
+  expect_match(code, 'paste(domain, cohort) == "lan, words old cohort"', fixed = TRUE)
+  expect_match(code, 'scale = "lan, words old\\u00a0cohort"', fixed = TRUE)
+})

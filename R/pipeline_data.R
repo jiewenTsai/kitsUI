@@ -81,9 +81,35 @@ kitsui_default_label <- function(rounds = character()) {
   paste0("R", n)
 }
 
-# 量尺的名稱："lan M36" -> 領域 "lan"、世代 "M36"
+# 量尺的名稱："lan M36" -> 領域 "lan"、世代 "M36"。
+# 世代名稱裡的空白，在量尺名稱裡換成不斷行空白（U+00A0，畫面上看起來一樣），所以量尺名稱
+# 最後一個空白一定是領域與世代的分界（領域名稱可以有空白）。世代名稱沒有空白時（例如 KIT 的
+# M03）量尺名稱和以前一樣，之前的固定檔照樣用
+KITSUI_NBSP <- "\u00a0"
+scale_key <- function(domain, cohort) {
+  paste(domain, gsub(" ", KITSUI_NBSP, cohort, fixed = TRUE))
+}
 scale_domain <- function(scale) sub(" [^ ]+$", "", scale)
-scale_cohort <- function(scale) sub("^.* ", "", scale)
+scale_cohort <- function(scale) gsub(KITSUI_NBSP, " ", sub("^.* ", "", scale), fixed = TRUE)
+# 用 ", " 接起來的量尺名稱（外部連結的 from_scale）拆回來。領域名稱有 ", " 時，照固定檔裡有的
+# 量尺（題庫與 VERSION 的 Scales）接回去
+kitsui_split_scales <- function(x, fixed = NULL) {
+  parts <- strsplit(x, ", ", fixed = TRUE)[[1]]
+  known <- unique(c(fixed$bank$scale, fixed$version$scales))
+  if (length(known) == 0 || all(parts %in% known)) return(parts)
+  out <- character()
+  now <- NULL
+  for (p in parts) {
+    now <- if (is.null(now)) p else paste(now, p, sep = ", ")
+    if (now %in% known) {
+      out <- c(out, now)
+      now <- NULL
+    }
+  }
+  c(out, now)
+}
+# 給 R 程式與 csv 用的量尺名稱：不斷行空白換回一般的空白（和 paste(domain, cohort) 一樣）
+scale_label <- function(scale) gsub(KITSUI_NBSP, " ", scale, fixed = TRUE)
 
 #' 量尺清單：領域 x 世代，各有幾列次、幾題、哪些波次
 #' @return tibble：scale、domain、cohort、n_visits、n_items、waves
@@ -94,7 +120,7 @@ kitsui_scales <- function(df) {
       n_visits = dplyr::n_distinct(.data$visit_id), n_items = dplyr::n_distinct(.data$item_id),
       waves = paste(sort(unique(.data$wave_m)), collapse = ", "), .by = c("domain", "cohort")
     ) |>
-    dplyr::mutate(scale = paste(.data$domain, .data$cohort), .before = 1) |>
+    dplyr::mutate(scale = scale_key(.data$domain, .data$cohort), .before = 1) |>
     dplyr::arrange(.data$cohort != KITSUI_REF_COHORT, .data$scale)
 }
 
@@ -103,7 +129,7 @@ kitsui_scales <- function(df) {
 #' @param scale 資料的量尺（領域 × 世代）；借用另一世代題庫時可以有兩個世代，例如 c("lan M03", "lan M36")
 #' @noRd
 kitsui_resp <- function(df, scale) {
-  part <- dplyr::filter(df, paste(.data$domain, .data$cohort) %in% scale)
+  part <- dplyr::filter(df, scale_key(.data$domain, .data$cohort) %in% scale)
   if (length(scale) > 1) kitsui_check_ids(part)
   kits::kits_resp(part)
 }

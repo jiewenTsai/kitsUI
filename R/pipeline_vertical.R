@@ -210,7 +210,7 @@ kitsui_vertical_borrowed <- function(series) grepl(" bank)", series, fixed = TRU
 # 內部連結後（到參照世代的量尺）或外部連結後（到 D）：換算後用 kits 的 rbind() 合起來
 kitsui_vertical_linked <- function(raw, earlier, fixed, links, stage, label) {
   scales <- union(names(raw), earlier$scale)
-  ref <- paste(scale_domain(scales[1]), fixed$version$reference)
+  ref <- scale_key(scale_domain(scales[1]), fixed$version$reference)
   target <- if (stage == "internal") ref else "D"
   converted <- purrr::imap(raw, \(x, s) {
     kitsui_convert_path(x, kitsui_path_links(fixed, links, s, stage))

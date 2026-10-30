@@ -440,7 +440,7 @@ mod_data_server <- function(id, goto, handover = NULL) {
       s <- input$design_scale %||% ck$scales$scale[1]
       # 通過步驟只寫這個量尺有的題（和作答設計圖相同）
       steps <- kitsui_steps_vec(fixed()$pass_steps)
-      steps <- steps[names(steps) %in% ck$df$item_id[paste(ck$df$domain, ck$df$cohort) == s]]
+      steps <- steps[names(steps) %in% ck$df$item_id[scale_key(ck$df$domain, ck$df$cohort) == s]]
       kitsui_code_data(s, upload_name, sort(unique(ck$picks$wave_m)), picks = ck$picks,
                        steps = steps)
     })

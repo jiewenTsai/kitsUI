@@ -63,7 +63,8 @@ kitsui_write_fixed <- function(fixed, zip_path) {
   }
   dir <- file.path(tempfile("fixed"), "fixed_set")
   dir.create(dir, recursive = TRUE)
-  write.dcf(kitsui_dcf(fixed), file.path(dir, "VERSION"), keep.white = "Sources")
+  dcf <- kitsui_dcf(fixed)
+  write.dcf(dcf, file.path(dir, "VERSION"), keep.white = kitsui_dcf_white(dcf[, "Scales"]))
   # 給人看的說明（每個檔案是什麼、下一回合怎麼用）；讀固定檔時不讀它
   # 說明是英文；使用者給的名稱有中文時加 UTF-8 BOM，記事本打開才不會是亂碼
   readme <- enc2utf8(kitsui_fixed_readme(fixed))
@@ -115,7 +116,9 @@ kitsui_read_fixed <- function(zip_path) {
   for (name in c("wave_summary", "pass_steps")) tables[[name]] <- tables[[name]] %||% empty[[name]]
   tables$versions$cohort <- dplyr::coalesce(tables$versions$cohort,
                                             scale_cohort(tables$versions$scale))
-  dcf <- read.dcf(file.path(dir, "VERSION"), keep.white = "Sources")[1, ]
+  version <- file.path(dir, "VERSION")
+  lined <- any(grepl("^Scales:[[:space:]]*$", readLines(version, warn = FALSE)))
+  dcf <- read.dcf(version, keep.white = c("Sources", if (lined) "Scales"))[1, ]
   c(kitsui_from_dcf(dcf), tables)
 }
 
@@ -133,7 +136,8 @@ kitsui_read_csv <- function(file, cols) {
     tibble::as_tibble()
 }
 
-# VERSION 的欄位；Sources 一行一個檔案：「波次 md5 檔名」
+# VERSION 的欄位；Sources 一行一個檔案：「波次 md5 檔名」。Scales 平常用 ", " 接起來；
+# 有量尺名稱含 ", "（領域名稱有逗號）時改成一行一個，讀回來才拆得對
 kitsui_dcf <- function(fixed) {
   v <- fixed$version
   src <- with(fixed$sources, paste(round, md5, file))
@@ -143,19 +147,35 @@ kitsui_dcf <- function(fixed) {
   cbind(
     Kits = v$kits, KitsUI = v$kitsUI, Created = v$created,
     Rounds = paste(v$rounds, collapse = ", "), Reference = v$reference,
-    Scales = paste(v$scales, collapse = ", "), Waves = paste(waves, collapse = "; "),
+    Scales = if (any(grepl(", ", v$scales, fixed = TRUE))) {
+      paste(c("", v$scales), collapse = "\n")
+    } else {
+      paste(v$scales, collapse = ", ")
+    },
+    Waves = paste(waves, collapse = "; "),
     Sources = paste(c("", src), collapse = "\n")
   )
 }
 
+# Scales 一行一個時，和 Sources 一樣保留換行（平常的 ", " 讓 write.dcf() 自己折行）
+kitsui_dcf_white <- function(scales) {
+  c("Sources", if (startsWith(scales, "\n")) "Scales")
+}
+
 kitsui_from_dcf <- function(dcf) {
   split <- \(x) if (is.na(x) || x == "") character() else strsplit(x, ", ")[[1]]
+  # 一行一個時，write.dcf() 在每一行前面加了一個空白
+  lines <- \(x) if (grepl("\n", x, fixed = TRUE)) {
+    sub("^ ", "", setdiff(strsplit(x, "\n")[[1]], ""))
+  } else {
+    split(x)
+  }
   src <- setdiff(trimws(strsplit(dcf[["Sources"]], "\n")[[1]]), "")
   pick <- \(i) sub("^(\\S+) (\\S+) (.*)$", i, src)
   version <- list(
     kits = dcf[["Kits"]], kitsUI = dcf[["KitsUI"]], created = dcf[["Created"]],
     rounds = split(dcf[["Rounds"]]), reference = dcf[["Reference"]],
-    scales = split(dcf[["Scales"]])
+    scales = lines(dcf[["Scales"]])
   )
   sources <- tibble::tibble(round = pick("\\1"), file = pick("\\3"), md5 = pick("\\2"))
   list(version = version, sources = sources)
