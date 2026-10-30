@@ -162,22 +162,22 @@ test_that("連結公式：一行文字與 intercept、slope 的 linking error", 
 })
 
 test_that("外部連結：參照世代有五個領域（錨題只在 lan、motor），其他領域用同一條線", {
-  # 示範資料改名當五個領域：motor 的題複製成 social，lan 的題複製成 cog、emotion
+  # 示範資料改名當五個領域：motor 的題複製成 soc，lan 的題複製成 cog、emo
   base <- kitsui_demo("M03", c(3, 6), c("lan", "motor"))
   copy <- \(from, to, prefix) {
     dplyr::filter(base, domain == from) |>
       dplyr::mutate(domain = to, item_id = paste0(prefix, item_id))
   }
-  df <- dplyr::bind_rows(base, copy("motor", "social", "soc_"), copy("lan", "cog", "cog_"),
-                         copy("lan", "emotion", "emo_"))
+  df <- dplyr::bind_rows(base, copy("motor", "soc", "soc_"), copy("lan", "cog", "cog_"),
+                         copy("lan", "emo", "emo_"))
   r <- suppressMessages(kitsui_round(df, kitsui_fixed_empty(), "1"))
   expect_true(r$ok)
   ref <- kitsui_ref_scales(r$fixed)
-  expect_setequal(scale_domain(ref), c("cog", "emotion", "lan", "motor", "social"))
+  expect_setequal(scale_domain(ref), c("cog", "emo", "lan", "motor", "soc"))
   d <- kitsui_link_D(r$fixed)
   expect_true(d$new)
   expect_setequal(d$link$from_scale, ref)
-  expect_setequal(d$link$settings$no_anchors, c("cog", "emotion", "social"))
+  expect_setequal(d$link$settings$no_anchors, c("cog", "emo", "soc"))
   # 直接呼叫 kits 也一樣
   thr <- purrr::map(purrr::set_names(ref, scale_domain(ref)), \(s) kitsui_bank_thr(r$fixed, s))
   direct <- kits::kits_linking(thr, kits::kits_anchors(), n_boot = 2000, seed = 1)
@@ -188,9 +188,9 @@ test_that("外部連結：參照世代有五個領域（錨題只在 lan、motor
   expect_setequal(re$settings$no_anchors, d$link$settings$no_anchors)
   s <- kitsui_score(r, df, d$fixed)$scores
   expect_equal(unique(s$scale), "D")
-  expect_setequal(unique(s$domain), c("cog", "emotion", "lan", "motor", "social"))
+  expect_setequal(unique(s$domain), c("cog", "emo", "lan", "motor", "soc"))
   cov <- kitsui_d_coverage(d$fixed, kitsui_anchor_counts(d$fixed))
-  expect_equal(cov$n_anchors[cov$scale == "social M03"], 0)
+  expect_equal(cov$n_anchors[cov$scale == "soc M03"], 0)
 })
 
 test_that("連結只重建需要的；沒有連結時換算路線是空的（不出錯）", {
