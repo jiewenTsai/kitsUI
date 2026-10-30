@@ -30,6 +30,7 @@ test_that("內部連結與外部連結各做一次，回傳加上連結的固定
     expect_equal(out$links[["lan M36"]]$to_scale, "lan M03")
     expect_equal(coef(out$links[["lan M36"]]), coef(linked()$internal))
     expect_match(output$internal_status$html, "這一回合剛做好")
+    expect_match(output$internal_status$html, "【完成】")
     expect_false(grepl("不能復原", output$internal_status$html))
     # 這一回合沒有 lan M03 的作答：獨立檢核做不了，說明原因
     html <- output$internal_result$html
@@ -70,7 +71,9 @@ test_that("內部連結與外部連結各做一次，回傳加上連結的固定
     expect_match(output$code, "kitsui_fixed_r8.zip")
     expect_false(grepl("fixed_set.zip", output$code))
     expect_match(output$links_table, "這一回合")
-    expect_match(output$links_table, "> round </th")
+    # kitsUI 整理的摘要表：中文欄名；連結的係數維持 intercept、slope
+    expect_match(output$links_table, "> 回合 </th")
+    expect_match(output$links_table, "> intercept </th")
     expect_match(output$links_table, "外部連結")
     expect_match(output$links_table, "內部連結")
     expect_match(output$links_table, "r8")
@@ -205,7 +208,7 @@ test_that("兩個世代都在這一回合時可以做獨立檢核；下載連結
     expect_false(grepl("v_external", output$code))
     expect_match(output$internal_result$html, "做獨立檢核")
     # 不是每次都要做：收在預設收起來的 details 裡
-    expect_match(output$internal_result$html, "<details class=\"kit-fold\">", fixed = TRUE)
+    expect_match(output$internal_result$html, "<details class=\"kit-detail\">", fixed = TRUE)
     session$setInputs(run_check = 1)
     expect_s3_class(check_now(), "kits_link_check")
     # 小表與中文判斷；kits 的完整輸出收在 details 裡
@@ -244,5 +247,36 @@ test_that("做連結時分數不重算：垂直連結的分數只跟這一回合
     session$setInputs(make_internal = 1)
     expect_identical(v_raw(), raw)
     expect_equal(vertical()$internal$scale, "lan M03")
+  })
+})
+
+test_that("外部連結不適用：整段收成一行；這一回合沒有能建立的連結時 todo 是空的", {
+  sb <- sim_bank()
+  X1 <- kits::kits_sim(seq(-3, 3, length.out = 50), sb$betas, seed = 1)
+  args <- link_args(sb$r1, sim_long(X1), kitsui_fixed_empty())
+  shiny::testServer(mod_link_server, args = args, {
+    session$flushReact()
+    expect_false(d_ok())
+    html <- output$d_section$html
+    expect_match(html, "外部連結不適用：")
+    expect_match(html, "這不是錯誤")
+    expect_match(html, "<summary>為什麼</summary>")
+    expect_false(grepl("d_status", html))
+    expect_length(session$returned()$todo, 0)
+  })
+})
+
+test_that("主要按鈕一頁一個：還有內部連結可以建立時，外部連結的按鈕是次要按鈕", {
+  r8 <- round8()
+  args <- link_args(r8$round, r8$df, lan_chain()[["48"]]$fixed)
+  shiny::testServer(mod_link_server, args = args, {
+    session$setInputs(internal_scale = "lan M36")
+    expect_match(output$internal_status$html, "btn-primary")
+    expect_false(grepl("btn-primary", output$d_status$html))
+    expect_setequal(session$returned()$todo, c("lan M36", "D"))
+    session$setInputs(make_internal = 1)
+    expect_match(output$d_status$html, "btn-primary")
+    expect_equal(session$returned()$todo, "D")
+    expect_match(output$settings$html, "本回合 r8")
   })
 })

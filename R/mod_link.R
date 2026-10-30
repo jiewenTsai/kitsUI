@@ -8,31 +8,26 @@ mod_link_ui <- function(id) {
   ns <- shiny::NS(id)
   shiny::tagList(
     link_guide(),
+    shiny::uiOutput(ns("settings")),
     shiny::uiOutput(ns("source")),
-    # 標題與說明用固定檔裡的參照世代與其他世代的名稱
+    # 1. 內部連結：標題與說明用固定檔裡的參照世代與其他世代的名稱
     shiny::uiOutput(ns("internal_head")),
     shiny::selectInput(ns("internal_scale"), "哪一個量尺要做內部連結？", choices = NULL),
     shiny::uiOutput(ns("internal_overview_ui")),
     shiny::uiOutput(ns("internal_status")),
     shiny::uiOutput(ns("internal_result")),
-    shiny::uiOutput(ns("d_head")),
-    shiny::uiOutput(ns("d_status")),
-    shiny::uiOutput(ns("d_result")),
-    shiny::h4("3. 各世代的垂直連結：連結前後"),
-    shiny::tags$small(
-      class = "kit-hint",
-      "三個分頁：未連結、內部連結後、外部連結後。",
-      "每個波次畫中位數，線段是 P25 到 P75（kits_vertical()）。",
-      "波次的單位是月時，連結後同一個月齡各世代的點靠在一起，表示連結合理。",
-      "單位是年或波次序號時，同一波各世代的年齡不同，點不一定會靠在一起。",
-      "之前回合的點來自固定檔裡的各波次摘要，照現在的連結換算。",
-      "所以這一回合只有一個世代時，也看得到連結得怎樣。"
-    ),
+    # 2. 外部連結：不適用時整段只有一行
+    shiny::uiOutput(ns("d_section")),
+    # 3. 垂直連結（校準以後才出現）
     shiny::uiOutput(ns("vertical_ui")),
-    shiny::h4("固定檔裡的連結（內部連結與外部連結）"),
-    shiny::tableOutput(ns("links_table")),
-    ui_check_panel(ns("checks")),
-    ui_code_panel(ns("code")),
+    ui_details_row(
+      ui_detail("固定檔裡的連結",
+                shiny::tags$p(class = "kit-hint", "內部連結與外部連結，每條一列。",
+                              "intercept、slope 是這條連結的係數（新的值 = intercept + slope × 舊的值）。"),
+                shiny::tags$div(class = "kit-table-scroll", shiny::tableOutput(ns("links_table")))),
+      ui_check_panel(ns("checks")),
+      ui_code_panel(ns("code"))
+    ),
     shiny::uiOutput(ns("next_step"))
   )
 }
@@ -106,6 +101,10 @@ mod_link_server <- function(id, data, items, goto) {
     }
 
     output$source <- shiny::renderUI(link_source_ui(items(), ns))
+    output$settings <- shiny::renderUI({
+      if (is.null(items())) return(NULL)
+      ui_settings_line(kitsui_settings_text(data()))
+    })
     # 標題與說明：還沒有題目校準時用 ① 的固定檔（參照世代）
     head_fixed <- shiny::reactive(fixed() %||% tryCatch(data()$fixed, error = \(e) NULL))
     d_ok <- shiny::reactive({
@@ -145,7 +144,7 @@ mod_link_server <- function(id, data, items, goto) {
                           "）以外的世代的量尺，這一步不用做。"))
       }
       link_status_ui(internal(), notes()[[input$internal_scale]], ns("make_internal"),
-                     "建立內部連結")
+                     "建立內部連結", "內部連結")
     })
 
     # 好幾個量尺可以做內部連結時（例如 M06、M40 都連到 M03），列出每一條的狀態
@@ -155,11 +154,11 @@ mod_link_server <- function(id, data, items, goto) {
         shiny::tags$small(class = "kit-hint",
                           "每個世代、每個領域各有一條內部連結，都連到參照世代：",
                           "在上面一條一條選、一條一條建立。"),
-        shiny::tableOutput(ns("internal_overview"))
+        shiny::tags$div(class = "kit-table-scroll", shiny::tableOutput(ns("internal_overview")))
       )
     })
     output$internal_overview <- kit_table(
-      kitsui_internal_overview(shiny::req(fixed()), links(), earlier())
+      kitsui_screen_names(kitsui_internal_overview(shiny::req(fixed()), links(), earlier()))
     )
     internal_link <- shiny::reactive(links()[[shiny::req(input$internal_scale)]])
     output$internal_result <- shiny::renderUI({
@@ -194,11 +193,21 @@ mod_link_server <- function(id, data, items, goto) {
     anchors <- shiny::reactive(kitsui_anchor_counts(shiny::req(fixed())))
     d_state <- shiny::reactive(kitsui_d_state(shiny::req(fixed()), links(), earlier(), anchors()))
     shiny::observeEvent(input$make_d, make_link("D", "正在建立外部連結…", kitsui_link_D))
+    # 外部連結不適用：整段收成一行（說明再收一層）；適用時標題、狀態、結果
+    output$d_section <- shiny::renderUI({
+      fx <- shiny::req(head_fixed())
+      if (!d_ok()) return(link_d_na_ui(fx))
+      shiny::tagList(shiny::uiOutput(ns("d_head")), shiny::uiOutput(ns("d_status")),
+                     shiny::uiOutput(ns("d_result")))
+    })
     output$d_status <- shiny::renderUI({
       if (is.null(fixed())) return(NULL)
+      # 主要按鈕一頁一個：內部連結都建立了，外部連結的按鈕才是主要按鈕
+      primary <- length(tryCatch(internal_ready(), error = \(e) character())) == 0
       shiny::tagList(
-        if (d_ok()) link_anchor_ui(anchors(), ns("coverage"), fixed()$version$reference),
-        link_status_ui(d_state(), notes()[["D"]], ns("make_d"), "建立外部連結")
+        link_status_ui(d_state(), notes()[["D"]], ns("make_d"), "建立外部連結", "外部連結",
+                       primary),
+        if (d_ok()) link_anchor_ui(anchors(), ns("coverage"), fixed()$version$reference)
       )
     })
     output$coverage <- kit_table(kitsui_d_coverage(fixed(), anchors()))
@@ -232,8 +241,11 @@ mod_link_server <- function(id, data, items, goto) {
     })
     output$vertical_ui <- shiny::renderUI({
       if (is.null(items())) return(NULL)
-      vertical_pick_ui(ns, v_domains(), shiny::isolate(input$vertical_domain),
-                       kitsui_vertical_alone(items()$fixed))
+      shiny::tagList(
+        vertical_head_ui(),
+        vertical_pick_ui(ns, v_domains(), shiny::isolate(input$vertical_domain),
+                         kitsui_vertical_alone(items()$fixed))
+      )
     })
     output$vertical_body <- shiny::renderUI({
       vertical_body_ui(ns, vertical(), shiny::isolate(input$vertical_tab))
@@ -252,7 +264,7 @@ mod_link_server <- function(id, data, items, goto) {
 
     # 總表、檢查、R 程式、下一步 ----
     output$links_table <- kit_table(
-      kitsui_link_table(shiny::req(fixed()), links(), earlier())
+      kitsui_screen_names(kitsui_link_table(shiny::req(fixed()), links(), earlier()))
     )
     output$checks <- kit_table({
       chk <- if (!inherits(check_now(), "error")) check_now()
@@ -393,19 +405,62 @@ link_source_ui <- function(round, ns) {
   )
 }
 
-#' 連結的狀態：已凍結、可以做（按鈕與「做了就凍結」）、還不能做（原因）、不適用（不是錯誤）
+#' 連結的狀態：可以做（按鈕與「做了就凍結」）、還不能做（原因）、不適用（不是錯誤）、已凍結；
+#' 這次連線按了按鈕以後是狀態框：建立好了是【完成】，沒有建立是【停下來】（原因與怎麼辦）
+#' @param note 這次連線按了按鈕以後的訊息（沒有按過時 NULL）
+#' @param kind 「內部連結」或「外部連結」
+#' @param primary 按鈕是這一頁的主要按鈕嗎（不是時用次要按鈕）
 #' @noRd
-link_status_ui <- function(st, note, button_id, button_label) {
+link_status_ui <- function(st, note, button_id, button_label, kind = "連結", primary = TRUE) {
+  tried <- !is.null(note)
   shiny::tagList(
-    ui_callout(st$text, warning = st$state == "missing"),
+    if (tried && st$state == "frozen") {
+      ui_status("done", paste0(kind, "建立好了，已凍結在固定檔裡。"), shiny::tags$p(st$text))
+    } else {
+      ui_callout(st$text, warning = st$state == "missing")
+    },
+    if (tried && st$state != "frozen") {
+      ui_status("stop", paste0(kind, "沒有建立。"), shiny::tags$p(kitsui_error_ui(note)),
+                shiny::tags$p("怎麼辦：看上面的原因；題庫缺的題要在之後的回合校準，再回來建立。"))
+    },
     if (st$state == "ready") {
       shiny::tags$div(
         class = "kit-downloads",
-        shiny::actionButton(button_id, button_label, class = "btn-primary"),
+        ui_button(button_id, button_label, if (primary) "primary" else "secondary"),
         shiny::tags$small(class = "kit-hint", "連結一做好就凍結在固定檔裡，不能復原，也不會重做。")
       )
-    },
-    if (!is.null(note) && st$state != "frozen") shiny::tags$p(class = "text-danger", note)
+    }
+  )
+}
+
+#' 外部連結不適用：整段只有一行，說明收起來
+#' @noRd
+link_d_na_ui <- function(fixed) {
+  ref <- kitsui_link_cohorts(fixed)$ref
+  shiny::tagList(
+    shiny::h4(kitsui_d_title(fixed, FALSE)),
+    ui_callout(
+      shiny::tags$strong("外部連結不適用："),
+      paste0("參照世代（", ref, "）沒有 D 分數的錨題，分數留在 ", ref, " 的量尺上。這不是錯誤。"),
+      shiny::tags$details(shiny::tags$summary("為什麼"), kitsui_d_hint(fixed, FALSE))
+    )
+  )
+}
+
+#' 垂直連結的標題與說明
+#' @noRd
+vertical_head_ui <- function() {
+  shiny::tagList(
+    shiny::h4("3. 各世代的垂直連結：連結前後"),
+    shiny::tags$small(
+      class = "kit-hint",
+      "三個分頁：未連結、內部連結後、外部連結後。",
+      "每個波次畫中位數，線段是 P25 到 P75（kits_vertical()）。",
+      "波次的單位是月時，連結後同一個月齡各世代的點靠在一起，表示連結合理。",
+      "單位是年或波次序號時，同一波各世代的年齡不同，點不一定會靠在一起。",
+      "之前回合的點來自固定檔裡的各波次摘要，照現在的連結換算。",
+      "所以這一回合只有一個世代時，也看得到連結得怎樣。"
+    )
   )
 }
 
@@ -419,14 +474,12 @@ link_result_ui <- function(ns, key, link, extra = NULL) {
   f <- kitsui_link_formula(link)
   shiny::tagList(
     shiny::h5(paste0(kind, "的公式")),
+    shiny::tags$p(shiny::tags$strong(f$formula)),
     shiny::tags$small(
       class = "kit-hint",
-      "新的值 = intercept + slope × 舊的值。", "linking error 是連結本身的不確定性。"
+      "新的值 = intercept + slope × 舊的值。", "linking_error 是連結本身的不確定性。"
     ),
-    shiny::tags$p(shiny::tags$strong(f$formula)),
     link_coef_table(f$table),
-    shiny::h5(paste0(kind, "的檢查（kits_check()）")),
-    shiny::tableOutput(out("checks")),
     shiny::h5(paste0(kind, "圖")),
     shiny::tags$small(class = "kit-hint",
                       "每個點是一個共同的題目步驟。", "點越貼近直線，連結越可靠。"),
@@ -436,7 +489,11 @@ link_result_ui <- function(ns, key, link, extra = NULL) {
       ui_download(out("plot_dl")),
       ui_download(out("points_dl"))
     ),
-    extra
+    ui_details_row(
+      ui_detail(paste0(kind, "的檢查（kits_check）"),
+                shiny::tags$div(class = "kit-table-scroll", shiny::tableOutput(out("checks")))),
+      extra
+    )
   )
 }
 
@@ -473,9 +530,8 @@ link_plot_box <- function(id, wait, height = "420px") {
 #' 內部連結的獨立檢核：能做時給按鈕，不能做時說明原因（不是每次都要做，預設收起來）
 #' @noRd
 internal_check_ui <- function(ns, why) {
-  shiny::tags$details(
-    class = "kit-fold",
-    shiny::tags$summary("內部連結的獨立檢核（kits_link_check()）"),
+  ui_detail(
+    "內部連結的獨立檢核（kits_link_check）",
     shiny::tags$small(
       class = "kit-hint",
       "用不靠共同題目的兩種方法再算一次：同年齡組比較、兩個世代一起校準。",
@@ -483,7 +539,7 @@ internal_check_ui <- function(ns, why) {
     ),
     if (is.null(why)) {
       shiny::tagList(
-        shiny::actionButton(ns("run_check"), "做獨立檢核", class = "btn-outline-primary"),
+        ui_button(ns("run_check"), "做獨立檢核"),
         shiny::uiOutput(ns("check_result"))
       )
     } else {
@@ -497,7 +553,8 @@ internal_check_ui <- function(ns, why) {
 check_result_ui <- function(ns, chk) {
   if (is.null(chk)) return(NULL)
   if (inherits(chk, "error")) {
-    return(ui_callout("檢核沒有完成：", conditionMessage(chk), warning = TRUE))
+    return(ui_status("stop", "獨立檢核停下來了，沒有結果。",
+                     shiny::tags$p(kitsui_error_ui(kit_error_text(chk, "獨立檢核")))))
   }
   tab <- kitsui_link_check_table(chk)
   shiny::tagList(
@@ -517,14 +574,15 @@ check_result_ui <- function(ns, chk) {
   )
 }
 
-#' 參照世代各量尺：錨題數與外部連結涵蓋的方式
+#' 參照世代各量尺：錨題數與外部連結涵蓋的方式（收起來的細節）
 #' @param ref 參照世代
 #' @noRd
 link_anchor_ui <- function(anchors, table_id, ref = KITSUI_REF_COHORT) {
   if (nrow(anchors) == 0) return(NULL)
-  shiny::tagList(
+  ui_details_row(ui_detail(
+    "錨題數與外部連結涵蓋的量尺",
     shiny::tags$p("參照世代各量尺在題庫裡的錨題數（kits_anchors()），與外部連結涵蓋哪些量尺："),
-    shiny::tableOutput(table_id),
+    shiny::tags$div(class = "kit-table-scroll", shiny::tableOutput(table_id)),
     shiny::tags$small(
       class = "kit-hint",
       "外部連結是各領域共用的一條線。",
@@ -532,7 +590,7 @@ link_anchor_ui <- function(anchors, table_id, ref = KITSUI_REF_COHORT) {
       "之後各回合題庫裡的錨題數可能變多。",
       "但外部連結凍結後，不會用新的錨題重新估計。"
     )
-  )
+  ))
 }
 
 #' 垂直連結：選領域；沒有可以畫的領域時，一句話說明（why，kitsui_vertical_alone()）

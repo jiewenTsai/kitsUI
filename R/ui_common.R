@@ -401,7 +401,7 @@ KITSUI_SCREEN_NAMES <- c(
   data = "資料", drift_n = "偏移（題）", fixed_n = "固定（題）", item_id = "題號", status = "狀態",
   steps = "步驟數", detail = "說明", bank = "題庫", route = "換算路線", final_scale = "最後的量尺",
   n = "列次數", note = "說明", from = "從", to = "到", state = "狀態", link = "連結", kind = "種類",
-  made = "哪一回合做的", round = "回合"
+  made = "什麼時候做的", round = "回合"
 )
 
 #' 摘要表的欄名換成中文（只換 KITSUI_SCREEN_NAMES 有的欄；只用在畫面上）
