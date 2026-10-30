@@ -417,8 +417,11 @@ score_fixed_ui <- function(round, button_id, next_id = NULL, label = NULL) {
       shiny::tags$li("下一回合要上傳這個 zip，才能接著用同一個題庫與連結。"),
       shiny::tags$li("在這次連線裡接著做，可以直接按「用這一回合的固定檔開始下一回合」，不用下載。"),
       if (length(round$excluded) > 0) {
+        why <- kitsui_excluded_reasons(round$log)[round$excluded]
+        shown <- ifelse(is.na(why) | !nzchar(why), scale_label(round$excluded),
+                        paste0(scale_label(round$excluded), "：", why))
         shiny::tags$li(class = "kit-warn-text",
-                       "這一回合不做的量尺（", paste(scale_label(round$excluded), collapse = "、"),
+                       "這一回合不做的量尺（", paste(shown, collapse = "；"),
                        "）沒有校準，題庫不變；固定檔的 checks.csv 記為 excluded。")
       }
     )

@@ -222,7 +222,7 @@ test_that("停下來的量尺：偏移表不說「沒有題庫」", {
     expect_false(session$getReturned()()$ok)
     expect_match(output$drift, "這個量尺停下來了，沒有偏移表")
     expect_false(grepl("沒有題庫", output$drift))
-    expect_match(output$status$html, "kits 出錯")
+    expect_match(output$status$html, "sim M03</strong>\\s*這一回合資訊不足，無法估計")
     expect_match(output$status$html, "不能產生新的固定檔")
     expect_match(output$scale_info$html, "停下來")
     expect_null(output$next_step)
@@ -238,12 +238,22 @@ test_that("這一回合不做的量尺：選了再校準；停下來時按鈕改
     session$setInputs(run = 1)
     expect_equal(session$getReturned()()$stopped, "sim M03")
     expect_match(output$status$html, "這一回合不做 sim M03，再校準一次")
+    expect_match(output$status$html, "按「這一回合不做」跳過這個量尺；題庫與連結不會改變。")
     session$setInputs(skip_stopped = 1)
     res <- session$getReturned()()
     expect_true(res$ok)
     expect_equal(res$excluded, "sim M03")
     expect_match(output$status$html, "這一回合不做：")
-    expect_match(output$overview, "這一回合不做")
+    # 資訊不足而跳過：摘要寫出原因，checks.csv 也是
+    expect_match(output$status$html, "sim M03 這一回合資訊不足，無法估計（每個列次只剩一題可以估計），已跳過")
+    expect_match(res$fixed$checks$detail[res$fixed$checks$check == "excluded"],
+                 "^insufficient information to estimate")
+    expect_match(output$overview, "這一回合不做（資訊不足，無法估計")
+    # 再校準一次（仍然勾著）：原因還在
+    session$setInputs(exclude = "sim M03", run = 3)
+    res <- session$getReturned()()
+    expect_match(res$fixed$checks$detail[res$fixed$checks$check == "excluded"],
+                 "^insufficient information to estimate")
     # 直接勾「這一回合不做」再校準
     session$setInputs(exclude = "motor M03", run = 2)
     expect_equal(session$getReturned()()$excluded, "motor M03")

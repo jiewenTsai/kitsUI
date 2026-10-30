@@ -30,6 +30,8 @@ KITSUI_CHECKS <- c("drift", "new version", "capped", "flag", "stop", "error", "D
 #'   例如在 app 裡更新進度條
 #' @param exclude NULL 或這一回合不做的資料量尺（領域 × 世代，例如 "tsupport B82"）：
 #'   這些量尺的作答不放進來，題庫、版本、連結都不動，checks.csv 記一列 "excluded"
+#' @param exclude_info NULL 或具名字元向量：不做的資料量尺 -> 上一次校準時 kits 說資訊不足的
+#'   原文（kitsui_no_info_stopped()）。checks.csv 的 excluded 那一列寫「資訊不足，無法估計」
 #' @return list(items, drift, data, fixed, stopped, ok, log, plan, memo, excluded, flag_fixed)：
 #'   excluded 是不做的資料量尺；flag_fixed 是各量尺用的「可固定的題少於幾題」；log 有 detail（中文）
 #'   與 detail_en（英文，寫進 checks.csv）；items、data（改名、
@@ -39,13 +41,14 @@ KITSUI_CHECKS <- c("drift", "new version", "capped", "flag", "stop", "error", "D
 #'   kitsui_round_plan()；memo 是存算過的東西的 environment（kitsui_own_scores()）
 #' @noRd
 kitsui_round <- function(df, fixed, round_label, flag_share = 0.2, flag_fixed = NA, files = NULL,
-                         progress = NULL, bank_choice = NULL, exclude = NULL) {
+                         progress = NULL, bank_choice = NULL, exclude = NULL,
+                         exclude_info = NULL) {
   kitsui_check_data(df)
   problem <- kitsui_label_problem(round_label, fixed$version$rounds)
   if (length(problem) > 0) kit_abort(problem)
   # 不做的量尺：作答拿掉（記下來；檔案的 md5 照樣記，因為這一回合用了這個檔案）
   all_df <- df
-  out <- kitsui_round_exclude(df, exclude, round_label)
+  out <- kitsui_round_exclude(df, exclude, round_label, exclude_info)
   df <- out$df
   bank_choice <- bank_choice[!names(bank_choice) %in% out$excluded]
   plan <- kitsui_round_plan(df, fixed, bank_choice)
@@ -81,10 +84,12 @@ kitsui_round <- function(df, fixed, round_label, flag_share = 0.2, flag_fixed = 
   )
 }
 
-#' 這一回合不做的量尺：資料拿掉，紀錄每個量尺一列 "excluded"
+#' 這一回合不做的量尺：資料拿掉，紀錄每個量尺一列 "excluded"；因為資訊不足而不做的
+#' （info 有它）寫出原因
+#' @param info NULL 或具名字元向量：資料量尺 -> kits 說資訊不足的原文
 #' @return list(df, excluded, log)
 #' @noRd
-kitsui_round_exclude <- function(df, exclude, round_label) {
+kitsui_round_exclude <- function(df, exclude, round_label, info = NULL) {
   exclude <- unique(exclude[!is.na(exclude) & nzchar(exclude)])
   if (length(exclude) == 0) return(list(df = df, excluded = character(), log = NULL))
   have <- scale_key(df$domain, df$cohort)
@@ -99,7 +104,51 @@ kitsui_round_exclude <- function(df, exclude, round_label) {
     detail = "這一回合不做這個量尺（在 ② 選的）：作答沒有校準，題庫、版本、連結都不動",
     detail_en = "left out of this round by the user: not calibrated; bank, versions and links unchanged"
   )
+  # 因為資訊不足而不做：寫出原因與 kits 的原文
+  msg <- unname(info[exclude])
+  why <- purrr::map(msg, \(m) if (!is.na(m %||% NA)) kitsui_kits_no_info(m))
+  at <- which(!purrr::map_lgl(why, is.null))
+  log$detail[at] <- sprintf(
+    "%s：%s。這一回合不做（在 ② 選的），作答沒有校準，題庫、版本、連結都不動（kits 的原文：%s）",
+    KITSUI_NO_INFO_ZH, purrr::map_chr(why[at], "zh"), msg[at]
+  )
+  log$detail_en[at] <- sprintf(
+    "%s: %s; left out of this round by the user: not calibrated; bank, versions and links unchanged (kits: %s)",
+    KITSUI_NO_INFO_EN, purrr::map_chr(why[at], "en"), msg[at]
+  )
   list(df = df[keep, ], excluded = exclude, log = log)
+}
+
+#' 不做的量尺的原因：資訊不足時「資訊不足，無法估計：…」，其他是 ""
+#' @param log kitsui_round() 的紀錄（或固定檔的 checks，只看 detail 是中文的那一欄）
+#' @return 具名字元向量：資料量尺 -> 原因
+#' @noRd
+kitsui_excluded_reasons <- function(log) {
+  ex <- log[log$check %in% "excluded", ]
+  if (is.null(ex) || nrow(ex) == 0) return(character())
+  no_info <- startsWith(ex$detail, KITSUI_NO_INFO_ZH)
+  stats::setNames(ifelse(no_info, sub("。.*$", "", ex$detail), ""), ex$scale)
+}
+
+#' 停下來、因為資訊不足的量尺：資料量尺 -> kits 的原文（給 kitsui_round(exclude_info = )）
+#'
+#' 借題庫時一個校準的量尺有好幾個資料量尺，每個都對到同一句。
+#' @param res kitsui_round() 的結果
+#' @return 具名字元向量（沒有時長度 0）
+#' @noRd
+kitsui_no_info_stopped <- function(res) {
+  err <- res$log[res$log$check == "error" & res$log$scale %in% res$stopped, ]
+  at <- regexpr(KITSUI_KITS_SAYS, err$detail, fixed = TRUE)
+  msg <- ifelse(at > 0, substring(err$detail, at + nchar(KITSUI_KITS_SAYS)), NA_character_)
+  hit <- !is.na(msg) & purrr::map_lgl(msg, \(m) !is.na(m) && !is.null(kitsui_kits_no_info(m)))
+  err <- err[hit, ]
+  msg <- msg[hit]
+  plan <- res$plan
+  out <- purrr::map2(err$scale, msg, \(s, m) {
+    data <- if (is.null(plan)) s else unique(plan$data_scale[plan$scale == s])
+    stats::setNames(rep(m, length(data)), data)
+  })
+  unlist(out) %||% character()
 }
 
 #' 「可固定的題少於幾題」算 flag：有設定時用設定；NA 時依量尺的題數，min(5, 題數的一半)
@@ -142,7 +191,7 @@ kitsui_round_try <- function(rows, part, fixed, round_label, flag_share, flag_fi
     kitsui_round_scale(X, scale, fixed, round_label, flag_share, flag_fixed, row_cohorts, borrowed)
   }, error = \(e) list(stopped = TRUE, log = tibble::tibble(
     round = round_label, scale = scale, item_id = NA_character_, check = "error",
-    detail = kitsui_error_detail(e), detail_en = kitsui_error_detail_en(e)
+    detail = kitsui_error_detail(e, scale), detail_en = kitsui_error_detail_en(e)
   )))
   out$log <- dplyr::bind_rows(borrow, out$log)
   out$waves <- tibble::tibble(scale = scale, wave_m = sort(unique(part$wave_m)),
@@ -151,13 +200,24 @@ kitsui_round_try <- function(rows, part, fixed, round_label, flag_share, flag_fi
 }
 
 #' 停下來的原因（中文）：kitsui 自己的訊息原文；kits 的訊息前面加一句中文，常見的錯誤再加
-#' 白話的說明（kitsui_kits_zh()）。kits 的原文接在「kits 的訊息：」後面（畫面收在 details 裡）
+#' 白話的說明（kitsui_kits_zh()）。kits 的原文接在「kits 的訊息：」後面（畫面收在 details 裡）。
+#' 資訊不足、無法估計的錯誤（kitsui_kits_no_info()）直接這樣說，請使用者按「這一回合不做」
+#' @param scale 停下來的量尺（資訊不足的說明用）
 #' @noRd
-kitsui_error_detail <- function(e) {
+kitsui_error_detail <- function(e, scale = NULL) {
   if (inherits(e, "kit_user_error")) return(conditionMessage(e))
-  paste0("kits 出錯，這個量尺停下來。", kitsui_kits_zh(conditionMessage(e)),
-         KITSUI_KITS_SAYS, conditionMessage(e))
+  msg <- conditionMessage(e)
+  no_info <- kitsui_kits_no_info(msg)
+  if (!is.null(no_info)) {
+    return(paste0(if (!is.null(scale)) paste0(scale_label(scale), " "), "這一回合", KITSUI_NO_INFO_ZH, "（", no_info$zh,
+                  "）。按「這一回合不做」跳過這個量尺；題庫與連結不會改變。",
+                  KITSUI_KITS_SAYS, msg))
+  }
+  paste0("kits 出錯，這個量尺停下來。", kitsui_kits_zh(msg), KITSUI_KITS_SAYS, msg)
 }
+# 資訊不足的說法（紅字、紀錄、checks.csv 都用同一句）
+KITSUI_NO_INFO_ZH <- "資訊不足，無法估計"
+KITSUI_NO_INFO_EN <- "insufficient information to estimate"
 # 紀錄裡 kits 原文前面的字（kitsui_error_ui() 照它切開）
 KITSUI_KITS_SAYS <- "kits 的訊息："
 
@@ -166,6 +226,10 @@ KITSUI_KITS_SAYS <- "kits 的訊息："
 #' @noRd
 kitsui_error_detail_en <- function(e) {
   if (!inherits(e, "kit_user_error")) {
+    no_info <- kitsui_kits_no_info(conditionMessage(e))
+    if (!is.null(no_info)) {
+      return(paste0(KITSUI_NO_INFO_EN, " (", no_info$en, "), scale stopped: ", conditionMessage(e)))
+    }
     return(paste0("kits error, scale stopped: ", conditionMessage(e)))
   }
   e$en %||% "kitsUI stopped this scale (the reason is in the round log of the app)"

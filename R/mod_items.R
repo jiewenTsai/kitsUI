@@ -79,9 +79,12 @@ mod_items_server <- function(id, data, goto) {
     # 給使用者看的訊息：ui_alert()
     note <- shiny::reactiveVal(NULL)
     say <- \(type, head, text) note(ui_alert(type, head, " ", text))
+    # 因為資訊不足停下來的資料量尺 -> kits 的原文：之後選「這一回合不做」時，checks.csv 寫原因
+    no_info <- shiny::reactiveVal(character())
 
     # 資料或設定變了，舊結果作廢
     shiny::observeEvent(data(), {
+      no_info(character())
       if (!is.null(shiny::isolate(round()))) {
         round(NULL)
         say("info", "【需要重新校準】", "資料或設定改了，舊的結果已清除。請再按「開始校準」。")
@@ -144,7 +147,8 @@ mod_items_server <- function(id, data, goto) {
           suppressMessages(kitsui_round(
             d$df, d$fixed, d$round_label, flag_share = input$flag_share %||% 0.2,
             flag_fixed = items_flag_fixed(input$flag_fixed), files = d$files,
-            progress = items_progress, bank_choice = choice, exclude = exclude
+            progress = items_progress, bank_choice = choice, exclude = exclude,
+            exclude_info = no_info()
           )),
           error = \(e) e
         )
@@ -157,6 +161,8 @@ mod_items_server <- function(id, data, goto) {
       note(NULL)
       used(d)
       round(res)
+      seen <- kitsui_no_info_stopped(res)
+      if (length(seen) > 0) no_info(c(seen, no_info()[setdiff(names(no_info()), names(seen))]))
     }
     shiny::observeEvent(input$run, run_round(input$exclude))
     # 停下來的量尺改成「這一回合不做」，再校準一次
@@ -443,7 +449,7 @@ items_progress <- function(i, n, scale) {
 #' @noRd
 items_status <- function(res, skip_id = NULL) {
   n_ok <- length(res$items)
-  extra <- shiny::tagList(items_excluded_note(res$excluded), items_category_note(res$log),
+  extra <- shiny::tagList(items_excluded_note(res$excluded, res$log), items_category_note(res$log),
                           items_flag_box(res$log))
   if (isTRUE(res$ok)) {
     done <- if (n_ok == 1) " 這個量尺校準好了。" else sprintf(" %d 個量尺都校準好了。", n_ok)
@@ -458,6 +464,12 @@ items_status <- function(res, skip_id = NULL) {
       "請看下面的原因，處理後重跑這一回合；",
       "或把停下來的量尺改成「這一回合不做」，其他量尺就可以產生固定檔。",
       shiny::tags$ul(lapply(seq_len(nrow(why)), \(i) {
+        label <- scale_label(why$scale[i])
+        # 資訊不足：「〈量尺〉這一回合資訊不足，無法估計（…）。按「這一回合不做」…」
+        if (startsWith(why$detail[i], paste0(label, " 這一回合", KITSUI_NO_INFO_ZH))) {
+          rest <- substring(why$detail[i], nchar(label) + 1)
+          return(shiny::tags$li(shiny::tags$strong(label), kitsui_error_ui(rest)))
+        }
         kind <- if (why$check[i] == "error") "kits 出錯" else "停下來"
         shiny::tags$li(shiny::tags$strong(why$scale[i]), "（", kind, "）：",
                        kitsui_error_ui(why$detail[i]))
@@ -481,13 +493,22 @@ items_stopped_data <- function(res) {
   unique(plan$data_scale[plan$scale %in% res$stopped])
 }
 
-#' 這一回合不做的量尺：一句話（沒有時 NULL）
+#' 這一回合不做的量尺：一句話；因為資訊不足而不做的，每個量尺一列寫出原因（沒有時 NULL）
+#' @param log 這一回合的紀錄（excluded 的列有原因）
 #' @noRd
-items_excluded_note <- function(excluded) {
+items_excluded_note <- function(excluded, log = NULL) {
   if (length(excluded) == 0) return(NULL)
+  why <- kitsui_excluded_reasons(log)
+  why <- why[names(why) %in% excluded & nzchar(why)]
   ui_callout(
     shiny::tags$strong("這一回合不做："), paste(scale_label(excluded), collapse = "、"), "。",
     "這些量尺沒有校準，題庫、連結都不動；固定檔的 checks.csv 記為 excluded。",
+    if (length(why) > 0) {
+      shiny::tags$ul(lapply(names(why), \(s) {
+        shiny::tags$li(class = "kit-warn-text",
+                       paste0(scale_label(s), " 這一回合", sub("：", "（", why[[s]]), "），已跳過；題庫與連結沒有改變。"))
+      }))
+    },
     warning = TRUE
   )
 }
@@ -548,8 +569,11 @@ items_overview <- function(res) {
   }) |>
     purrr::list_rbind()
   if (length(res$excluded) == 0) return(out)
+  why <- kitsui_excluded_reasons(res$log)[res$excluded]
+  calibration <- ifelse(is.na(why) | !nzchar(why), "這一回合不做",
+                        paste0("這一回合不做（", why, "）"))
   dplyr::bind_rows(out, tibble::tibble(scale = res$excluded, data = res$excluded,
-                                       calibration = "這一回合不做", flag = ""))
+                                       calibration = unname(calibration), flag = ""))
 }
 
 #' 選題庫的表：資料量尺、波次、題庫（選單）、原因（跟著選單變，why_i）；欄名是英文

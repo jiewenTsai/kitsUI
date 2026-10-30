@@ -129,6 +129,36 @@ KITSUI_KITS_ERRORS <- tibble::tribble(
   "kitsUI 找不到要用的欄或題。請把這個量尺與資料告訴維護 kitsUI 的人。"
 )
 
+# 資訊不足、無法估計的 kits 錯誤（資料本身沒有錯，只是這一回合的人或題不夠）-> 一句簡短的原因。
+# 這些錯誤停下來時，紅字直接說「資訊不足」，請使用者按「這一回合不做」跳過；不強迫估計，
+# 也不把偏移的題或新題改成題庫的值。前兩種在偏移把關時遇到會走 kitsui_drift_safe() 的退路
+# （題庫的題固定在題庫的值），只有在別的地方（例如固定校準）遇到時才會停下來。
+# 其他錯誤（資料有問題，要人看）不在這裡。
+KITSUI_KITS_NO_INFO <- tibble::tribble(
+  ~pattern, ~zh, ~en,
+  "Fewer than 2 items of the new data have a 0 score",
+  "能自由校準的題不到 2 題", "fewer than 2 items can be calibrated freely",
+  "^Only [0-9]+ item step\\(s\\) have at least `min_n`",
+  "上下各有 30 人的步驟不到 3 個", "fewer than 3 steps have 30 persons below and above",
+  "Every person-wave answered only one item",
+  "每個列次只剩一題可以估計", "every person-wave has only one item left to estimate",
+  "At least 2 item steps are needed",
+  "可以估計的步驟不到 2 個", "fewer than 2 item steps can be estimated",
+  "Every item is fixed and has no 0 score or only one score",
+  "每一題都固定，沒有可以估計的分數", "every item is fixed and none can be estimated",
+  "Hessian of the calibration is singular",
+  "人或題太少，算不出標準誤", "too few persons or items to compute standard errors"
+)
+
+#' kits 的錯誤是不是「資訊不足、無法估計」
+#' @return list(zh, en)（簡短的原因）；不是時 NULL
+#' @noRd
+kitsui_kits_no_info <- function(msg) {
+  hit <- which(purrr::map_lgl(KITSUI_KITS_NO_INFO$pattern, \(p) grepl(p, msg)))
+  if (length(hit) == 0) return(NULL)
+  list(zh = KITSUI_KITS_NO_INFO$zh[hit[1]], en = KITSUI_KITS_NO_INFO$en[hit[1]])
+}
+
 #' kits 的英文錯誤翻成白話中文
 #' @param msg kits 的錯誤訊息（英文）
 #' @return 一兩句中文；不是常見的錯誤時 NULL

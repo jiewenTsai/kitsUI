@@ -103,12 +103,16 @@ test_that("kits 出錯的量尺停下來並記下原因（中文），其他量�
   expect_equal(names(r$items), "motor M03")
   err <- dplyr::filter(r$log, check == "error")
   expect_equal(err$scale, "sim M03")
-  expect_match(err$detail, "^kits 出錯，這個量尺停下來。每個列次都只剩一題.*kits 的訊息：Every person-wave answered")
+  # 每個列次只剩一題：資訊不足，直接這樣說，請使用者按「這一回合不做」
+  expect_match(err$detail, paste0("^sim M03 這一回合資訊不足，無法估計（每個列次只剩一題可以估計）。",
+                                  "按「這一回合不做」跳過這個量尺；題庫與連結不會改變。",
+                                  "kits 的訊息：Every person-wave answered"))
   en <- dplyr::filter(r$fixed$checks, check == "error")
   expect_equal(en$scale, "sim M03")
   # checks.csv 是英文：kits 的訊息原文
   msg <- sub("^.*kits 的訊息：", "", err$detail)
-  expect_equal(en$detail, paste0("kits error, scale stopped: ", msg))
+  expect_equal(en$detail, paste0("insufficient information to estimate (every person-wave has only one ",
+                                 "item left to estimate), scale stopped: ", msg))
   zip_path <- withr::local_tempfile(fileext = ".zip")
   expect_error(kitsui_write_fixed(r$fixed, zip_path), "sim M03", class = "kit_user_error")
 })
@@ -500,10 +504,18 @@ test_that("kits 的英文錯誤：常見的翻成白話中文，原文收在 det
   expect_null(kitsui_kits_zh("something else"))
   e <- simpleError("Every person-wave answered only one item, so CML has no information.")
   d <- kitsui_error_detail(e)
-  expect_match(d, "^kits 出錯，這個量尺停下來。每個列次都只剩一題.*kits 的訊息：Every person-wave")
+  expect_match(d, "^這一回合資訊不足，無法估計（每個列次只剩一題可以估計）。.*kits 的訊息：Every person-wave")
   # checks.csv 仍是 kits 的原文（英文）
   expect_equal(kitsui_error_detail_en(e),
-               "kits error, scale stopped: Every person-wave answered only one item, so CML has no information.")
+               paste0("insufficient information to estimate (every person-wave has only one item left ",
+                      "to estimate), scale stopped: Every person-wave answered only one item, so CML has ",
+                      "no information."))
+  # 不是資訊不足的錯誤：照舊
+  e2 <- simpleError("Column(s) item_score2 of `data` change within a person-wave")
+  expect_match(kitsui_error_detail(e2, "sim M03"), "^kits 出錯，這個量尺停下來。同一個列次")
+  expect_match(kitsui_error_detail_en(e2), "^kits error, scale stopped: Column")
+  html <- as.character(kitsui_error_ui(kitsui_error_detail(e2)))
+  expect_match(html, "<code>Column")
   html <- as.character(kitsui_error_ui(d))
   expect_match(html, "<details")
   expect_match(html, "<summary>kits 的原文</summary>")
@@ -518,4 +530,105 @@ test_that("① 先說：題庫裡沒有這一回合的任何一題", {
   d$item_id <- paste0("new_", d$item_id)
   note <- kitsui_note_no_common(d, kitsui_round_plan(d, fixed), fixed)
   expect_match(note, "^lan M03：lan M03 的題庫裡沒有這一回合的任何一題")
+})
+
+test_that("資訊不足的 kits 錯誤：哪些算，簡短的原因", {
+  no_info <- \(m) kitsui_kits_no_info(m)$zh
+  expect_equal(no_info("Every person-wave answered only one item, so CML has no information"),
+               "每個列次只剩一題可以估計")
+  expect_equal(no_info("At least 2 item steps are needed to calibrate; there are 1."),
+               "可以估計的步驟不到 2 個")
+  expect_equal(no_info(paste("Fewer than 2 items of the new data have a 0 score and at least two",
+                             "scores, so the new data cannot be calibrated.")),
+               "能自由校準的題不到 2 題")
+  expect_equal(no_info("Only 2 item step(s) have at least `min_n` = 30 persons below and above"),
+               "上下各有 30 人的步驟不到 3 個")
+  expect_equal(no_info("The Hessian of the calibration is singular"), "人或題太少，算不出標準誤")
+  # 資料有問題（要人看）的錯誤不算
+  expect_null(kitsui_kits_no_info("Column(s) wave_m of `data` change within a person-wave"))
+  expect_null(kitsui_kits_no_info("No item of the new data is in `ref`."))
+  expect_null(kitsui_kits_no_info("something else"))
+})
+
+test_that("資訊不足停下來：不強迫估計；使用者選「這一回合不做」後 checks.csv 寫原因", {
+  sb <- sim_bank()
+  df <- dplyr::bind_rows(sim_long(one_item_each(), 2), kitsui_demo("M03", 3, "motor"))
+  stopped <- suppressMessages(kitsui_round(df, sb$r1$fixed, "2"))
+  # 停下來，沒有自動跳過、沒有改用題庫的值
+  expect_equal(stopped$stopped, "sim M03")
+  expect_length(stopped$excluded, 0)
+  expect_null(stopped$items[["sim M03"]])
+  info <- kitsui_no_info_stopped(stopped)
+  expect_equal(names(info), "sim M03")
+  expect_match(info, "^Every person-wave answered only one item")
+  html <- as.character(items_status(stopped, "skip"))
+  expect_match(html, "<strong>sim M03</strong>\\s*這一回合資訊不足，無法估計（每個列次只剩一題可以估計）")
+  expect_match(html, "按「這一回合不做」跳過這個量尺；題庫與連結不會改變。")
+  expect_match(html, "<summary>kits 的原文</summary>")
+  expect_match(html, "這一回合不做 sim M03，再校準一次")
+  # 使用者選「這一回合不做」：checks.csv 記 excluded，原因是資訊不足
+  r <- suppressMessages(kitsui_round(df, sb$r1$fixed, "2", exclude = "sim M03", exclude_info = info))
+  expect_true(r$ok)
+  ex <- dplyr::filter(r$log, check == "excluded")
+  expect_match(ex$detail, "^資訊不足，無法估計：每個列次只剩一題可以估計。這一回合不做（在 ② 選的）")
+  expect_match(ex$detail, "kits 的原文：Every person-wave answered only one item")
+  ex_en <- dplyr::filter(r$fixed$checks, check == "excluded")
+  expect_match(ex_en$detail, paste0("^insufficient information to estimate: every person-wave has only ",
+                                    "one item left to estimate; left out of this round by the user"))
+  expect_false(any(grepl("[^ -~]", ex_en$detail)))
+  expect_identical(dplyr::filter(r$fixed$bank, scale == "sim M03"),
+                   dplyr::filter(sb$r1$fixed$bank, scale == "sim M03"))
+  # 摘要、量尺一覽、④ 的固定檔說明都寫出原因
+  expect_equal(kitsui_excluded_reasons(r$log),
+               c("sim M03" = "資訊不足，無法估計：每個列次只剩一題可以估計"))
+  note <- as.character(items_excluded_note(r$excluded, r$log))
+  expect_match(note, "sim M03 這一回合資訊不足，無法估計（每個列次只剩一題可以估計），已跳過；題庫與連結沒有改變。")
+  ov <- items_overview(r)
+  expect_equal(ov$calibration[ov$scale == "sim M03"],
+               "這一回合不做（資訊不足，無法估計：每個列次只剩一題可以估計）")
+  expect_match(as.character(score_fixed_ui(r, "dl")), "sim M03：資訊不足，無法估計")
+  zip_path <- withr::local_tempfile(fileext = ".zip")
+  kitsui_write_fixed(r$fixed, zip_path)
+  back <- kitsui_read_fixed(zip_path)
+  expect_match(back$checks$detail[back$checks$check == "excluded"], "^insufficient information")
+  # 沒有原因（一般的「這一回合不做」）時照舊
+  plain <- suppressMessages(kitsui_round(df, sb$r1$fixed, "2", exclude = "sim M03"))
+  expect_match(plain$log$detail[plain$log$check == "excluded"], "^這一回合不做這個量尺")
+  expect_equal(unname(kitsui_excluded_reasons(plain$log)), "")
+  expect_equal(items_overview(plain)$calibration[items_overview(plain)$scale == "sim M03"], "這一回合不做")
+  # 其他原因停下來的量尺不算資訊不足
+  expect_length(kitsui_no_info_stopped(list(log = tibble::tibble(
+    scale = "a B1", check = "error", detail = "kits 出錯，這個量尺停下來。kits 的訊息：Column(s) x change"
+  ), stopped = "a B1", plan = NULL)), 0)
+})
+
+test_that("TDCYP：tsupport B82 第二回合（24）資訊不足停下來，選「這一回合不做」後產生固定檔", {
+  path <- "/Users/jiewentsai/Documents/ClaudePlayMac/lab20261030_kitsui/lab1031/work/kits_input/tdcyp_jsq_kits.csv.gz"
+  skip_if_not(file.exists(path))
+  all <- kitsui_read_uploads(data.frame(name = basename(path), datapath = path))$data
+  ids <- withr::with_seed(1, all |>
+    dplyr::filter(cohort %in% c("B82", "B85")) |>
+    dplyr::distinct(cohort, subj_id) |>
+    dplyr::group_by(cohort) |>
+    dplyr::slice_sample(n = 250) |>
+    dplyr::ungroup())
+  d <- dplyr::semi_join(all, ids, by = c("cohort", "subj_id"))
+  r1 <- suppressMessages(kitsui_round(dplyr::filter(d, wave_m %in% c(0, 12)), kitsui_fixed_empty(), "R1"))
+  expect_true(r1$ok)
+  d2 <- dplyr::filter(d, wave_m == 24)
+  r2 <- suppressMessages(kitsui_round(d2, r1$fixed, "R2"))
+  expect_equal(r2$stopped, "tsupport B82")
+  err <- dplyr::filter(r2$log, check == "error")
+  expect_match(err$detail, "^tsupport B82 這一回合資訊不足，無法估計（")
+  info <- kitsui_no_info_stopped(r2)
+  expect_equal(names(info), "tsupport B82")
+  r2b <- suppressMessages(kitsui_round(d2, r1$fixed, "R2", exclude = names(info), exclude_info = info))
+  expect_true(r2b$ok)
+  expect_match(r2b$fixed$checks$detail[r2b$fixed$checks$check == "excluded"],
+               "^insufficient information to estimate: ")
+  expect_identical(dplyr::filter(r2b$fixed$bank, scale == "tsupport B82"),
+                   dplyr::filter(r1$fixed$bank, scale == "tsupport B82"))
+  zip_path <- withr::local_tempfile(fileext = ".zip")
+  kitsui_write_fixed(r2b$fixed, zip_path)
+  expect_true(file.exists(zip_path))
 })
