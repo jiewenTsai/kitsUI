@@ -349,7 +349,8 @@ vertical_outputs <- function(output, session, stage, vertical, domain) {
   p <- shiny::reactive({
     v <- vertical()[[stage]]
     shiny::req(v$vertical)
-    kitsui_vertical_plot(v)
+    # 世代依序取 KIT 的類別色（三個分頁同一個世代同一個顏色）
+    kit_chart_categorical(kitsui_vertical_plot(v))
   })
   output[[id("plot")]] <- plotly::renderPlotly(p())
   output[[id("dl_ui")]] <- render_download_plot(

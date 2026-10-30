@@ -302,14 +302,18 @@ mod_items_server <- function(id, data, goto) {
           "這個量尺沒有題庫，是自由校準，沒有偏移把關圖。"
         }))
       }
+      # 依類別上色的圖（分數、波次）換成 KIT 的類別色（kit_chart_categorical()）
       p <- shiny::withProgress(message = "畫圖中…", value = 0.5, tryCatch(switch(
         type,
         wright = plot(x$item, type = "wright", scores = scores()),
-        observed = plot(x$item, type = "observed", data = x$X, group = "wave",
-                        persons = persons(), scores = scores(), items = shown()),
+        observed = kit_chart_categorical(
+          plot(x$item, type = "observed", data = x$X, group = "wave", persons = persons(),
+               scores = scores(), items = shown()),
+          skip = "model"
+        ),
         fit = items_fit_plot(x$item$itemfit),
         drift = kitsui_drift_plot(x$drift, status()$tab),
-        plot(x$item, type = "category", items = shown())
+        kit_chart_categorical(plot(x$item, type = "category", items = shown()))
       ), error = \(e) e))
       if (inherits(p, "error")) shiny::validate(paste("這張圖畫不出來：", conditionMessage(p)))
       p

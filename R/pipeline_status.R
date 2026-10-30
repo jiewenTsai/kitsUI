@@ -166,14 +166,14 @@ kitsui_fixed_bad_lines <- function(bad) {
           bad$beta, bad$beta_bank, purrr::map_chr(bad$diff, kitsui_diff_text))
 }
 
-# 偏移把關圖：每一種狀態的點（顏色和 kits 的圖一樣：固定藍、偏移橘、不判斷灰）；
-# unjudged 是沒有判斷的步驟（上下的人不夠），不管是哪一題
+# 偏移把關圖：每一種狀態的點（顏色在 kit_chart_role()：固定藍、偏移朱紅、其他原因固定綠、
+# 不判斷灰）；unjudged 是沒有判斷的步驟（上下的人不夠），不管是哪一題
 KITSUI_DRIFT_LOOKS <- list(
-  fixed = list(col = "#0072B2", symbol = "circle"),
-  moved = list(col = "#D55E00", symbol = "x"),
-  kept = list(col = "#7F7F7F", symbol = "diamond"),
-  other = list(col = "#000000", symbol = "square"),
-  unjudged = list(col = "#7F7F7F", symbol = "circle-open",
+  fixed = list(col = kit_chart_role("fixed"), symbol = "circle"),
+  moved = list(col = kit_chart_role("moved"), symbol = "x"),
+  kept = list(col = kit_chart_role("kept"), symbol = "diamond"),
+  other = list(col = kit_chart_role("other"), symbol = "square"),
+  unjudged = list(col = kit_chart_role("unjudged"), symbol = "circle-open",
                   name = "Step not judged (too few people above/below)")
 )
 

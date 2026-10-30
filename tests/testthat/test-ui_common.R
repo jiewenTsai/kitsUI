@@ -187,3 +187,21 @@ test_that("畫面用的欄名：beta -> difficulty、thr -> threshold、theta ->
                c("item_id", "difficulty", "difficulty_se", "threshold", "threshold_se", "ability",
                  "d_score", "d_score_se"))
 })
+
+test_that("圖的類別色：Okabe–Ito 依序取色；同一組同一個顏色，跳過的組不換", {
+  expect_equal(kit_chart_colors(2), c("#0072B2", "#E69F00"))
+  expect_length(kit_chart_colors(8), 8)
+  expect_equal(kit_chart_colors(7)[7], "#0072B2")
+  p <- plotly::plot_ly() |>
+    plotly::add_trace(x = 1:2, y = 1:2, type = "scatter", mode = "lines", name = "model",
+                      line = list(color = "#7F7F7F")) |>
+    plotly::add_trace(x = 1:2, y = 2:3, type = "scatter", mode = "lines+markers", name = "M03") |>
+    plotly::add_trace(x = 1:2, y = 3:4, type = "scatter", mode = "markers", name = "M36")
+  d <- kit_chart_categorical(p, skip = "model")$x$data
+  expect_equal(d[[1]]$line$color, "#7F7F7F")
+  expect_equal(d[[2]]$line$color, "#0072B2")
+  expect_equal(d[[2]]$marker$color, "#0072B2")
+  expect_equal(d[[3]]$marker$color, "#E69F00")
+  expect_equal(KITSUI_DRIFT_LOOKS$moved$col, kit_chart_role("moved"))
+  expect_true(KITSUI_DRIFT_LOOKS$fixed$col %in% kit_chart_colors())
+})
