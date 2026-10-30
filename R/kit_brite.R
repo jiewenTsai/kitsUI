@@ -362,5 +362,76 @@ details > summary {
   }
   .nav-tabs .nav-link { white-space: nowrap; }
 }
+
+/* ── 新元件：步驟分頁的進度 ──────────────────────────────────────
+   做完的步驟打 ✓（.kit-tab-done，✓ 是分頁裡的 .kit-tab-mark）；還不能做的步驟灰色
+   （.kit-tab-locked，滑過時 title 說明「先做 ②」）。仍然可以按：進去會看到怎麼辦。 */
+.nav-tabs .nav-link .kit-tab-mark { margin-left: 0.35rem; font-weight: 900; }
+.nav-tabs .nav-link.kit-tab-locked:not(.active),
+.nav-tabs .nav-link.kit-tab-locked:not(.active):hover {
+  background: #e8e4d8;
+  color: #6b6b6b;
+  border-color: #6b6b6b;
+  box-shadow: none;
+  transform: none;
+}
+
+/* ── 新元件：狀態框的第一行 ──────────────────────────────────────
+   【完成】一句結論（大字粗體）；下面的重點、怎麼辦是一般字重；kits 的原文收起來 */
+.kit-status .kit-status-line { margin-bottom: 0.2rem; }
+.kit-status .btn { margin-top: 0.4rem; }
+.kit-status details { font-weight: 400; }
+
+/* ── 新元件：設定摘要 ────────────────────────────────────────────
+   結果上面一行小字：「本回合 R1：M03、M36 · 3、6、36 個月 · 參照世代 M03 · …」 */
+.kit-settings-line {
+  font-size: 0.82rem;
+  color: #5a5a5a;
+  margin: 1.2rem 0 0.6rem;
+}
+
+/* ── 新元件：進階設定 ────────────────────────────────────────────
+   預設收起；打開後左邊一條淡線，和其他設定分開（不加框） */
+.kit-advanced { margin: 0.8rem 0 0.4rem; }
+.kit-advanced > summary { cursor: pointer; }
+.kit-advanced-body {
+  margin: 0.5rem 0 0.8rem;
+  padding-left: 1rem;
+  border-left: 1.5px solid #d9d4c5;
+}
+
+/* ── 新元件：一排細節 ────────────────────────────────────────────
+   結果下面一排收起來的標題（▸ 題目參數　▸ 偏移把關　▸ 用 R 怎麼做…）；
+   打開的那一個佔一整行，內容不加框 */
+.kit-details {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: baseline;
+  gap: 0.3rem 1.6rem;
+  margin: 1.6rem 0 1rem;
+}
+.kit-details > .kit-detail[open] { flex-basis: 100%; }
+.kit-detail > summary { cursor: pointer; }
+.kit-detail-body { padding: 0.6rem 0 1rem; }
+
+/* ── 新元件：下一步 ──────────────────────────────────────────────
+   頁面最下面、靠右：一句小字＋「下一步：××× →」（和主要按鈕同一種樣式） */
+.kit-next {
+  display: flex;
+  flex-wrap: wrap;
+  justify-content: flex-end;
+  align-items: center;
+  gap: 0.6rem 1rem;
+  margin: 2.4rem 0 1rem;
+}
+.kit-next .kit-hint { margin: 0; }
+
+/* ── 新元件：用 R 怎麼做 ─────────────────────────────────────────
+   一句說明、右上角「複製」（這一列沒有框）、下面一個程式碼框 */
+.kit-code-copy {
+  display: flex;
+  justify-content: flex-end;
+  margin-bottom: 0.3rem;
+}
 )---"
 }

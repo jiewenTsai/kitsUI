@@ -21,10 +21,11 @@ mod_guide <- function(goal, steps, output, note = NULL) {
   )
 }
 
-#' 提示框（warning = TRUE 時是橘色的提醒：.kit-callout-warn，深棕字、淺橘底）
+#' 提示框（KIT 設計語言 3.7）：天藍的資訊；warning = TRUE 時是黃色的注意（.kit-callout-warning，
+#' 和 kitJoin 同一個名字）
 #' @noRd
 ui_callout <- function(..., warning = FALSE) {
-  cls <- paste("kit-callout", if (warning) "kit-callout-warn")
+  cls <- paste("kit-callout", if (warning) "kit-callout-warning")
   shiny::tags$div(class = cls, ...)
 }
 
@@ -40,7 +41,7 @@ ui_warn_list <- function(head, items, ...) {
 #' 找不到 pandoc 時，頁面最上方的提醒
 #' @noRd
 kit_pandoc_notice <- function() {
-  shiny::tags$div(class = "kit-callout kit-callout-warn kit-pandoc-notice", role = "alert",
+  shiny::tags$div(class = "kit-callout kit-callout-warning kit-pandoc-notice", role = "alert",
                   KIT_PANDOC_MISSING)
 }
 
@@ -54,18 +55,112 @@ ui_go_items <- function(ns) {
   )
 }
 
-#' 狀態列：type 是 "success"、"info"、"danger"；head 是【】裡的粗體字
+# 狀態框的四種標籤與顏色（KIT 設計語言 3.6）；兩個 app 都只用這四種
+KIT_STATUS <- list(
+  done = list(label = "【完成】", class = "alert-success"),
+  warn = list(label = "【完成，但請注意】", class = "alert-warning"),
+  stop = list(label = "【停下來】", class = "alert-danger"),
+  stale = list(label = "【要重新執行】", class = "alert-warning")
+)
+
+#' 狀態框：一個動作的結果，第一眼要看的東西
+#'
+#' 第一行是標籤與一句結論（大字粗體）；接著最多 3 點重點（points），再接其他內容（...），
+#' 例如停下來時「怎麼辦」的按鈕、收起來的「kits 的原文」。
+#' @param kind "done"（完成）、"warn"（完成，但請注意）、"stop"（停下來）、"stale"（要重新執行）
+#' @param line 一句結論
+#' @param points 重點（字串或 tag 的 list）；長度 0 時不顯示
 #' @noRd
-ui_alert <- function(type, head, ...) {
+ui_status <- function(kind, line, ..., points = NULL) {
+  st <- KIT_STATUS[[match.arg(kind, names(KIT_STATUS))]]
   shiny::tags$div(
-    class = paste0("alert alert-", type, " kit-status"), role = "alert",
-    shiny::tags$strong(head), ...
+    class = paste("alert kit-status", st$class), role = "alert",
+    shiny::tags$div(class = "kit-status-line", shiny::tags$strong(st$label), " ", line),
+    if (length(points) > 0) shiny::tags$ul(lapply(points, shiny::tags$li)),
+    ...
+  )
+}
+
+# 按鈕的寫法（KIT 設計語言 3.4）：主要按鈕一頁一個；次要按鈕白底、小一號；
+# 危險按鈕（這一回合不做、不用固定檔…）鮭紅底
+KIT_BTN <- c(
+  primary = "btn-primary",
+  secondary = "btn-sm btn-outline-secondary",
+  danger = "btn-sm btn-danger"
+)
+
+#' 一個按鈕（shiny::actionButton()），class 照 KIT_BTN
+#' @param kind "primary"、"secondary" 或 "danger"
+#' @noRd
+ui_button <- function(id, label, kind = "secondary", ..., class = NULL) {
+  shiny::actionButton(id, label, class = paste(c(KIT_BTN[[kind]], class), collapse = " "), ...)
+}
+
+#' 進階設定：預設收起（回合名稱、flag 的條件、用哪一個題庫、通過步驟…）
+#' @param title 收合標題；可以是 tag（例如後面接現在的設定）
+#' @noRd
+ui_advanced <- function(..., title = "進階設定", open = FALSE) {
+  shiny::tags$details(
+    class = "kit-advanced", open = if (open) NA,
+    shiny::tags$summary(title),
+    shiny::tags$div(class = "kit-advanced-body", ...)
+  )
+}
+
+#' 一排細節：結果下面一排收起來的區塊（題目參數、紀錄、kits 的檢查、用 R 怎麼做…）
+#' @param ... ui_detail()
+#' @noRd
+ui_details_row <- function(...) {
+  shiny::tags$div(class = "kit-details", ...)
+}
+
+#' 一個細節：預設收起，標題一行小字
+#' @noRd
+ui_detail <- function(title, ..., open = FALSE) {
+  shiny::tags$details(
+    class = "kit-detail", open = if (open) NA,
+    shiny::tags$summary(title),
+    shiny::tags$div(class = "kit-detail-body", ...)
+  )
+}
+
+#' 設定摘要：結果上面一行小字，例如「本回合 R1：M03、M36 · 3、6、36 個月 · 參照世代 M03」
+#' @noRd
+ui_settings_line <- function(text) {
+  if (length(text) == 0 || !nzchar(text)) return(NULL)
+  shiny::tags$p(class = "kit-settings-line", text)
+}
+
+#' 設定摘要的一句：回合名稱、世代、波次（帶單位）、參照世代、固定檔
+#' @param d mod_data_server() 的回傳值（list）；NULL 時是 ""
+#' @noRd
+kitsui_settings_text <- function(d) {
+  if (is.null(d)) return("")
+  picks <- d$picks %||% d$df
+  cohorts <- sort(unique(stats::na.omit(picks$cohort)))
+  unit <- kitsui_wave_unit(d$fixed)
+  waves <- sort(unique(stats::na.omit(picks$wave_m)))
+  wave_text <- switch(
+    unit,
+    years = paste0(paste(format(waves, trim = TRUE), collapse = "、"), " 年"),
+    waves = paste0("第 ", paste(format(waves, trim = TRUE), collapse = "、"), " 波"),
+    paste0(paste(format(waves, trim = TRUE), collapse = "、"), " 個月")
+  )
+  ref <- d$fixed$version$reference
+  rounds <- d$fixed$version$rounds
+  fixed <- if (length(rounds) == 0) "沒有固定檔（第一回合）" else {
+    paste0("固定檔：", d$fixed_file %||% paste0("到第 ", utils::tail(rounds, 1), " 回合"))
+  }
+  paste0(
+    "本回合", if (length(d$round_label) == 1) paste0(" ", d$round_label), "：",
+    paste(c(paste(cohorts, collapse = "、"), if (length(waves) > 0) wave_text,
+            if (length(ref) == 1) paste0("參照世代 ", ref), fixed), collapse = " · ")
   )
 }
 
 #' 開啟 kitJoin 雲端版的按鈕（新分頁）
 #' @noRd
-ui_kitjoin_button <- function(label = "開啟 kitJoin", class = "btn-outline-primary") {
+ui_kitjoin_button <- function(label = "開啟 kitJoin", class = KIT_BTN[["secondary"]]) {
   shiny::tags$a(
     href = KITJOIN_URL, target = "_blank", rel = "noopener noreferrer",
     class = paste("btn kit-ext-btn", class), shiny::icon("arrow-up-right-from-square"), label
@@ -74,7 +169,7 @@ ui_kitjoin_button <- function(label = "開啟 kitJoin", class = "btn-outline-pri
 
 #' 資料不合格式時的一句話：到 kitJoin ⑥ 轉好再上傳
 #' @noRd
-ui_kitjoin_hint <- function(class = "btn-sm btn-outline-primary", hint_class = "kit-hint") {
+ui_kitjoin_hint <- function(class = KIT_BTN[["secondary"]], hint_class = "kit-hint") {
   shiny::tags$p(
     class = hint_class,
     "資料是寬格式（一題一欄）、欄名不一樣，或分數不是從 0 開始？",
@@ -92,26 +187,25 @@ kitsui_error_ui <- function(detail) {
   head <- substr(detail, 1, at - 1)
   said <- substr(detail, at + nchar(KITSUI_KITS_SAYS), nchar(detail))
   shiny::tagList(head, shiny::tags$details(
-    class = "d-inline", shiny::tags$summary("kits 的原文"), shiny::tags$code(said)
+    class = "d-inline kit-kits-says", shiny::tags$summary("kits 的原文"), shiny::tags$code(said)
   ))
 }
 
-#' 下一步：一句話與一個切換分頁的按鈕
+#' 下一步：頁面最下面，一句小字與一個切換分頁的按鈕（和主要按鈕同一種樣式，靠右）
+#' @param label 「下一步：題目校準」；後面自動加「 →」
 #' @noRd
 ui_next_step <- function(text, button_id, label) {
-  ui_callout(
-    shiny::tags$p(text),
-    shiny::actionButton(button_id, label, class = "btn-primary")
+  shiny::tags$div(
+    class = "kit-next",
+    shiny::tags$p(class = "kit-hint", text),
+    ui_button(button_id, paste0(label, " →"), "primary")
   )
 }
 
-#' 檢查結果（kits_check()）：UI 一格
+#' 檢查結果（kits_check()）：一排細節裡的一個收合區塊（ui_detail()）
 #' @noRd
-ui_check_panel <- function(id, title = "檢查結果") {
-  shiny::tagList(
-    shiny::h5(title),
-    shiny::tableOutput(id)
-  )
+ui_check_panel <- function(id, title = "kits 的檢查") {
+  ui_detail(title, shiny::tags$div(class = "kit-table-scroll", shiny::tableOutput(id)))
 }
 
 #' 畫面上的表格：小數點 2 位；整數欄不顯示小數（下載的 csv 保留完整數字）
@@ -149,11 +243,24 @@ checks_or_ok <- function(tab) {
   data.frame(result = "kits_check()：全部通過，沒有提醒。")
 }
 
-#' R 程式：可以複製的程式碼區塊
+#' R 程式：一排細節裡的一個收合區塊（ui_detail()）；裡面一句說明、右上角「複製」、一個程式碼框
+#'
+#' 「複製」用 navigator.clipboard 複製下面的程式碼，按了顯示「已複製」1.5 秒（和 kitJoin 相同）。
 #' @noRd
 ui_code_panel <- function(id, title = "用 R 怎麼做") {
-  shiny::tags$details(
-    shiny::tags$summary(title),
+  copy <- paste0(
+    "var b=this;navigator.clipboard.writeText(",
+    "b.parentElement.nextElementSibling.innerText).then(function(){",
+    "b.textContent='已複製';setTimeout(function(){b.textContent='複製';},1500);});"
+  )
+  ui_detail(
+    title,
+    shiny::tags$p(class = "kit-hint", "以下程式碼依你目前的設定產生，是簡化的示範。"),
+    shiny::tags$div(
+      class = "kit-code-copy",
+      shiny::tags$button(type = "button", class = paste("btn", KIT_BTN[["secondary"]]),
+                         onclick = copy, "複製")
+    ),
     shiny::verbatimTextOutput(id)
   )
 }
@@ -166,8 +273,8 @@ ui_code_panel <- function(id, title = "用 R 怎麼做") {
 #' @noRd
 ui_download <- function(id) shiny::uiOutput(paste0(id, "_ui"), inline = TRUE)
 
-# 下載鈕的樣式
-KIT_DL_CLASS <- "btn-sm btn-outline-primary"
+# 下載鈕的樣式：次要按鈕
+KIT_DL_CLASS <- KIT_BTN[["secondary"]]
 
 #' 下載鈕：一張表存成 UTF-8 csv（Excel 看得懂中文）
 #'
@@ -224,7 +331,7 @@ download_button_ui <- function(session, id, label, name, ext, content, class = K
 ui_download_off <- function(label, why) {
   shiny::tags$span(
     class = "kit-download-off",
-    shiny::tags$button(type = "button", class = "btn btn-sm btn-outline-secondary",
+    shiny::tags$button(type = "button", class = paste("btn", KIT_BTN[["secondary"]]),
                        disabled = NA, shiny::icon("download"), label),
     shiny::tags$small(class = "kit-hint kit-warn-text", why)
   )
@@ -283,5 +390,25 @@ KITSUI_DISPLAY_NAMES <- c(
 kitsui_display_names <- function(df) {
   hit <- intersect(names(df), names(KITSUI_DISPLAY_NAMES))
   names(df)[match(hit, names(df))] <- KITSUI_DISPLAY_NAMES[hit]
+  df
+}
+
+# 畫面上 kitsUI 自己整理的摘要表用中文欄名（KIT 設計語言 3.8）。
+# kits 函式直接算出來的表（coef(item)、kits_check()、適配度、kits_subj_table()、偏移表、連結係數、
+# 分數表與題目表）維持英文欄名，方便和 kits 的說明與 R 的輸出對照；下載的 CSV 一律維持原欄名。
+KITSUI_SCREEN_NAMES <- c(
+  scale = "量尺", n_visits = "列次數", n_items = "題數", waves = "波次", calibration = "校準方式",
+  data = "資料", drift_n = "偏移（題）", fixed_n = "固定（題）", item_id = "題號", status = "狀態",
+  steps = "步驟數", detail = "說明", bank = "題庫", route = "換算路線", final_scale = "最後的量尺",
+  n = "列次數", note = "說明", from = "從", to = "到", state = "狀態", link = "連結", kind = "種類",
+  made = "哪一回合做的", round = "回合"
+)
+
+#' 摘要表的欄名換成中文（只換 KITSUI_SCREEN_NAMES 有的欄；只用在畫面上）
+#' @noRd
+kitsui_screen_names <- function(df) {
+  if (!is.data.frame(df)) return(df)
+  hit <- intersect(names(df), names(KITSUI_SCREEN_NAMES))
+  names(df)[match(hit, names(df))] <- KITSUI_SCREEN_NAMES[hit]
   df
 }

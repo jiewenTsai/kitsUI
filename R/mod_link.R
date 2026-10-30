@@ -287,9 +287,12 @@ mod_link_server <- function(id, data, items, goto) {
                    "下一步：受試者評分")
     })
 
+    # todo：還可以建立的連結（步驟分頁的 ✓：都建立了才算做完）
     shiny::reactive({
       if (is.null(fixed())) return(NULL)
-      list(fixed = fixed(), links = links())
+      todo <- tryCatch(c(internal_ready(), if (identical(d_state()$state, "ready")) "D"),
+                       error = \(e) character())
+      list(fixed = fixed(), links = links(), todo = todo)
     })
   })
 }

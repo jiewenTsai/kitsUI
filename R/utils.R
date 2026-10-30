@@ -36,7 +36,8 @@ file_display_name <- function(wave_label, file_name) {
 #' @noRd
 kit_error_text <- function(e, action) {
   if (inherits(e, "kit_user_error")) return(conditionMessage(e))
-  paste0(action, "時出錯：", conditionMessage(e))
+  # 原文收在 kitsui_error_ui() 的「kits 的原文」裡
+  paste0(action, "時停下來了。", KITSUI_KITS_SAYS, conditionMessage(e))
 }
 
 # pandoc（kits::kits_save_plot() 存 html 要用） ----

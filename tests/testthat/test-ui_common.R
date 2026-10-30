@@ -18,7 +18,7 @@ test_that("說明框、提示框、下一步", {
   expect_match(g, "<summary>\\s*<strong>這一頁做什麼：</strong>\\s*目的")
   expect_match(g, 'class="kit-guide-body"')
   expect_match(as.character(ui_callout("x", warning = TRUE)), "kit-callout kit-callout-warn")
-  expect_match(as.character(ui_alert("danger", "【停】", "x")), "alert-danger")
+  expect_match(as.character(ui_status("stop", "x")), "alert-danger")
   expect_match(as.character(ui_next_step("好了", "go", "下一步")), "id=\"go\"")
 })
 
@@ -156,7 +156,7 @@ test_that("下載鈕：檔名在畫按鈕時決定，跟著 input 變；CSV 位�
     html <- output$dl_ui$html
     expect_match(kit_link_attr(html, session$ns("dl"), "href"), "/item_table_lan_M03\\.csv\\?")
     expect_equal(kit_link_attr(html, session$ns("dl"), "download"), "item_table_lan_M03.csv")
-    expect_match(html, "btn-sm btn-outline-primary")
+    expect_match(html, "btn-sm btn-outline-secondary")
     res <- kit_test_download(session, "dl")
     expect_equal(res$content_type, "text/csv; charset=UTF-8")
     old <- withr::local_tempfile(fileext = ".csv")
@@ -204,4 +204,56 @@ test_that("圖的類別色：Okabe–Ito 依序取色；同一組同一個顏色
   expect_equal(d[[3]]$marker$color, "#E69F00")
   expect_equal(KITSUI_DRIFT_LOOKS$moved$col, kit_chart_role("moved"))
   expect_true(KITSUI_DRIFT_LOOKS$fixed$col %in% kit_chart_colors())
+})
+
+test_that("狀態框只有四種標籤；停下來的框可以放怎麼辦與按鈕", {
+  html <- \(...) as.character(ui_status(...))
+  expect_match(html("done", "好了。"), "alert-success")
+  expect_match(html("done", "好了。"), "<strong>【完成】</strong>\\s*好了。")
+  expect_match(html("warn", "好了。", points = c("一", "二")), "【完成，但請注意】")
+  expect_match(html("warn", "好了。", points = c("一", "二")), "<li>二</li>")
+  expect_match(html("warn", "好了。"), "alert-warning")
+  stop_box <- html("stop", "停了。", shiny::tags$p("怎麼辦：按這裡"), ui_button("skip", "這一回合不做",
+                                                                             "danger"))
+  expect_match(stop_box, "【停下來】")
+  expect_match(stop_box, "alert-danger")
+  expect_match(stop_box, "btn-danger")
+  expect_match(html("stale", "改了。"), "【要重新執行】")
+  expect_error(ui_status("oops", "x"))
+  expect_setequal(purrr::map_chr(KIT_STATUS, "label"),
+                  c("【完成】", "【完成，但請注意】", "【停下來】", "【要重新執行】"))
+  # 按鈕的寫法：主要、次要、危險
+  expect_match(as.character(ui_button("a", "開始", "primary")), "btn-primary")
+  expect_match(as.character(ui_button("a", "全選")), "btn-sm btn-outline-secondary")
+  # 一排細節、進階設定、下一步
+  row <- as.character(ui_details_row(ui_detail("題目參數", "x"), ui_code_panel("code")))
+  expect_match(row, 'class="kit-details"')
+  expect_match(row, "<summary>題目參數</summary>")
+  expect_match(row, "<summary>用 R 怎麼做</summary>")
+  expect_match(row, "navigator.clipboard")
+  expect_match(row, "以下程式碼依你目前的設定產生，是簡化的示範。")
+  expect_false(grepl("open", row))
+  expect_match(as.character(ui_advanced("x")), "<summary>進階設定</summary>")
+  expect_match(as.character(ui_next_step("好了", "go", "下一步：連結")), "下一步：連結 →")
+})
+
+test_that("設定摘要：世代、波次帶單位、參照世代、固定檔", {
+  picks <- data.frame(cohort = c("B82", "B85", "B85"), wave_m = c(2009, 2009, 2011))
+  fx <- kitsui_fixed_empty("B85")
+  fx$version$wave_unit <- "years"
+  d <- list(picks = picks, fixed = fx, round_label = "R1")
+  expect_equal(kitsui_settings_text(d),
+               "本回合 R1：B82、B85 · 2009、2011 年 · 參照世代 B85 · 沒有固定檔（第一回合）")
+  fx$version$rounds <- "R1"
+  d <- list(picks = picks, fixed = fx, round_label = "R2", fixed_file = "kitsui_fixed_R1.zip")
+  expect_match(kitsui_settings_text(d), "固定檔：kitsui_fixed_R1.zip$")
+  expect_equal(kitsui_settings_text(NULL), "")
+  expect_null(ui_settings_line(""))
+})
+
+test_that("摘要表用中文欄名；kits 的表不換", {
+  df <- data.frame(scale = "a", n_visits = 1, n_items = 2, waves = "3", calibration = "x",
+                   beta = 1)
+  expect_named(kitsui_screen_names(df),
+               c("量尺", "列次數", "題數", "波次", "校準方式", "beta"))
 })

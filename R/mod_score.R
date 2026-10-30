@@ -592,9 +592,9 @@ steps_msg_at <- function(msg, where) if (identical(msg$where, where)) msg$ui
 #' @param todo 下一步怎麼做（「請改好再上傳。」等）
 #' @noRd
 steps_error_ui <- function(errors, todo) {
-  ui_alert("danger", "【通過步驟沒有套用】",
-           shiny::tags$ul(lapply(errors, shiny::tags$li)),
-           shiny::tags$p(class = "mb-0", "設定沒有改。", todo))
+  ui_status("stop", "通過步驟沒有套用，設定沒有改。",
+            shiny::tags$ul(lapply(errors, shiny::tags$li)),
+            shiny::tags$p(class = "mb-0", "怎麼辦：", todo))
 }
 
 #' 算完分數之後的畫面：分數表、分數對照表、題目表、檢查、R 程式

@@ -17,7 +17,14 @@ test_that("示範資料跑一回合：回傳 items，圖、表、程式都出得
     expect_true(res$ok)
     expect_named(res$items, "lan M03")
     expect_s3_class(res$items[["lan M03"]], "kits_item")
-    expect_match(output$status$html, "完成")
+    expect_match(output$status$html, "【完成】")
+    expect_false(grepl("請注意", output$status$html))
+    expect_null(output$attention)
+    expect_match(output$settings$html, "本回合 3：M03 · 3 個月 · 參照世代 M03 · 沒有固定檔")
+    # 每個量尺一列：中文欄名
+    expect_match(output$overview, "量尺")
+    expect_match(output$overview, "校準方式")
+    expect_match(output$overview, "固定（題）")
     expect_match(output$scale_info$html, "自由校準")
     expect_match(output$fit, "lana01")
     for (type in c("category", "wright", "fit", "observed")) {
@@ -108,6 +115,7 @@ test_that("資料改了，舊結果清掉", {
     d(items_data(kitsui_demo("M03", 3, "motor")))
     session$flushReact()
     expect_null(session$getReturned()())
+    expect_match(output$status$html, "【要重新執行】")
     expect_match(output$status$html, "重新校準")
   })
 })
@@ -147,10 +155,14 @@ test_that("flag 的量尺（可固定的題少於 5 題）：照做，② 用橘
   shiny::testServer(mod_items_server, args = list(data = shiny::reactive(d), goto = \(tab) NULL), {
     session$setInputs(run = 1, scale = "sim M03", plot_type = "fit")
     expect_true(session$getReturned()()$ok)
-    expect_match(output$status$html, "kit-warn-text")
-    expect_match(output$status$html, "sim M03（flag）")
-    expect_match(output$status$html, "kit-callout-warn")
-    expect_match(output$status$html, "被 flag 的量尺照樣往下做；請看偏移的題，必要時在下一回合處理。")
+    # 狀態框：【完成，但請注意】與一句重點；細節在「要注意」
+    expect_match(output$status$html, "【完成，但請注意】")
+    expect_match(output$status$html, "被 flag 的量尺：sim M03")
+    html <- output$attention$html
+    expect_match(html, "kit-warn-text")
+    expect_match(html, "sim M03（flag）")
+    expect_match(html, "kit-callout-warning")
+    expect_match(html, "被 flag 的量尺照樣往下做；請看偏移的題，必要時在下一回合處理。")
     expect_match(output$scale_info$html, "flag：")
     expect_match(output$log, "warn")
     expect_match(output$overview, "可固定的題少於 5 題")
@@ -237,15 +249,20 @@ test_that("這一回合不做的量尺：選了再校準；停下來時按鈕改
     expect_match(output$exclude_ui$html, "sim M03")
     session$setInputs(run = 1)
     expect_equal(session$getReturned()()$stopped, "sim M03")
-    expect_match(output$status$html, "這一回合不做 sim M03，再校準一次")
+    expect_match(output$status$html, "【停下來】")
+    expect_match(output$status$html, "這一回合不做 sim M03，再校準一次（題庫與連結不會改變）")
+    expect_match(output$status$html, "btn-danger")
+    expect_match(output$status$html, "怎麼辦：")
     expect_match(output$status$html, "按「這一回合不做」跳過這個量尺；題庫與連結不會改變。")
     session$setInputs(skip_stopped = 1)
     res <- session$getReturned()()
     expect_true(res$ok)
     expect_equal(res$excluded, "sim M03")
-    expect_match(output$status$html, "這一回合不做：")
-    # 資訊不足而跳過：摘要寫出原因，checks.csv 也是
-    expect_match(output$status$html, "sim M03 這一回合資訊不足，無法估計（每個列次只剩一題可以估計），已跳過")
+    expect_match(output$status$html, "【完成，但請注意】")
+    expect_match(output$status$html, "這一回合不做：sim M03")
+    # 資訊不足而跳過：「要注意」寫出原因，checks.csv 也是
+    expect_match(output$attention$html,
+                 "sim M03 這一回合資訊不足，無法估計（每個列次只剩一題可以估計），已跳過")
     expect_match(res$fixed$checks$detail[res$fixed$checks$check == "excluded"],
                  "^insufficient information to estimate")
     expect_match(output$overview, "這一回合不做（資訊不足，無法估計")
@@ -392,6 +409,11 @@ test_that("固定了哪些題：狀態、核對、全部固定的題、csv；偏
     expect_named(csv, c("scale", "item_id", "status", "steps", "detail"))
     expect_equal(nrow(csv), 15)
     expect_equal(csv$status[1], "偏移 → 新版本")
+    # 每個量尺一列：偏移與固定的題數和「固定了哪些題」相同
+    ov <- items_overview(session$getReturned()(), checks_all())
+    expect_equal(ov$fixed_n, 13L)
+    expect_equal(ov$drift_n, 2L)
+    expect_match(output$fixed_status$html, "<th>題號</th>")
     # 偏移把關圖
     p <- plot_obj()
     expect_s3_class(p, "plotly")

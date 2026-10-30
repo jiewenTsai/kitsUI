@@ -260,10 +260,12 @@ mod_data_server <- function(id, goto, handover = NULL) {
                "。")
       }
       force <- if (isTRUE(fixed_modified())) {
-        shiny::tags$p(shiny::actionButton(ns("fixed_force"), "仍然使用這個固定檔（我知道它被改過）",
-                                          class = "btn-sm btn-outline-danger"))
+        shiny::tags$p(ui_button(ns("fixed_force"), "仍然使用這個固定檔（我知道它被改過）", "danger"))
       }
-      ui_alert("danger", "【固定檔讀不進來】", shiny::tags$p(e), shiny::tags$p(keep), force)
+      ui_status("stop", "固定檔讀不進來。", shiny::tags$p(kitsui_error_ui(e)), shiny::tags$p(keep),
+                shiny::tags$p("怎麼辦：重新選上一回合在「④ 受試者評分」下載的 zip；",
+                              "第一回合不用固定檔。"),
+                force)
     })
 
     # ④ 交過來的固定檔：不用上傳；世代與波次清空，等使用者勾新的
@@ -350,8 +352,10 @@ mod_data_server <- function(id, goto, handover = NULL) {
       if (length(p) == 0) return(NULL)
       # 上傳的檔案沒通過：提示可以到 kitJoin 轉
       to_kitjoin <- is_upload() && !is.null(input$file) && length(data_p) > 0
-      ui_alert("danger", "【資料還不能用】", shiny::tags$ul(lapply(p, shiny::tags$li)),
-               if (to_kitjoin) ui_kitjoin_hint("btn-sm btn-light", hint_class = "mb-0"))
+      ui_status("stop", "資料還不能用。",
+                shiny::tags$ul(lapply(p, \(x) shiny::tags$li(kitsui_error_ui(x)))),
+                shiny::tags$p("怎麼辦：照上面的原因改左邊的設定，或改好資料檔再上傳。"),
+                if (to_kitjoin) ui_kitjoin_hint(hint_class = "mb-0"))
     })
     output$hint <- shiny::renderUI({
       h <- checked()$hint

@@ -40,7 +40,8 @@ kit_ui <- function(request) {
   bslib::page_fluid(
     theme = kit_theme(),
     title = "KIT 量尺建構工具",
-    shiny::tags$head(shiny::tags$style(kit_css()), shiny::tags$script(kit_js())),
+    shiny::tags$head(shiny::tags$style(kit_css()), shiny::tags$script(kit_js()),
+                     shiny::tags$script(kit_tabs_js())),
     kit_header(),
     if (kit_is_cloud()) kit_cloud_banner(),
     if (!kit_pandoc_ok()) kit_pandoc_notice(),
@@ -72,9 +73,17 @@ kit_server <- function(input, output, session) {
   data <- mod_data_server("data", goto, handover)
   items <- mod_items_server("items", data, goto)
   links <- mod_link_server("link", data, items, goto)
-  mod_score_server("score", data, items, links, goto, next_round)
+  score <- mod_score_server("score", data, items, links, goto, next_round)
   # 有這一回合的結果時，離開頁面前先問一次（kit_js()）
   shiny::observe({
     session$sendCustomMessage("kit_unload_guard", !is.null(items()))
   })
+  # 步驟分頁的進度：做完的打 ✓，還不能做的灰色（kit_tabs.R）
+  tab_states <- shiny::reactive({
+    ok <- \(f) tryCatch(f(), error = \(e) NULL)
+    lk <- ok(links)
+    kit_tab_states(!is.null(ok(data)), ok(items), !is.null(lk) && length(lk$todo) == 0,
+                   ok(score))
+  })
+  shiny::observe(session$sendCustomMessage("kit_tab_state", kit_tab_message(tab_states())))
 }
