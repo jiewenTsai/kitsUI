@@ -236,16 +236,31 @@ summary:focus-visible {
 /* 上傳進度條：細的平塗條 */
 .progress,
 .shiny-file-input-progress {
-  border: 2px solid var(--nb-ink);
+  border: 1px solid var(--nb-ink);
   border-radius: 3px;
   box-shadow: none;
   background: var(--nb-card);
-  height: 0.7rem;
+  height: 0.5rem;
 }
+/* 檔案輸入：不拉滿整頁（最寬約一個長檔名） */
+.shiny-input-container:has(.btn-file) { max-width: 34rem; }
 .progress-bar { background: var(--nb-green); border-radius: 0; }
+/* 檔案上傳的進度條：Shiny 設的寬度換算後只剩幾 px，看起來像沒在跑。
+   改成：上傳中（.active）是流動的斜紋條；傳完整條填滿 */
+.shiny-file-input-progress { height: 1.1rem; }
+.shiny-file-input-progress .progress-bar {
+  width: 100% !important; font-size: 0.75rem; color: #fff; font-weight: 700;
+}
+.shiny-file-input-progress.active .progress-bar {
+  background: repeating-linear-gradient(-45deg, var(--nb-green) 0 10px, var(--nb-mint) 10px 20px);
+  background-size: 28px 28px;
+  animation: kit-upload 0.8s linear infinite;
+}
+@keyframes kit-upload { to { background-position: 28px 0; } }
 
 @media (prefers-reduced-motion: reduce) {
   .btn, .nav-tabs .nav-link { transition: none; }
+  .shiny-file-input-progress.active .progress-bar { animation: none; }
 }
 
 /* ── 字級與版面寬度 ────────────────────────────────────────────────
@@ -299,6 +314,12 @@ body { font-size: 1rem; line-height: 1.65; }
   box-shadow: none;
   background: #f1eee4;
 }
+/* 下載是這一頁的主角時（例如作答檔）：和主要按鈕一樣 */
+.kit-download.btn-primary {
+  font-size: 1.1rem; font-weight: 700; padding: 0.55rem 1.4rem; border-width: 2px;
+  background: var(--nb-lime); box-shadow: var(--nb-shadow);
+}
+.kit-download.btn-primary:hover { background: var(--nb-lime); transform: translate(1px, 1px); box-shadow: 1px 1px 0 0 var(--nb-ink); }
 
 /* 「這一頁做什麼」：退成配角，沒有卡片框，小字、淡色，用一條細線和內容分開 */
 .kit-guide {
@@ -363,75 +384,166 @@ details > summary {
   .nav-tabs .nav-link { white-space: nowrap; }
 }
 
-/* ── 新元件：步驟分頁的進度 ──────────────────────────────────────
-   做完的步驟打 ✓（.kit-tab-done，✓ 是分頁裡的 .kit-tab-mark）；還不能做的步驟灰色
-   （.kit-tab-locked，滑過時 title 說明「先做 ②」）。仍然可以按：進去會看到怎麼辦。 */
-.nav-tabs .nav-link .kit-tab-mark { margin-left: 0.35rem; font-weight: 900; }
-.nav-tabs .nav-link.kit-tab-locked:not(.active),
-.nav-tabs .nav-link.kit-tab-locked:not(.active):hover {
-  background: #e8e4d8;
-  color: #6b6b6b;
-  border-color: #6b6b6b;
-  box-shadow: none;
-  transform: none;
-}
-
-/* ── 新元件：狀態框的第一行 ──────────────────────────────────────
-   【完成】一句結論（大字粗體）；下面的重點、怎麼辦是一般字重；kits 的原文收起來 */
+/* ── 新元件：狀態框 ── */
+/* 第一行是標籤＋一句結論（大字粗體）；條列最多 3 點，其他收在「還有 N 點」；
+   停下來時的「怎麼辦」連結；原始訊息收起來 */
+.kit-status-line { font-size: 1.08rem; font-weight: 700; }
+.kit-status ul { margin: 0.45rem 0 0; }
+.kit-status details { margin-top: 0.4rem; font-weight: 400; }
+.kit-status details > summary { font-size: 0.85rem; color: var(--nb-ink); }
+.kit-status-action { margin-top: 0.5rem; font-size: 0.95rem; }
+.kit-status-notes { font-weight: 400; font-size: 0.88rem; margin-top: 0.4rem; }
+.kit-status-raw code { display: block; white-space: pre-wrap; font-size: 0.85rem; }
 .kit-status .kit-status-line { margin-bottom: 0.2rem; }
 .kit-status .btn { margin-top: 0.4rem; }
 .kit-status details { font-weight: 400; }
 
-/* ── 新元件：設定摘要 ────────────────────────────────────────────
-   結果上面一行小字：「本回合 R1：M03、M36 · 3、6、36 個月 · 參照世代 M03 · …」 */
-.kit-settings-line {
-  font-size: 0.82rem;
-  color: #5a5a5a;
-  margin: 1.2rem 0 0.6rem;
-}
-
-/* ── 新元件：進階設定 ────────────────────────────────────────────
-   預設收起；打開後左邊一條淡線，和其他設定分開（不加框） */
+/* ── 新元件：進階設定、細節、設定摘要、下一步 ── */
+/* 進階設定：預設收起，一行小字標題；打開後左邊一條淡線，和其他設定分開（不加框） */
 .kit-advanced { margin: 0.8rem 0 0.4rem; }
-.kit-advanced > summary { cursor: pointer; }
-.kit-advanced-body {
-  margin: 0.5rem 0 0.8rem;
-  padding-left: 1rem;
-  border-left: 1.5px solid #d9d4c5;
-}
-
-/* ── 新元件：一排細節 ────────────────────────────────────────────
-   結果下面一排收起來的標題（▸ 題目參數　▸ 偏移把關　▸ 用 R 怎麼做…）；
+.kit-advanced > summary { font-size: 0.9rem; color: #4d4d4d; cursor: pointer; }
+.kit-advanced-body { margin: 0.5rem 0 0.8rem; padding-left: 1rem; border-left: 1.5px solid #d9d4c5; }
+/* 一排細節：結果下面一排收起來的標題（▸ 預覽　▸ 用 R 怎麼做…）；
    打開的那一個佔一整行，內容不加框 */
 .kit-details {
-  display: flex;
-  flex-wrap: wrap;
-  align-items: baseline;
-  gap: 0.3rem 1.6rem;
-  margin: 1.6rem 0 1rem;
+  display: flex; flex-wrap: wrap; align-items: baseline; gap: 0.3rem 1.6rem; margin: 1.6rem 0 1rem;
 }
-.kit-details > .kit-detail[open] { flex-basis: 100%; }
-.kit-detail > summary { cursor: pointer; }
+.kit-details > .shiny-html-output { display: contents; }
+.kit-details .kit-detail[open] { flex-basis: 100%; }
+.kit-detail > summary { font-size: 0.9rem; color: #4d4d4d; cursor: pointer; }
 .kit-detail-body { padding: 0.6rem 0 1rem; }
-
-/* ── 新元件：下一步 ──────────────────────────────────────────────
-   頁面最下面、靠右：一句小字＋「下一步：××× →」（和主要按鈕同一種樣式） */
+.kit-detail-body h6 { margin-top: 0.8rem; }
+/* 設定摘要：結果（或主要按鈕）上面一行小字 */
+.kit-settings-line { font-size: 0.85rem; color: #5a5a5a; margin: 1.2rem 0 0.6rem; }
+/* 下一步：頁面最下面、靠右：一句小字＋「下一步：××× →」 */
 .kit-next {
-  display: flex;
-  flex-wrap: wrap;
-  justify-content: flex-end;
-  align-items: center;
-  gap: 0.6rem 1rem;
+  display: flex; flex-wrap: wrap; justify-content: flex-end; align-items: center; gap: 0.6rem 1rem;
   margin: 2.4rem 0 1rem;
 }
-.kit-next .kit-hint { margin: 0; }
-
-/* ── 新元件：用 R 怎麼做 ─────────────────────────────────────────
-   一句說明、右上角「複製」（這一列沒有框）、下面一個程式碼框 */
-.kit-code-copy {
-  display: flex;
-  justify-content: flex-end;
-  margin-bottom: 0.3rem;
+.kit-next .kit-hint { margin: 0; flex: 1 1 22rem; }
+.kit-next .kit-hint ul { margin: 0.3rem 0 0.3rem 1.2rem; padding: 0; }
+/* 下載區：次要按鈕排成一排 */
+.kit-downloads .btn { margin: 0 0.5rem 0.4rem 0; }
+/* 上傳是這一頁的主要動作時，「選擇檔案…」畫成主要按鈕 */
+.kit-file-primary .btn-file {
+  background: var(--nb-lime); font-size: 1.1rem; box-shadow: var(--nb-shadow);
 }
+
+/* ── 新元件：用 R 怎麼做 ── */
+/* 一行小字的收合標題（.kit-detail）；打開後只有程式碼本身有框：
+   版本名稱與「複製」在同一行、沒有框，下面的 <pre> 才有框 */
+.kit-code-head {
+  display: flex; justify-content: flex-start; align-items: center; gap: 0.6rem;
+  margin: 0.9rem 0 0.35rem; border: 0; background: transparent;
+}
+.kit-detail-body pre {
+  font-size: 0.85rem; padding: 0.75rem; margin: 0 0 0.6rem; white-space: pre; overflow-x: auto;
+}
+.kit-detail-body pre code { padding: 0; background: none; color: inherit; }
+/* kitsUI：一個版本時，「複製」靠右放在程式碼框上面 */
+.kit-code-copy { display: flex; justify-content: flex-end; margin-bottom: 0.3rem; }
+
+/* ── 新元件：步驟分頁的進度 ── */
+/* 做完的分頁打 ✓；還不能用的分頁灰色（滑過時 title 說明要先做什麼）；
+   要重新執行時 ✓ 拿掉（kit-tab-stale 沒有額外的樣子） */
+.nav-tabs .nav-link.kit-tab-done::after { content: " ✓"; color: var(--nb-green); font-weight: 700; }
+.nav-tabs .nav-link.active.kit-tab-done::after { color: var(--nb-ink); }
+/* kitsUI 的 ✓ 是分頁裡的 .kit-tab-mark（kit_tabs_js()）；kitJoin 用 ::after */
+.nav-tabs .nav-link .kit-tab-mark { margin-left: 0.35rem; font-weight: 900; }
+.nav-tabs .nav-link.kit-tab-locked:not(.active):hover { transform: none; box-shadow: none; }
+.nav-tabs .nav-link.kit-tab-locked:not(.active) {
+  background: #ece8dc; color: #6b6b6b; border-color: #8a8a8a; box-shadow: none;
+}
+
+/* ── 新元件：分頁分組 ── */
+/* 分頁分成三組，不編號：準備 → 做出資料（選一個）→ 其他工具；每組上面一行灰色小字。
+   其他工具（獨立的小工具）用虛線框、沒有陰影 */
+.kit-navgroups {
+  display: flex; flex-wrap: wrap; gap: 0.8rem 1.6rem; align-items: flex-end; margin: 0 0 1.2rem;
+}
+.kit-navgroup-label { font-size: 0.82rem; color: #5a5a5a; margin-bottom: 0.3rem; }
+.kit-navgroup .nav-tabs { gap: 0.5rem; flex-wrap: wrap; }
+.kit-navgroup .nav-link { padding: 0.45rem 0.9rem; }
+.kit-navgroup.tools .nav-link,
+.kit-navgroup.tools .nav-link:hover { border-style: dashed; box-shadow: none; }
+.kit-navgroup.tools .nav-link.active { transform: none; }
+/* ── 新元件：步驟卡、檢查清單、細節列（kitJoin ⑥ 起） ── */
+/* 表格跟著內容寬度，最寬到版面寬度（KIT 設計語言 3.8） */
+.table { width: auto; max-width: 100%; }
+
+/* 步驟卡：一頁裡的幾個步驟。現在這一步有框和陰影；做完的收成一行；還不能做的是灰的 */
+.kit-stepcard {
+  border: 2px solid var(--nb-ink);
+  border-radius: 8px;
+  background: var(--nb-card);
+  margin-bottom: 1rem;
+}
+.kit-stepcard:has(.kit-stephead.is-current) { box-shadow: 3px 3px 0 var(--nb-ink); }
+.kit-stepcard:has(.kit-stephead.is-done) { background: transparent; border-color: #9a9a9a; }
+.kit-stepcard:has(.kit-stephead.is-locked) { background: transparent; border-color: #c9c3b6; }
+.kit-stephead { display: flex; align-items: center; gap: .8rem; padding: .8rem 1.1rem; flex-wrap: wrap; }
+.kit-stepnum {
+  flex: none; width: 2rem; height: 2rem; border-radius: 50%;
+  border: 2px solid var(--nb-ink); background: var(--nb-card);
+  display: flex; align-items: center; justify-content: center; font-weight: 700;
+}
+.kit-stephead.is-current .kit-stepnum { background: var(--nb-lime); }
+.kit-stephead.is-done .kit-stepnum { background: var(--nb-mint); }
+.kit-stephead.is-locked .kit-stepnum { border-color: #c9c3b6; color: #8a8a8a; }
+.kit-steptitle { font-weight: 700; font-size: 1.1rem; }
+.kit-stephead.is-locked .kit-steptitle { color: #8a8a8a; }
+.kit-stepsum { flex: 1; color: #4d4d4d; font-size: .92rem; }
+.kit-stephead.is-locked .kit-stepsum { color: #8a8a8a; font-size: .85rem; }
+.kit-stepedit { font-size: .9rem; font-weight: 700; }
+.kit-stepbody { padding: .2rem 1.1rem 1.1rem 3.9rem; }
+.kit-stepbody > p:first-child { margin-top: 0; }
+@media (max-width: 768px) { .kit-stepbody { padding-left: 1.1rem; } }
+/* 卡片裡的表不再加外框（框不疊框） */
+.kit-stepbody .table { border: 0; margin-bottom: .4rem; }
+.kit-stepbody .table td { vertical-align: middle; }
+.kit-stepbody .kit-table-scroll { border: 0; box-shadow: none; }
+.kit-file-table td.kit-guess .selectize-control .selectize-input { background: #fffbe6; }
+
+/* 檢查清單：一列一件事；! 要決定、✓ 沒問題、· 提醒；按鈕在說明下面 */
+.kit-checklist { list-style: none; padding: 0; margin: 0 0 .6rem; }
+.kit-check { display: flex; gap: 1rem; align-items: flex-start; padding: .85rem 0;
+  border-top: 1px solid #e3ded2; }
+.kit-check:first-child { border-top: 0; }
+.kit-check-mark { flex: none; width: 1.6rem; font-weight: 900; font-size: 1.1rem; text-align: center; }
+.kit-check.todo .kit-check-mark { color: #d9730d; }
+.kit-check.ok .kit-check-mark { color: var(--bs-success); }
+.kit-check.note .kit-check-mark { color: #5a5a5a; }
+.kit-check-text { flex: 1; }
+.kit-check-text > strong { display: block; }
+.kit-check.ok .kit-check-text > strong { font-weight: 500; }
+.kit-check-text > span { display: block; font-size: .92rem; color: #4d4d4d; }
+.kit-check-actions { display: flex; gap: .5rem; flex-wrap: wrap; align-items: center; margin-top: .6rem; }
+.kit-check-actions .form-group { margin-bottom: 0; }
+.kit-problems { color: #8a2a00; font-size: .95rem; margin: .6rem 0; }
+.kit-problems ul { margin: .3rem 0 0; }
+
+/* 主要按鈕上面的一行：還差什麼 */
+.kit-ready { font-size: .95rem; margin: 1.4rem 0 .5rem; }
+.kit-ready.todo { color: #8a4a00; font-weight: 700; }
+.btn-primary:disabled, .btn-primary[disabled] { opacity: .5; box-shadow: none; }
+.kit-next-link { font-weight: 700; margin-left: .8rem; }
+.kit-downloads { display: flex; align-items: center; flex-wrap: wrap; gap: .6rem; margin: .6rem 0 1.4rem; }
+
+
+/* 一排小控制項（標籤在上） */
+.kit-inline { display: flex; flex-wrap: wrap; gap: .4rem 1rem; align-items: flex-end; margin: .4rem 0; }
+.kit-inline .form-group, .kit-inline .shiny-input-container { margin-bottom: .3rem; }
+
+/* 逐題表 */
+.kit-items td { font-size: .92rem; }
+.kit-items .kit-flag { color: #8a4a00; font-size: .85rem; }
+.kit-items tr.kit-row-off td { color: #9a9a9a; }
+.kit-muted { color: #8a8a8a; }
+.kit-bulk { margin-top: .6rem; }
+/* 第 2 步：像題目的欄一組一列（勾選、題目內容、領域） */
+.kit-groups td { vertical-align: middle; }
+.kit-groups .kit-group-label { font-size: .92rem; max-width: 22rem; }
+.kit-groups input[type="checkbox"] { width: 1.25rem; height: 1.25rem; }
+.kit-groups .form-group { margin-bottom: 0; }
 )---"
 }
