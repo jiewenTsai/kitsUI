@@ -1,6 +1,6 @@
 <div class="km-wrap">
 <header class="km-top">
-  <div class="km-eyebrow">KIT 量尺建構工具 · kitsUI 0.3.10</div>
+  <div class="km-eyebrow">KIT 量尺建構工具 · kitsUI 0.3.11</div>
   <h1>kitsUI 操作手冊</h1>
   <p class="km-lede">kitsUI 把 KIT 的作答資料校準、連結，算成每個孩子的分數。這份手冊分成兩個任務：第一次建立量尺時的<strong>基礎計分</strong>，以及之後每收到一波資料時的<strong>新增波次計分</strong>。</p>
   <div class="km-meta">
@@ -163,7 +163,7 @@
 
   <h4>3. 兩個世代的垂直連結</h4>
   <p>三個分頁：未連結、內部連結後、外部連結後。每個波次畫中位數，線段是 P25 到 P75。連結後，同一個月齡兩個世代的點應該靠在一起。</p>
-  <p>每個波次的人數、P25、中位數、P75 會存進固定檔（<code>wave_summary.csv</code>）。之後的回合靠它畫出這一回合的點，說明在<a href="#man-t2-link">任務二的 ③</a>。</p>
+  <p>每個波次的人數、P25、中位數、P75 和實際月齡的中位數會存進固定檔（<code>wave_summary.csv</code>）。之後的回合靠它畫出這一回合的點，說明在<a href="#man-t2-link">任務二的 ③</a>。</p>
   <figure class="km-shot km-narrow"><img src="kitsui-manual/img/t1_link_vertical.webp" alt="垂直連結圖（外部連結後）：M03 和 M36 在 36、48 個月的點重疊"></figure>
 
   <p>頁尾的<strong>固定檔裡的連結</strong>列出做好的連結。三條都在（兩條內部、一條外部）時，按<strong>下一步：受試者評分</strong>。</p>
@@ -249,7 +249,7 @@
       <tr><td><span class="km-col">bank.csv</span></td><td>題庫：每個量尺每一題每一步的 beta 與標準誤。</td></tr>
       <tr><td><span class="km-col">versions.csv</span></td><td>題目版本：偏移的題原來的題號和新的題號。</td></tr>
       <tr><td><span class="km-col">waves.csv</span></td><td>每個題庫校準過的波次。</td></tr>
-      <tr><td><span class="km-col">wave_summary.csv</span></td><td>每個量尺、世代、波次的人數，與能力值的 P25、中位數、P75（校準的量尺上）。只有摘要，沒有個人資料。畫垂直圖用。</td></tr>
+      <tr><td><span class="km-col">wave_summary.csv</span></td><td>每個量尺、世代、波次的人數，能力值的 P25、中位數、P75（校準的量尺上），和實際月齡的中位數。只有摘要，沒有個人資料。畫垂直圖用。</td></tr>
       <tr><td><span class="km-col">pass_steps.csv</span></td><td>通過步驟。沒列的題用 1。</td></tr>
       <tr><td><span class="km-col">links.csv</span></td><td>連結的點與設定。</td></tr>
       <tr><td><span class="km-col">checks.csv</span></td><td>每一回合的檢查紀錄：偏移、新版本、flag、借用另一世代題庫等。</td></tr>
@@ -386,6 +386,7 @@
   <ul>
     <li>這一回合的點，用這一回合的分數畫。</li>
     <li>之前回合的點，來自固定檔的 <code>wave_summary.csv</code>（各波次的人數、P25、中位數、P75），再用現在的連結換算。</li>
+    <li>每一回合的圖都把點畫在各波次<strong>實際月齡的中位數</strong>，例如 M36 的 84 個月施測時實際是 86.5 個月。實際月齡和名義月齡差超過 1 個月的波次，標題下會註明。kitsUI 0.3.11 以前做的固定檔沒有實際月齡，那些點畫在名義月齡，圖的說明會寫出是哪一回合。</li>
     <li>圖上分得出「這一回合」和「之前的回合」。滑鼠移到點上，會顯示是哪一個回合。</li>
   </ul>
   <p>新的一波應該接在之前回合的點旁邊。突然跳高或跳低時，回 ② 看看有沒有偏移。</p>
@@ -439,6 +440,6 @@
   <p>每一頁最下面的「用 R 怎麼做」列出這一步背後的 kits 程式碼，可以複製到 R 裡重跑。程式碼用 M PLUS Code Latin 字型。</p>
 </section>
 
-<footer>kitsUI 0.3.10（2026-10-30）· kits 0.25.2 · 截圖用 app 內建的示範資料（kits::kitm03、kits::kitm36）。</footer>
+<footer>kitsUI 0.3.11（2026-10-30）· kits 0.25.2 · 截圖用 app 內建的示範資料（kits::kitm03、kits::kitm36）。</footer>
 </main>
 </div>

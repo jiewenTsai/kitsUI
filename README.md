@@ -67,7 +67,7 @@ kitsUI 是 [kits](https://github.com/jiewenTsai/kits) 的 Shiny 介面。
 | bank.csv | 題庫：每個量尺每一題每一步的 beta 與標準誤 |
 | versions.csv | 題目版本：偏移的題原來的題號與新的題號 |
 | waves.csv | 每個題庫校準過的波次 |
-| wave_summary.csv | 各量尺、世代、波次的人數與能力值的 P25、中位數、P75（校準的量尺上）；只有摘要，沒有個人資料 |
+| wave_summary.csv | 各量尺、世代、波次的人數、能力值的 P25、中位數、P75（校準的量尺上）與實際月齡的中位數（0.3.11 起）；只有摘要，沒有個人資料 |
 | pass_steps.csv | 通過步驟；沒列的題用 1。下一回合沿用；新版本用原來那一題的設定 |
 | links.csv | 連結的點與設定 |
 | checks.csv | 每一回合的檢查紀錄 |

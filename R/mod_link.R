@@ -555,8 +555,18 @@ vertical_caption <- function(stage, v) {
   )
   if (!any(v$table$source == "earlier")) return(text)
   rounds <- unique(v$table$round[v$table$source == "earlier"])
+  age <- as.numeric(v$table$age_med)
+  where <- if (all(!is.finite(age))) {
+    "沒有實際月齡，所以 x 軸用波次。"
+  } else {
+    old <- unique(v$table$round[v$table$source == "earlier" & !is.finite(age)])
+    paste0("點畫在各波次實際月齡的中位數。",
+           if (length(old) > 0) {
+             paste0("之前回合 ", paste(old, collapse = "、"), " 的固定檔沒有實際月齡",
+                    "（kitsUI 0.3.11 以前做的），那些點畫在名義月齡。")
+           })
+  }
   paste0(text, "實心的點是這一回合。",
          "空心、較淡的點是之前的回合（", paste(rounds, collapse = "、"), "），來自固定檔。",
-         "滑鼠移到點上，可以看是哪一回合。",
-         "摘要沒有實際月齡，所以 x 軸用波次。")
+         "滑鼠移到點上，可以看是哪一回合。", where)
 }

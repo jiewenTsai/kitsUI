@@ -14,20 +14,23 @@ KITSUI_SUMMARY_SINCE <- "0.3.8"
 #' 一個量尺的各世代、各波次的能力值摘要（wave_summary 的列）
 #'
 #' 和 kits_vertical() 同一個算法：拿掉 theta 不是有限值與沒有波次的列，
-#' P25、P75 是 quantile() 的預設（type 7），中位數是 median()。只有摘要，沒有個人資料。
+#' P25、P75 是 quantile() 的預設（type 7），中位數是 median()；age_med 是實際月齡的中位數
+#' （沒有 age_m 時 NA）。只有摘要，沒有個人資料。
 #' @param own 校準的量尺上的 kits_subj（還沒換算）；scale 是校準的量尺
-#' @return tibble：scale、cohort、wave_m、n、p25、p50、p75、round
+#' @return tibble：scale、cohort、wave_m、n、p25、p50、p75、age_med、round
 #' @noRd
 kitsui_wave_summary <- function(own, scale, round_label = NA_character_) {
   d <- tibble::as_tibble(own)
   if (!"wave_m" %in% names(d)) return(kitsui_fixed_empty()$wave_summary)
   if (!"cohort" %in% names(d)) d$cohort <- scale_cohort(scale)
+  if (!"age_m" %in% names(d)) d$age_m <- NA_real_
   q <- \(x, p) stats::quantile(x, p, names = FALSE)
   d |>
     dplyr::filter(is.finite(.data$theta), !is.na(.data$wave_m)) |>
     dplyr::mutate(cohort = as.character(.data$cohort)) |>
     dplyr::summarise(n = dplyr::n(), p25 = q(.data$theta, 0.25), p50 = stats::median(.data$theta),
-                     p75 = q(.data$theta, 0.75), .by = c("cohort", "wave_m")) |>
+                     p75 = q(.data$theta, 0.75), age_med = stats::median(.data$age_m, na.rm = TRUE),
+                     .by = c("cohort", "wave_m")) |>
     dplyr::mutate(scale = scale, round = round_label) |>
     dplyr::arrange(.data$cohort, .data$wave_m) |>
     dplyr::select(dplyr::all_of(names(KITSUI_FIXED_COLS$wave_summary)))
@@ -256,7 +259,8 @@ kitsui_vertical_table <- function(v, earlier, label) {
     dplyr::mutate(source = "this", round = label %||% NA_character_)
   before <- tibble::as_tibble(earlier) |>
     dplyr::transmute(.data$cohort, .data$wave_m, n = as.integer(.data$n), median = .data$p50,
-                     P25 = .data$p25, P75 = .data$p75, source = "earlier", .data$round)
+                     P25 = .data$p25, P75 = .data$p75, age_med = as.numeric(.data$age_med),
+                     source = "earlier", .data$round)
   dplyr::bind_rows(now, before) |>
     dplyr::arrange(.data$cohort, .data$wave_m, .data$source == "this")
 }
@@ -271,17 +275,34 @@ kitsui_vertical_plot <- function(v) {
   tab <- v$table
   if (is.null(tab) || !any(tab$source == "earlier")) {
     ticks <- kitsui_vertical_ticks(as.data.frame(v$vertical)$wave_m)
-    return(plot(v$vertical, type = "median", age_ticks = ticks))
+    return(kitsui_vertical_axis(plot(v$vertical, type = "median", age_ticks = ticks)))
   }
   keep <- c("cohort", "wave_m", "n", "median", "P25", "P75")
   obj <- as.data.frame(tab[keep])
-  obj$age_med <- NA_real_
+  # 點畫在實際月齡的中位數；沒有的列（舊的固定檔）退回名義月齡
+  obj$age_med <- kitsui_vertical_age(tab)
   obj <- structure(obj, class = class(v$vertical), scale = attr(v$vertical, "scale"))
   p <- plot(obj, type = "median", age_ticks = kitsui_vertical_ticks(tab$wave_m))
+  p <- kitsui_vertical_axis(p)
   # kits 的圖可能已經 build 過（p$x$data）；沒有時改還沒 build 的 p$x$attrs
   slot <- if (length(p$x$data) > 0) "data" else "attrs"
   p$x[[slot]] <- purrr::map(p$x[[slot]], \(tr) kitsui_vertical_marks(tr, tab))
   p
+}
+
+# 點的 x：實際月齡的中位數；沒有的列（0.3.11 以前的固定檔、資料沒有 age_m）用名義月齡。
+# 全部都沒有時是 NA（kits 的圖就整張用名義月齡）
+kitsui_vertical_age <- function(tab) {
+  age <- as.numeric(tab$age_med %||% NA_real_)
+  if (all(!is.finite(age))) return(rep(NA_real_, nrow(tab)))
+  dplyr::if_else(is.finite(age), age, as.numeric(tab$wave_m))
+}
+
+# x 軸的標題：畫在實際月齡時寫清楚是各波次的實際月齡中位數
+kitsui_vertical_axis <- function(p) {
+  title <- p$x$layout$xaxis$title %||% p$x$layoutAttrs[[1]]$xaxis$title
+  if (!identical(title, "Age (months)")) return(p)
+  plotly::layout(p, xaxis = list(title = "月齡（各波次實際月齡的中位數）"))
 }
 
 # x 軸的刻度（也是格線）：圖上有的每一個波次。kits 預設的刻度只到 96 個月，

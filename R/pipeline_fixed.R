@@ -12,10 +12,11 @@ KITSUI_FIXED_COLS <- list(
             round = "c"),
   checks = c(round = "c", scale = "c", item_id = "c", check = "c", detail = "c"),
   waves = c(scale = "c", wave_m = "d", round = "c"),
-  # 每個量尺、每個世代、每個波次的能力值摘要（校準的量尺上，還沒換算）：畫垂直圖用。
+  # 每個量尺、每個世代、每個波次的能力值摘要（校準的量尺上，還沒換算）與實際月齡的中位數
+  # （age_med，0.3.11 起；之前的固定檔沒有時是 NA）：畫垂直圖用。
   # 連結是斜率為正的直線，中位數與 P25、P75 換算後仍然是中位數與 P25、P75
   wave_summary = c(scale = "c", cohort = "c", wave_m = "d", n = "i", p25 = "d", p50 = "d",
-                   p75 = "d", round = "c"),
+                   p75 = "d", age_med = "d", round = "c"),
   # 題目的通過步驟（得分至少 step 算通過）：題目表的門檻與 age50、作答設計圖用。
   # 沒列的題用 1；偏移後的新版本沿用原題號的設定
   pass_steps = c(item_id = "c", step = "i", round = "c")

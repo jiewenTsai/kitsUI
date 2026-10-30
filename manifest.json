@@ -2810,7 +2810,7 @@
       "checksum": "226d7cbec671c2e297aebc835d03041f"
     },
     "DESCRIPTION": {
-      "checksum": "2e4ad0ce8a00964db72a116b7474c3eb"
+      "checksum": "faba6472f6cd2eff47da6c1a738a1e98"
     },
     "inst/manual/img/t1_data_design.webp": {
       "checksum": "f7e066d8adce96794925cfd46818bdfb"
@@ -2879,10 +2879,10 @@
       "checksum": "811b41f7fb0d63afcfab87980d4df609"
     },
     "inst/manual/kitsui_manual_body.html": {
-      "checksum": "42a7ce9ddbf4b7aca5c1c8528ca4c3dd"
+      "checksum": "18e06b6858cee40bcd632172be8f996a"
     },
     "inst/manual/kitsui_manual.html": {
-      "checksum": "997f0cce791a917b408226a3540da9c5"
+      "checksum": "f2c6d31b49428f21b600eef98d15dcf7"
     },
     "NAMESPACE": {
       "checksum": "317ae8dff22b06e5d19fde44a9aaf7a7"
@@ -2918,7 +2918,7 @@
       "checksum": "0bac1b33c836742934edc7b3337118f0"
     },
     "R/mod_link.R": {
-      "checksum": "53fca3683a8f93dc6c17198ec040c892"
+      "checksum": "f0baed26957c4ae5017d25720907594c"
     },
     "R/mod_score.R": {
       "checksum": "7c228f7009bdd7f74ade3800dd4e94f1"
@@ -2930,13 +2930,13 @@
       "checksum": "ea37488eb0f7be62ef6f5b1179d9cedc"
     },
     "R/pipeline_code.R": {
-      "checksum": "2df673c0b1879af20c6f44c5967f27e1"
+      "checksum": "d2f618e67eef41a9bef3239c7cff5717"
     },
     "R/pipeline_data.R": {
       "checksum": "df9f98e6774be5e0a5978f715d98fe59"
     },
     "R/pipeline_fixed.R": {
-      "checksum": "49295ecd6992a44b6d1e6f010e2e8706"
+      "checksum": "fb58da68f7a90cc276aba35299846f20"
     },
     "R/pipeline_link.R": {
       "checksum": "7b23520db41a73d2a9fa6af603452ebd"
@@ -2954,7 +2954,7 @@
       "checksum": "472f4885c98e4217fa4a450adff89343"
     },
     "R/pipeline_vertical.R": {
-      "checksum": "50bd8ec61382f6fbb75c3913f73bab0a"
+      "checksum": "cff796c8a5ca33a6c4ab3a0b691f8cd8"
     },
     "R/run_kitsui.R": {
       "checksum": "e1f8faea2e445c16d8acd95fc65fa320"
@@ -2966,7 +2966,7 @@
       "checksum": "527049a0d401817b64cbb954de521e0c"
     },
     "README.md": {
-      "checksum": "904f58558e6dcdad309936246d533637"
+      "checksum": "690575135248360493523efabe70e2f9"
     }
   },
   "users": null

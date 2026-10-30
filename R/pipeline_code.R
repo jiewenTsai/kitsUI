@@ -305,7 +305,7 @@ kitsui_code_vertical_earlier <- function(fixed, scales, stage, zip) {
       "ws <- mutate(ws, across(c(p25, p50, p75), \\(x) to(x, scale[1])), .by = scale)")
   }
   paste(c(
-    "# 之前回合的點：固定檔的 wave_summary.csv（各波次的人數與 P25、中位數、P75）",
+    "# 之前回合的點：固定檔的 wave_summary.csv（各波次的人數、P25、中位數、P75、實際月齡的中位數）",
     sprintf('unzip(%s, exdir = "fixed_set", junkpaths = TRUE)', kitsui_r(zip)),
     'ws <- read.csv("fixed_set/wave_summary.csv", colClasses = c(round = "character")) |>',
     sprintf("  filter(scale %%in%% %s) |>", kitsui_r(scales)),
@@ -314,7 +314,10 @@ kitsui_code_vertical_earlier <- function(fixed, scales, stage, zip) {
     "# 點是中位數，線段是 P25 到 P75；空心的點是之前的回合",
     sprintf('now <- if_else(ws$round == %s, "這一回合", "之前的回合")', kitsui_r(label)),
     'ws$source <- factor(now, c("之前的回合", "這一回合"))',
-    "plotly::plot_ly(ws, x = ~wave_m, y = ~p50, color = ~cohort, symbol = ~source,",
+    "# x 是實際月齡的中位數；舊的固定檔沒有 age_med 時用名義月齡",
+    "if (is.null(ws$age_med)) ws$age_med <- NA_real_",
+    "ws$age <- coalesce(ws$age_med, ws$wave_m)",
+    "plotly::plot_ly(ws, x = ~age, y = ~p50, color = ~cohort, symbol = ~source,",
     '                symbols = c("circle-open", "circle"), type = "scatter", mode = "markers",',
     "                error_y = ~list(array = p75 - p50, arrayminus = p50 - p25, symmetric = FALSE))"
   ), collapse = "\n")

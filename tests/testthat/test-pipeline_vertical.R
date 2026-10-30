@@ -55,6 +55,32 @@ test_that("摘要和 kits_vertical() 的 n、P25、中位數、P75 完全相同�
   expect_identical(ws$p25, kv$P25)
   expect_identical(ws$p50, kv$median)
   expect_identical(ws$p75, kv$P75)
+  # 實際月齡的中位數：和 kits_vertical() 的 age_med 相同
+  expect_true(all(is.finite(ws$age_med)))
+  expect_identical(ws$age_med, kv$age_med)
+})
+
+test_that("垂直圖都畫在實際月齡的中位數；舊的固定檔沒有實際月齡時，那些點畫在名義月齡", {
+  r8 <- round8()
+  lk <- linked()
+  v <- kitsui_verticals(r8$round, r8$df, lk$fixed, "lan")$external
+  tab <- v$table
+  expect_true(all(is.finite(tab$age_med)))
+  built <- plotly::plotly_build(kitsui_vertical_plot(v))$x
+  xs <- unlist(purrr::map(purrr::keep(built$data, \(tr) tr$name %in% c("M03", "M36")), "x"))
+  expect_setequal(round(xs, 8), round(tab$age_med, 8))
+  expect_equal(built$layout$xaxis$title, "月齡（各波次實際月齡的中位數）")
+  expect_match(vertical_caption("external", v), "點畫在各波次實際月齡的中位數")
+  # 舊的固定檔（0.3.11 以前）：之前回合沒有 age_med，退回名義月齡，說明寫出來
+  old_fixed <- lk$fixed
+  old_fixed$wave_summary$age_med <- NA_real_
+  w <- kitsui_verticals(r8$round, r8$df, old_fixed, "lan")$external
+  t2 <- w$table
+  expect_equal(kitsui_vertical_age(t2)[t2$source == "earlier"], t2$wave_m[t2$source == "earlier"])
+  expect_equal(kitsui_vertical_age(t2)[t2$source == "this"], t2$age_med[t2$source == "this"])
+  expect_match(vertical_caption("external", w), "沒有實際月齡（kitsUI 0.3.11 以前做的）")
+  # 全部都沒有實際月齡：整張用名義月齡
+  expect_true(all(is.na(kitsui_vertical_age(data.frame(age_med = NA, wave_m = c(3, 6))))))
 })
 
 test_that("摘要照連結換算，等於換算後的分數再做摘要", {
