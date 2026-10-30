@@ -10,8 +10,8 @@ mod_data_ui <- function(id) {
         "選資料來源：示範資料，或上傳自己的長格式資料（可以一次選好幾個檔案）。",
         "勾這一回合的世代與波次（例如月齡）。一個檔案可以有好幾個波次。新收一波時只勾那一波；已經收完的好幾波可以一次勾。",
         "第二回合起：上傳上一回合的固定檔（zip）。第一回合不用。",
-        "確認右邊沒有紅字。橘色的提醒請看過。",
-        "按「下一步：題目校準」。"
+        "看右邊：沒有【停下來】；有「要注意」時先看過。量尺表確認每個量尺的列次數、題數與校準方式。",
+        "按最下面的「下一步：題目校準」。"
       ),
       output = "這一回合的資料。還沒有校準；校準在 ② 題目校準。"
     ),
@@ -19,39 +19,47 @@ mod_data_ui <- function(id) {
     bslib::layout_columns(
       col_widths = c(4, 8),
       data_choices_ui(ns),
+      # 右欄：設定摘要、狀態、要注意、量尺表（重點）；固定檔、作答設計、預覽、檢查、程式收起來
       shiny::tagList(
+        shiny::uiOutput(ns("settings")),
         shiny::uiOutput(ns("problems")),
         shiny::uiOutput(ns("hint")),
+        shiny::uiOutput(ns("data_status")),
         shiny::uiOutput(ns("notes")),
         shiny::uiOutput(ns("categories")),
         shiny::h4("量尺"),
         shiny::tags$p(class = "kit-hint",
                       shiny::textOutput(ns("scale_example"), inline = TRUE), "每個量尺分開校準。"),
-        shiny::tableOutput(ns("scales")),
+        shiny::tags$div(class = "kit-table-scroll", shiny::tableOutput(ns("scales"))),
         shiny::uiOutput(ns("borrowed")),
-        shiny::uiOutput(ns("next_step")),
-        shiny::uiOutput(ns("fixed_info")),
-        shiny::h4("作答設計"),
-        shiny::tags$p(class = "kit-hint",
-                      "每格是一個波次、一題的通過比例（得分達到通過步驟以上；預設 1 分）。",
-                      "空白表示沒有施測。"),
-        shiny::uiOutput(ns("design_steps")),
-        shiny::uiOutput(ns("design_pick")),
-        plotly::plotlyOutput(ns("design"), height = "420px"),
-        shiny::uiOutput(ns("design_dl")),
-        shiny::h4("預覽"),
-        shiny::textOutput(ns("preview_meta")),
-        shiny::tags$div(class = "kit-table-scroll", shiny::tableOutput(ns("preview"))),
-        shiny::tags$div(class = "kit-downloads",
-                        ui_download(ns("dl_data"))),
-        ui_check_panel(ns("check"), "kits 的檢查（kits_check，作答設計選的量尺）"),
-        ui_code_panel(ns("code"))
+        ui_details_row(
+          ui_detail("固定檔的內容", shiny::uiOutput(ns("fixed_info"))),
+          ui_detail(
+            "作答設計",
+            shiny::tags$p(class = "kit-hint",
+                          "每格是一個波次、一題的通過比例（得分達到通過步驟以上；預設 1 分）。",
+                          "空白表示沒有施測。"),
+            shiny::uiOutput(ns("design_steps")),
+            shiny::uiOutput(ns("design_pick")),
+            plotly::plotlyOutput(ns("design"), height = "420px"),
+            shiny::uiOutput(ns("design_dl"))
+          ),
+          ui_detail(
+            "預覽",
+            shiny::textOutput(ns("preview_meta")),
+            shiny::tags$div(class = "kit-table-scroll", shiny::tableOutput(ns("preview"))),
+            shiny::tags$div(class = "kit-downloads", ui_download(ns("dl_data")))
+          ),
+          ui_check_panel(ns("check"), "kits 的檢查（作答設計選的量尺）"),
+          ui_code_panel(ns("code"))
+        ),
+        shiny::uiOutput(ns("next_step"))
       )
     )
   )
 }
 
-# 左欄：資料來源、世代與波次、固定檔、這一回合的名稱
+# 左欄：資料來源、世代與波次、固定檔；這一回合的名稱在進階設定
 data_choices_ui <- function(ns) {
   shiny::tagList(
     shiny::h5("1. 資料來源"),
@@ -88,8 +96,8 @@ data_choices_ui <- function(ns) {
     shiny::uiOutput(ns("pick_ui")),
     shiny::tags$div(
       class = "d-flex gap-2 mb-1",
-      shiny::actionButton(ns("waves_all"), "全選", class = "btn-sm btn-outline-secondary"),
-      shiny::actionButton(ns("waves_none"), "全不選", class = "btn-sm btn-outline-secondary")
+      ui_button(ns("waves_all"), "全選"),
+      ui_button(ns("waves_none"), "全不選")
     ),
     shiny::tags$small(class = "kit-hint", shiny::textOutput(ns("wave_hint"), inline = TRUE),
                       "可以一次勾好幾個。", "勾完停 1 秒才開始檢查。"),
@@ -104,13 +112,15 @@ data_choices_ui <- function(ns) {
       "固定檔是上一回合在 ④ 下載的 zip。",
       "有它，舊題的參數就固定不動。"
     ),
-    shiny::h5("4. 這一回合的名稱"),
-    shiny::textInput(ns("round_label"), NULL, ""),
-    shiny::tags$small(
-      class = "kit-hint",
-      "預設是 R1、R2…（第幾回合）。",
-      "只能用英文字母與數字。",
-      "偏移的題會改名，加上「_r名稱」。"
+    ui_advanced(
+      shiny::textInput(ns("round_label"), "這一回合的名稱", ""),
+      shiny::tags$small(
+        class = "kit-hint",
+        "預設是 R1、R2…（第幾回合）。",
+        "只能用英文字母與數字。",
+        "偏移的題會改名，加上「_r名稱」。"
+      ),
+      title = "進階設定（這一回合的名稱）"
     )
   )
 }
@@ -364,7 +374,7 @@ mod_data_server <- function(id, goto, handover = NULL) {
                  data_wave_meaning(kitsui_wave_unit(fixed())), "。")
     })
 
-    # 橘色的提醒：波次已經校準過、固定檔不是最新的一回合、資料檔之前用過、
+    # 要注意（黃色的提醒）：波次已經校準過、固定檔不是最新的一回合、資料檔之前用過、
     # 拿掉的約定以外的欄、wave_m 空白的列、像遺漏碼的分數
     notes <- shiny::reactive({
       ck <- checked()
@@ -377,7 +387,7 @@ mod_data_server <- function(id, goto, handover = NULL) {
         ck$notes
       )
     })
-    output$notes <- shiny::renderUI(ui_warn_list("請注意", notes()))
+    output$notes <- shiny::renderUI(ui_warn_list("要注意", notes()))
     # 得分不完整的題（沒有 0 分、中間少了分數、只有一種分數）
     categories <- shiny::reactive({
       df <- checked()$df
@@ -389,18 +399,27 @@ mod_data_server <- function(id, goto, handover = NULL) {
     output$scales <- kit_table({
       ck <- checked()
       shiny::req(ck$scales)
-      data_scale_table(ck$scales, fixed(), plan())
+      kitsui_screen_names(data_scale_table(ck$scales, fixed(), plan()))
     })
     output$borrowed <- shiny::renderUI(data_borrowed_note(plan(), fixed()))
 
     output$next_step <- shiny::renderUI({
       if (is.null(result())) return(NULL)
       warned <- length(notes()) > 0 || NROW(categories()) > 0
-      text <- if (warned) "資料可以用，但上面有橘色的提醒，請先看過。下一步是校準。" else {
+      text <- if (warned) "資料可以用，但有要注意的事，請先看過上面的「要注意」。下一步是校準。" else {
         "資料沒問題。下一步是校準。"
       }
       ui_next_step(text, ns("go_items"), "下一步：題目校準")
     })
+    # 設定摘要與狀態框：資料可以用時【完成】；有要注意的事時【完成，但請注意】
+    output$settings <- shiny::renderUI(ui_settings_line(kitsui_settings_text(result())))
+    output$data_status <- shiny::renderUI({
+      r <- result()
+      if (is.null(r)) return(NULL)
+      data_status_ui(r, length(notes()), NROW(categories()), fixed_rv()$integrity)
+    })
+    # 作答設計的量尺選單收在細節裡：收起來時也要畫好（kits 的檢查與 R 程式用它選的量尺）
+    shiny::outputOptions(output, "design_pick", suspendWhenHidden = FALSE)
     shiny::observeEvent(input$go_items, goto("items"))
 
     output$fixed_info <- shiny::renderUI({
@@ -464,7 +483,8 @@ mod_data_server <- function(id, goto, handover = NULL) {
     output$preview_meta <- shiny::renderText({
       df <- checked()$df
       shiny::req(df)
-      sprintf("這一回合有 %d 列作答。以下是前 %d 列。", nrow(df), KIT_PREVIEW_ROWS)
+      sprintf("這一回合共 %s 列作答，以下前 %d 列。完整的請下載。", format(nrow(df), big.mark = ","),
+              KIT_PREVIEW_ROWS)
     })
     output$preview <- kit_table({
       df <- checked()$df
@@ -499,6 +519,24 @@ mod_data_server <- function(id, goto, handover = NULL) {
 
     result
   })
+}
+
+#' ① 的狀態框：資料可以用時【完成】一句（幾個量尺、幾列作答）；有要注意的事、固定檔的核對碼
+#' 不符時【完成，但請注意】
+#' @param n_notes 要注意的提醒有幾則；n_categories 得分不完整的題數
+#' @param integrity NULL 或 kitsui_fixed_integrity()
+#' @noRd
+data_status_ui <- function(r, n_notes = 0, n_categories = 0, integrity = NULL) {
+  line <- sprintf("資料可以用：%d 個量尺、%s 列作答。", nrow(r$scales), format(nrow(r$df), big.mark = ","))
+  points <- c(
+    if (!is.null(integrity) && !identical(integrity$status, "ok")) {
+      paste0("固定檔的核對碼：", integrity$text)
+    },
+    if (n_notes > 0) sprintf("有 %d 則要注意的事，請看下面的「要注意」。", n_notes),
+    if (n_categories > 0) sprintf("有 %d 題的得分不完整，② 會照規則處理。", n_categories)
+  )
+  if (length(points) == 0) return(ui_status("done", line))
+  ui_status("warn", line, points = points)
 }
 
 #' 波次的單位：第一回合可以選（之後沿用固定檔的）
@@ -543,7 +581,7 @@ data_steps_note <- function(pass_steps) {
   ), "可以在「④ 受試者評分」的題目表改。")
 }
 
-#' 得分不完整的題：橘色的提醒，說 ② 怎麼處理（分數本身不改）
+#' 得分不完整的題：黃色的提醒，說 ② 怎麼處理（分數本身不改）
 #' @param problems NULL 或 kitsui_category_problems()
 #' @noRd
 data_category_note <- function(problems) {
@@ -559,7 +597,8 @@ data_category_note <- function(problems) {
   )
 }
 
-#' 量尺表：列次、題數、波次與校準方式（有題庫時固定校準；借用另一世代題庫時寫出借誰的）；欄名是英文
+#' 量尺表：列次、題數、波次與校準方式（有題庫時固定校準；借用另一世代題庫時寫出借誰的）；
+#' 欄名是英文（畫面上用 kitsui_screen_names() 換成中文）
 #' @param plan NULL 或 kitsui_round_plan()
 #' @noRd
 data_scale_table <- function(scales, fixed, plan = NULL) {
@@ -682,14 +721,13 @@ data_fixed_choice_ui <- function(ns, round) {
   if (!is.null(round)) {
     return(shiny::tagList(
       ui_callout(shiny::tags$strong(paste0("上一回合的固定檔：來自這次連線的第 ", round, " 回合"))),
-      shiny::actionButton(ns("fixed_clear"), "改用上傳的固定檔，或不用",
-                          class = "btn-sm btn-outline-secondary")
+      ui_button(ns("fixed_clear"), "改用上傳的固定檔，或不用")
     ))
   }
   shiny::tagList(
     shiny::fileInput(ns("fixed_file"), NULL, accept = ".zip", buttonLabel = "選擇 zip…",
                      placeholder = "沒有（第一回合）"),
-    shiny::actionButton(ns("fixed_clear"), "不用固定檔", class = "btn-sm btn-outline-secondary")
+    ui_button(ns("fixed_clear"), "不用固定檔")
   )
 }
 

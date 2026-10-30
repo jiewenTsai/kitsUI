@@ -29,7 +29,7 @@ ui_callout <- function(..., warning = FALSE) {
   shiny::tags$div(class = cls, ...)
 }
 
-#' 橘色的提醒：一句標題與一串項目（不擋下一步）
+#' 黃色的提醒（要注意）：一句標題與一串項目（不擋下一步）
 #' @param items 中文句子；長度 0 時不顯示
 #' @noRd
 ui_warn_list <- function(head, items, ...) {

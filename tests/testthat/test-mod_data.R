@@ -32,6 +32,15 @@ test_that("示範資料：預設什麼都不勾，只有中性的提示（不是
     expect_equal(nrow(d$fixed$bank), 0)
     expect_equal(d$persons, kitsui_persons(d$df))
     expect_null(output$hint)
+    # 狀態框、設定摘要、量尺表（中文欄名）
+    expect_false(grepl("停下來", output$data_status$html))
+    expect_match(output$data_status$html, "【完成】")
+    expect_match(output$data_status$html, "資料可以用：1 個量尺、[0-9,]+ 列作答。")
+    expect_match(output$settings$html, "本回合 R1：M03 · 3 個月 · 參照世代 M03")
+    expect_match(output$scales, "列次數")
+    expect_match(output$scales, "校準方式")
+    expect_false(grepl("n_visits", output$scales))
+    expect_match(output$next_step$html, "下一步：題目校準 →")
     expect_match(output$code, "kits_resp")
     session$setInputs(design_scale = "lan M03")
     expect_s3_class(design_plot(), "plotly")
@@ -163,6 +172,7 @@ test_that("固定檔放了不是 zip 的檔案：紅字說明，之前的固定�
     session$setInputs(fixed_file = upload_input(csv, "responses.csv"))
     expect_match(output$fixed_error$html, "這不是固定檔（zip）")
     expect_match(output$fixed_error$html, "alert-danger")
+    expect_match(output$fixed_error$html, "【停下來】")
     expect_match(output$fixed_error$html, "仍然用之前的固定檔：fixed_R1.zip")
     d <- session$getReturned()()
     expect_equal(d$fixed$version$rounds, "3")
@@ -243,8 +253,9 @@ test_that("得分不完整的題：橘色提醒（不是紅字），說 ② 怎�
     expect_match(html, "作答的分數不會被改動")
     expect_match(html, KITJOIN_URL, fixed = TRUE)
     expect_null(output$problems)
+    expect_match(output$data_status$html, "【完成，但請注意】")
     expect_false(grepl("資料沒問題", output$next_step$html))
-    expect_match(output$next_step$html, "橘色的提醒")
+    expect_match(output$next_step$html, "要注意")
   })
 })
 
@@ -267,7 +278,7 @@ test_that("橘色提醒：波次之前的回合校準過、資料檔之前的回
     expect_match(html, "m03_3.csv：這個檔案在第 R1 回合用過")
     # 提醒不擋下一步
     expect_type(session$getReturned()(), "list")
-    expect_match(output$next_step$html, "橘色的提醒")
+    expect_match(output$next_step$html, "要注意")
   })
 })
 
