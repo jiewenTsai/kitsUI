@@ -275,11 +275,19 @@ kitsui_code_vertical <- function(fixed, scales, stages = names(KITSUI_VERTICAL_S
       "# age_ticks：每一個波次都有刻度（kits 預設的刻度只到 96 個月）",
       'plot(v_none, type = "median", age_ticks = sort(unique(v_none$wave_m)))'
     ),
-    internal = linked("internal", "# 內部連結後：M36 換到參照世代的量尺"),
-    external = linked("external", "# 外部連結後：兩個世代都換到 D")
+    internal = linked("internal", kitsui_code_internal_title(fixed, scales)),
+    external = linked("external", "# 外部連結後：各世代都換到 D")
   )
   head <- sprintf("# %s：%s 用 ④ 的程式算好的 kits_subj()（還沒換算）", vars, scales)
   paste(c(head, unlist(purrr::map(code[stages], \(x) c("", x)))), collapse = "\n")
+}
+
+# 「內部連結後」那一段的註解：哪些世代換到參照世代的量尺（例如「M36 換到參照世代 M03 的量尺」）
+kitsui_code_internal_title <- function(fixed, scales) {
+  ref <- fixed$version$reference
+  others <- setdiff(unique(scale_cohort(scales)), ref)
+  from <- if (length(others) == 0) "其他世代" else paste(others, collapse = "、")
+  sprintf("# 內部連結後：%s 換到參照世代 %s 的量尺", from, ref)
 }
 
 #' 垂直連結加上之前回合的點：讀固定檔的 wave_summary.csv，照現在的連結換算後一起畫

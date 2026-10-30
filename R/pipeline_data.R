@@ -1,7 +1,8 @@
 # 資料：示範資料、kits 不知道的欄位（domain、cohort）、量尺清單、作答矩陣、這一回合的名稱
 # 其他檢查（作答分數、重複列…）交給 kits_resp() 與 kits_check()
 
-# 參照世代（內部連結的目標、外部連結的起點）
+# 預設的參照世代（內部連結的目標、外部連結的起點）：資料有 M03 時（KIT）；
+# 第一回合在 ① 選（kitsui_ref_pick()），寫進固定檔的 VERSION
 KITSUI_REF_COHORT <- "M03"
 
 # 資料一定要有的欄位（資料約定）
@@ -12,7 +13,7 @@ KITSUI_COLUMNS <- tibble::tribble(
   ~column, ~type, ~meaning,
   "visit_id", "c", "列次編號：一個孩子的一個波次一個編號。兩個世代不能重複。",
   "subj_id", "c", "孩子編號：同一個孩子的各波次相同。",
-  "cohort", "c", "世代，例如 M03、M36。參照世代是 M03。",
+  "cohort", "c", "世代，例如 M03、M36。參照世代在第一回合選（有 M03 時預設 M03）。",
   "sex", "c", "性別，例如 boy、girl。",
   "wave_m", "d", "波次（施測月齡），例如 3、6、12。",
   "age_m", "d", "實際月齡。題目表的通過年齡要用它。",
@@ -84,17 +85,18 @@ kitsui_default_label <- function(rounds = character()) {
 scale_domain <- function(scale) sub(" [^ ]+$", "", scale)
 scale_cohort <- function(scale) sub("^.* ", "", scale)
 
-#' 量尺清單：領域 x 世代，各有幾列次、幾題、哪些波次
+#' 量尺清單：領域 x 世代，各有幾列次、幾題、哪些波次（參照世代在前）
+#' @param ref 參照世代；預設照資料的世代（kitsui_ref_default()）
 #' @return tibble：scale、domain、cohort、n_visits、n_items、waves
 #' @noRd
-kitsui_scales <- function(df) {
+kitsui_scales <- function(df, ref = kitsui_ref_default(df$cohort)) {
   df |>
     dplyr::summarise(
       n_visits = dplyr::n_distinct(.data$visit_id), n_items = dplyr::n_distinct(.data$item_id),
       waves = paste(sort(unique(.data$wave_m)), collapse = ", "), .by = c("domain", "cohort")
     ) |>
     dplyr::mutate(scale = paste(.data$domain, .data$cohort), .before = 1) |>
-    dplyr::arrange(.data$cohort != KITSUI_REF_COHORT, .data$scale)
+    dplyr::arrange(.data$cohort != ref, .data$scale)
 }
 
 #' 一個量尺的作答（kits_resp()）
@@ -150,15 +152,16 @@ kitsui_persons <- function(df) {
 # 這一回合的資料 ----
 
 #' 資料裡有哪些世代 × 波次（給 ① 勾選）：參照世代在前，再依世代名稱、月齡
+#' @param ref 參照世代；預設照資料的世代（kitsui_ref_default()）
 #' @return tibble：cohort、wave_m、value（勾選框的值，例如 "M03 3"）
 #' @noRd
-kitsui_pick_choices <- function(data) {
+kitsui_pick_choices <- function(data, ref = kitsui_ref_default(data$cohort)) {
   if (!all(c("cohort", "wave_m") %in% names(data))) {
     return(tibble::tibble(cohort = character(), wave_m = numeric(), value = character()))
   }
   dplyr::distinct(data, .data$cohort, .data$wave_m) |>
     dplyr::filter(!is.na(.data$cohort), !is.na(.data$wave_m)) |>
-    dplyr::arrange(.data$cohort != KITSUI_REF_COHORT, .data$cohort, .data$wave_m) |>
+    dplyr::arrange(.data$cohort != ref, .data$cohort, .data$wave_m) |>
     dplyr::mutate(value = paste(.data$cohort, .data$wave_m)) |>
     tibble::as_tibble()
 }

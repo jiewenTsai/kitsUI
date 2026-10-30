@@ -28,6 +28,7 @@ KITSUI_FIXED_COLS <- list(
 KITSUI_FIXED_OPTIONAL <- c("waves", "wave_summary", "pass_steps")
 
 #' 空的固定檔
+#' @param reference 參照世代：第一回合在 ① 選（kitsui_ref_pick()），寫進 VERSION 以後不能改
 #' @return list(version, sources, bank, versions, links, checks)
 #' @noRd
 kitsui_fixed_empty <- function(reference = KITSUI_REF_COHORT) {
@@ -36,11 +37,34 @@ kitsui_fixed_empty <- function(reference = KITSUI_REF_COHORT) {
   })
   version <- list(
     kits = as.character(utils::packageVersion("kits")), kitsUI = kitsui_version(),
-    created = as.character(Sys.Date()), rounds = character(), reference = reference,
+    created = kitsui_today(), rounds = character(), reference = reference,
     scales = character()
   )
   sources <- tibble::tibble(round = character(), file = character(), md5 = character())
   c(list(version = version, sources = sources), tables)
+}
+
+#' 今天的日期（固定檔的 Created）：用台灣的日期，不用伺服器的時區（雲端版的伺服器在美國）。
+#' 別的時區用 options(kitsui.tz = "Europe/London") 之類設定
+#' @noRd
+kitsui_today <- function() {
+  format(Sys.time(), "%Y-%m-%d", tz = getOption("kitsui.tz", "Asia/Taipei"))
+}
+
+#' 預設的參照世代：資料有 M03 時是 M03（KIT），沒有時是第一個世代（依名稱）
+#' @param cohorts 資料裡的世代
+#' @noRd
+kitsui_ref_default <- function(cohorts) {
+  cohorts <- sort(unique(stats::na.omit(as.character(cohorts))))
+  if (length(cohorts) == 0 || KITSUI_REF_COHORT %in% cohorts) return(KITSUI_REF_COHORT)
+  cohorts[1]
+}
+
+#' ① 選的參照世代：選的世代在資料裡時用它，不然用預設（kitsui_ref_default()）
+#' @noRd
+kitsui_ref_pick <- function(pick, cohorts) {
+  if (length(pick) == 1 && !is.na(pick) && pick %in% cohorts) return(pick)
+  kitsui_ref_default(cohorts)
 }
 
 #' kitsUI 的版本：和頁首一樣讀 DESCRIPTION（kit_app_description()）；找不到時 "dev"

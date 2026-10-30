@@ -1,12 +1,28 @@
 # 連結：每條連結只做一次（kits_linking()，用題庫的門檻），點存進固定檔的 links.csv，之後從點重建
-#   內部：世代 M36 -> M03（每個領域一條）；外部：參照世代 -> D（各領域共用一條）
+#   內部：參照世代以外的每個世代 -> 參照世代（每個世代、每個領域各一條；KIT 是 M36 -> M03）
+#   外部：參照世代 -> D（各領域共用一條；參照世代有 GSED 的錨題時才適用）
 
 #' 內部連結：一個領域的 cohort -> 參照世代（兩邊都用題庫到目前為止的所有步驟）
 #'
+#' @param cohort 要連結的世代；NULL 時用題庫裡這個領域唯一一個不是參照世代的世代
+#'   （有好幾個時要指定）
 #' @return list(fixed, link, new, message)：已有這條連結時沿用（new = FALSE）；
 #'   做不了時 link = NULL，message 說明原因（kits 的錯誤訊息）
 #' @noRd
-kitsui_link_internal <- function(fixed, domain, cohort = "M36", n_boot = 2000, seed = 1) {
+kitsui_link_internal <- function(fixed, domain, cohort = NULL, n_boot = 2000, seed = 1) {
+  if (is.null(cohort)) {
+    others <- kitsui_internal_scales(fixed)
+    cohort <- scale_cohort(others[scale_domain(others) == domain])
+    if (length(cohort) == 0) {
+      text <- paste0("題庫裡還沒有 ", domain, " 參照世代（", fixed$version$reference,
+                     "）以外的量尺。")
+      return(list(fixed = fixed, link = NULL, new = FALSE, message = text))
+    }
+    if (length(cohort) > 1) {
+      kit_abort(domain, " 有好幾個世代可以做內部連結（", paste(cohort, collapse = "、"), "），",
+                "請指定是哪一個世代。")
+    }
+  }
   from <- paste(domain, cohort)
   to <- paste(domain, fixed$version$reference)
   kitsui_link_once(fixed, from, "internal", function() {
@@ -199,11 +215,94 @@ kitsui_link_path <- function(fixed, scale) {
 
 # ③ 連結頁的狀態與檢核 ----
 
-#' 可以做內部連結的量尺：題庫裡不是參照世代的量尺
+#' 可以做內部連結的量尺：題庫裡不是參照世代的量尺（每個世代、每個領域各一條，都連到參照世代）
 #' @noRd
 kitsui_internal_scales <- function(fixed) {
   scales <- union(fixed$version$scales, unique(fixed$bank$scale))
   sort(scales[scale_cohort(scales) != fixed$version$reference])
+}
+
+#' 所有內部連結一覽：起點、終點（參照世代的同一個領域）、狀態（一句話）
+#' @param links kitsui_links(fixed)；earlier 是這一回合開始時固定檔裡的連結名稱
+#' @return tibble（欄名英文）：from、to、state
+#' @noRd
+kitsui_internal_overview <- function(fixed, links, earlier) {
+  scales <- kitsui_internal_scales(fixed)
+  words <- c(frozen = "已凍結", ready = "可以建立", missing = "還不能做（題庫缺一邊）")
+  state <- purrr::map_chr(scales, \(s) kitsui_internal_state(fixed, s, links, earlier)$state)
+  tibble::tibble(from = scales, to = paste(scale_domain(scales), fixed$version$reference),
+                 state = unname(words[state]))
+}
+
+# ③ 的標題與說明：用固定檔裡的參照世代與其他世代的名稱（不寫死 M03、M36） ----
+
+#' 參照世代，與題庫裡（含這一回合的量尺）其他的世代
+#' @return list(ref, others)
+#' @noRd
+kitsui_link_cohorts <- function(fixed) {
+  ref <- fixed$version$reference %||% KITSUI_REF_COHORT
+  scales <- union(fixed$version$scales, unique(fixed$bank$scale))
+  list(ref = ref, others = sort(setdiff(unique(scale_cohort(scales)), ref)))
+}
+
+#' 內部連結的標題，例如「1. 內部連結：M36 → M03」「1. 內部連結：M06、M40 → M03」
+#' @noRd
+kitsui_internal_title <- function(fixed) {
+  co <- kitsui_link_cohorts(fixed)
+  from <- if (length(co$others) == 0) "其他世代" else paste(co$others, collapse = "、")
+  paste0("1. 內部連結：", from, " → ", co$ref)
+}
+
+#' 內部連結的說明（一段話）
+#' @noRd
+kitsui_internal_hint <- function(fixed) {
+  co <- kitsui_link_cohorts(fixed)
+  from <- if (length(co$others) == 0) "參照世代以外的世代" else paste(co$others, collapse = "、")
+  each <- if (length(co$others) > 1) "每個世代、每個領域各一條。" else "每個領域一條。"
+  paste0("各世代的題目參數各自在自己的量尺上。",
+         "內部連結用兩邊共同的題目，把 ", from, " 的量尺換到參照世代 ", co$ref, " 的量尺。", each)
+}
+
+#' 外部連結的標題，例如「2. 外部連結：M03 → D」；不適用時加「（不適用）」
+#' @param applicable kitsui_d_applicable()
+#' @noRd
+kitsui_d_title <- function(fixed, applicable = TRUE) {
+  paste0("2. 外部連結：", kitsui_link_cohorts(fixed)$ref, " → D", if (!applicable) "（不適用）")
+}
+
+#' 外部連結的說明（一段話）
+#' @noRd
+kitsui_d_hint <- function(fixed, applicable = TRUE) {
+  ref <- kitsui_link_cohorts(fixed)$ref
+  if (!applicable) {
+    return(paste0("D 分數是嬰幼兒發展的國際量尺（GSED），錨題只有 lan、motor、cog 的題目。",
+                  "參照世代（", ref, "）的題目裡沒有錨題，所以這份資料不做外部連結。",
+                  "分數留在參照世代（", ref, "）的量尺上。這不是錯誤。"))
+  }
+  paste0("D 分數是國際共用的發展量尺。",
+         "參照世代（", ref, "）的題目裡，有些是錨題：它們在 D 量尺上的位置已知。",
+         "外部連結用錨題把 ", ref, " 的量尺換到 D。所有領域共用一條。",
+         "之後才進題庫的 ", ref, " 量尺，沿用同一條外部連結。")
+}
+
+#' 外部連結（到 D）適不適用
+#'
+#' 不適用：還沒有外部連結、題庫裡已經有參照世代的量尺，而且這些量尺沒有任何錨題、
+#' 領域也不是錨題的領域（kits_anchors() 的 lan、motor、cog）。例如 TDCYP 的家庭量表。
+#' 題庫裡還沒有參照世代的量尺時還不知道，算適用（照原來的說明）。
+#' @param anchors kitsui_anchor_counts(fixed)
+#' @noRd
+kitsui_d_applicable <- function(fixed, anchors = kitsui_anchor_counts(fixed),
+                                domains = unique(kits::kits_anchors()$domain)) {
+  if ("D" %in% kitsui_link_names(fixed)) return(TRUE)
+  if (nrow(anchors) == 0 || sum(anchors$n_anchors) > 0) return(TRUE)
+  any(scale_domain(anchors$scale) %in% domains)
+}
+
+#' 外部連結不適用時，分數停在參照世代的量尺：回傳參照世代；適用時 NULL
+#' @noRd
+kitsui_ref_final <- function(fixed) {
+  if (kitsui_d_applicable(fixed)) NULL else fixed$version$reference
 }
 
 #' 一條內部連結的狀態
@@ -247,13 +346,21 @@ kitsui_anchor_counts <- function(fixed, anchors = kits::kits_anchors()) {
 
 #' 外部連結（到 D）的狀態
 #' @param anchors kitsui_anchor_counts(fixed)
-#' @return list(state, link, text)
+#' @return list(state, link, text)：state 是 "frozen"、"ready"、"missing"，或 "na"
+#'   （不適用：參照世代沒有錨題，kitsui_d_applicable()；不是錯誤）
 #' @noRd
 kitsui_d_state <- function(fixed, links, earlier, anchors) {
   link <- links[["D"]]
   n <- sum(anchors$n_anchors)
   if (!is.null(link)) {
     return(list(state = "frozen", link = link, text = kitsui_frozen_text("D" %in% earlier)))
+  }
+  if (!kitsui_d_applicable(fixed, anchors)) {
+    ref <- fixed$version$reference
+    text <- paste0("不適用：參照世代（", ref, "）的量尺（", paste(anchors$scale, collapse = "、"),
+                   "）沒有 D 分數的錨題（kits_anchors()），所以不做外部連結。",
+                   "分數留在參照世代（", ref, "）的量尺上；這一回合照常完成。")
+    return(list(state = "na", link = NULL, text = text))
   }
   if (nrow(anchors) == 0) {
     text <- paste0("題庫裡還沒有參照世代（", fixed$version$reference, "）的量尺。",

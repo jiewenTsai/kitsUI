@@ -138,8 +138,9 @@ kitsui_vertical_scores <- function(round, domain, persons, progress = NULL) {
 #' 這一回合的分數只算一次（kitsui_vertical_scores()），再依版本換算：
 #' - none（未連結）：各世代留在自己校準的量尺上。kits 的 rbind() 不讓不同量尺的分數合在一起，
 #'   所以去掉量尺的標記，當成沒有量尺的分數交給 kits_vertical()（y 軸不標量尺）。
-#' - internal（內部連結後）：M36 用內部連結換到參照世代的量尺，兩個世代 rbind()。
-#' - external（外部連結後）：再用外部連結換到 D（和 kitsui_score() 的換算相同）。
+#' - internal（內部連結後）：參照世代以外的世代用內部連結換到參照世代的量尺，各世代 rbind()。
+#' - external（外部連結後）：再用外部連結換到 D（和 kitsui_score() 的換算相同）；外部連結不適用
+#'   （參照世代沒有錨題）時畫不了，na = TRUE（不是錯誤）。
 #' 之前回合的點（固定檔的摘要）照同樣的連結換算，和這一回合的點畫在一起。
 #' @param links NULL 或 kitsui_links(fixed)；persons NULL 或 kitsui_persons(df)
 #' @param raw NULL 或 kitsui_vertical_scores() 的結果（已經算好時傳進來，連結變了不用重算）
@@ -219,17 +220,26 @@ kitsui_vertical_linked <- function(raw, earlier, fixed, links, stage, label) {
   ends <- c(purrr::map_chr(converted, \(x) attr(x, "scale")), attr(before, "ends"))
   if (any(ends != target)) {
     why <- kitsui_vertical_why(fixed, scales, links, stage)
-    return(kitsui_vertical_none(names(raw), why))
+    na <- stage == "external" && !kitsui_d_applicable(fixed)
+    return(c(kitsui_vertical_none(names(raw), why), list(na = na)))
   }
   v <- kits::kits_vertical(do.call(rbind, unname(converted)))
   list(vertical = v, table = kitsui_vertical_table(v, before, label), scale = target, why = NULL)
 }
 
-# 畫不了的原因：缺內部連結，或（外部連結後）還沒有外部連結
+# 畫不了的原因：缺內部連結，或（外部連結後）還沒有外部連結、外部連結不適用
 kitsui_vertical_why <- function(fixed, scales, links, stage) {
-  off <- setdiff(scales[scale_cohort(scales) != fixed$version$reference], names(links))
+  ref <- fixed$version$reference
+  if (stage == "external" && !kitsui_d_applicable(fixed)) {
+    return(paste0("外部連結不適用：參照世代（", ref, "）沒有 D 分數的錨題，所以沒有換到 D 的圖。",
+                  "「內部連結後」那一頁就是最後的量尺（", ref, " 的量尺）。"))
+  }
+  off <- setdiff(scales[scale_cohort(scales) != ref], names(links))
   if (length(off) > 0) {
-    rest <- if (stage == "internal") "兩個世代不在同一把尺上。" else "所以換不到 D。"
+    rest <- if (stage == "internal") "各世代不在同一把尺上。" else "所以換不到 D。"
+    if (stage == "internal" && length(unique(scale_cohort(scales))) == 2) {
+      rest <- "兩個世代不在同一把尺上。"
+    }
     return(paste0(paste(off, collapse = "、"), " 還沒有內部連結，", rest))
   }
   if (is.null(links[["D"]])) {
@@ -238,15 +248,19 @@ kitsui_vertical_why <- function(fixed, scales, links, stage) {
   paste0(paste(scales, collapse = "、"), " 還有量尺不在外部連結裡，換不到 D。")
 }
 
-#' 這一回合兩個世代沒有共同的月齡時，一句說明（有共同月齡時是 NULL）
+#' 這一回合任兩個世代都沒有共同的月齡時，一句說明（有兩個世代有共同月齡時是 NULL）
+#'
+#' 三個以上的世代時，只要有兩個世代有共同的月齡，就有可以直接比的點，不說明。
 #' @param raw 具名 list：各量尺換算前的 kits_subj（有 wave_m）
 #' @noRd
 kitsui_vertical_no_common <- function(raw) {
   waves <- purrr::map(raw, \(x) sort(unique(x$wave_m)))
-  if (any(purrr::map_lgl(waves, is.null))) return(NULL)
-  if (length(Reduce(intersect, waves)) > 0) return(NULL)
+  if (length(waves) < 2 || any(purrr::map_lgl(waves, is.null))) return(NULL)
+  all_waves <- unlist(waves, use.names = FALSE)
+  if (anyDuplicated(all_waves) > 0) return(NULL)
   each <- purrr::imap_chr(waves, \(w, s) paste0(s, "：", paste(w, collapse = "、"), " 個月"))
-  paste0("這一回合兩個世代沒有共同的月齡（", paste(each, collapse = "；"), "）。",
+  who <- if (length(waves) > 2) "各世代之間" else "兩個世代"
+  paste0("這一回合", who, "沒有共同的月齡（", paste(each, collapse = "；"), "）。",
          "所以圖上沒有同一個月齡可以直接比的兩個點。")
 }
 

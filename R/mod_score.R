@@ -28,14 +28,16 @@ score_guide <- function() {
     goal = "算這一回合每個列次的分數。",
     steps = c(
       "按「計算這一回合的分數」。",
-      "看每個量尺換到哪一把尺：校準的量尺 → 內部連結（M36 才有）→ 外部連結（到 D）。",
+      paste0("看每個量尺換到哪一把尺：校準的量尺 → 內部連結（參照世代以外的世代才有）→ ",
+             "外部連結（到 D；參照世代有 D 分數的錨題時才有）。"),
       "下載這一回合的分數表。早先各回合的分數不會重算，所以請現在就存好。",
       "下載新的固定檔（zip），下一回合要用。",
       "要接著加新的波次，按「用這一回合的固定檔開始下一回合」。"
     ),
     output = paste0(
       "這一回合的分數表、分數對照表、題目表，與新的固定檔。",
-      "還沒有外部連結的量尺，分數留在自己的量尺上。"
+      "還沒有外部連結的量尺，分數留在自己的量尺上。",
+      "外部連結不適用時（沒有 D 分數的錨題），最後的分數是參照世代量尺上的 ref_score。"
     ),
     note = paste0(
       "能力值（ability，kits 裡叫 theta）在校準的量尺上；換到 D 後是量尺分數（d_score）。",
@@ -134,14 +136,16 @@ mod_score_server <- function(id, data, items, links, goto, next_round = NULL) {
       if (is.null(result())) return(NULL)
       # 有題不是 1 時通過步驟的區塊打開，不把設定藏起來
       shown <- shiny::isolate(tryCatch(shown_steps(), error = \(e) NULL))
-      score_result_ui(ns, names(result()$subj), shown)
+      score_result_ui(ns, names(result()$subj), shown, fixed()$version$reference, ref_final())
     })
 
     # 1. 分數表 ----
     output$routes <- kit_table({
       kitsui_score_routes(fixed(), shiny::req(result())$subj, items()$plan)
     })
-    output$columns <- shiny::renderUI(score_columns_ui(shiny::req(result())$scores))
+    # 外部連結不適用時的參照世代（分數表是 ref_score，不是 d_score）；適用時 NULL
+    ref_final <- shiny::reactive(kitsui_ref_final(shiny::req(fixed())))
+    output$columns <- shiny::renderUI(score_columns_ui(shiny::req(result())$scores, ref_final()))
     shown <- shiny::reactive(kitsui_score_search(shiny::req(result())$scores, input$search))
     pages <- shiny::reactive(max(1, ceiling(nrow(shown()) / SCORE_PAGE_ROWS)))
     page <- shiny::reactive(score_page(input$page, pages()))
@@ -264,7 +268,9 @@ mod_score_server <- function(id, data, items, links, goto, next_round = NULL) {
       last <- utils::tail(intersect(KITSUI_ITEM_THRESHOLDS, names(tab)), 1)
       shiny::tags$p(class = "kit-hint", paste0("題目依 ", last, " 由小到大排列。"))
     })
-    output$item_table_note <- shiny::renderUI(item_table_note_ui(item_table()))
+    output$item_table_note <- shiny::renderUI({
+      item_table_note_ui(item_table(), fixed()$version$reference)
+    })
 
     # 檢查、R 程式 ----
     output$checks <- kit_table({
@@ -414,9 +420,10 @@ score_fixed_ui <- function(round, button_id, next_id = NULL, label = NULL) {
 }
 
 #' 分數表每一欄的一句說明
+#' @param ref NULL，或外部連結不適用時的參照世代（kitsui_ref_final()）
 #' @noRd
-score_columns_ui <- function(scores) {
-  cols <- kitsui_score_columns(scores)
+score_columns_ui <- function(scores, ref = NULL) {
+  cols <- kitsui_score_columns(scores, ref)
   shiny::tags$details(
     open = NA,
     shiny::tags$summary("每一欄是什麼"),
@@ -428,8 +435,9 @@ score_columns_ui <- function(scores) {
 }
 
 #' 題目表下面：拿掉了哪些沒有內容的欄
+#' @param ref 參照世代
 #' @noRd
-item_table_note_ui <- function(tab) {
+item_table_note_ui <- function(tab, ref = KITSUI_REF_COHORT) {
   drop <- attr(tab, "dropped")
   li <- \(col, ...) if (col %in% names(tab)) shiny::tags$li(shiny::tags$code(col), ...)
   shiny::tags$details(
@@ -443,7 +451,7 @@ item_table_note_ui <- function(tab) {
       li("step", "：通過步驟。得分至少這麼多分算通過。",
          "門檻與 age50 都照它算。只有在有題不是 1 時才列出。"),
       li("ability_threshold", "：在校準的量尺上，和 ability 同一把尺（kits 裡這一欄叫 D）。"),
-      li("ability_linked_threshold", "：經過內部連結，在參照世代（M03）的量尺上，",
+      li("ability_linked_threshold", paste0("：經過內部連結，在參照世代（", ref, "）的量尺上，"),
          "和 ability_linked 同一把尺。參照世代自己的量尺沒有這一欄。"),
       li("d_threshold", "：再經過外部連結，在 D 上，和 d_score 同一把尺。"),
       li("age50", "：這一回合一半的孩子通過（得分達到通過步驟）的月齡。",
@@ -577,13 +585,27 @@ steps_error_ui <- function(errors, todo) {
 
 #' 算完分數之後的畫面：分數表、分數對照表、題目表、檢查、R 程式
 #' @param steps kitsui_steps_shown()：有題不是 1 時通過步驟的區塊打開
+#' @param ref 參照世代；ref_final 是外部連結不適用時的參照世代（kitsui_ref_final()），適用時 NULL
 #' @noRd
-score_result_ui <- function(ns, scales, steps = NULL) {
+score_result_ui <- function(ns, scales, steps = NULL, ref = KITSUI_REF_COHORT, ref_final = NULL) {
   shiny::tagList(
     shiny::h4("1. 分數表"),
-    shiny::tags$small(class = "kit-hint",
-                      "每個量尺的分數換到哪一把尺上（route：內部連結，再外部連結到 D）。",
-                      "bank 是校準用的題庫；data 是哪一個世代、哪些波次的資料。"),
+    shiny::tags$small(
+      class = "kit-hint",
+      if (is.null(ref_final)) {
+        "每個量尺的分數換到哪一把尺上（route：內部連結，再外部連結到 D）。"
+      } else {
+        "每個量尺的分數換到哪一把尺上（route：內部連結到參照世代）。"
+      },
+      "bank 是校準用的題庫；data 是哪一個世代、哪些波次的資料。"
+    ),
+    if (!is.null(ref_final)) {
+      ui_callout(paste0(
+        "外部連結不適用：參照世代（", ref_final, "）沒有 D 分數的錨題，所以分數表沒有 d_score。",
+        "最後的分數是 ref_score，在參照世代（", ref_final, "）的量尺上；",
+        "還沒有內部連結的世代，ref_score 是空白，分數留在 ability（自己的量尺）。"
+      ))
+    },
     shiny::tableOutput(ns("routes")),
     shiny::textInput(ns("search"), "找人：輸入 visit_id 或 subj_id 的一部分",
                      placeholder = "例如 c55df9b"),
@@ -607,12 +629,18 @@ score_result_ui <- function(ns, scales, steps = NULL) {
                        "：校準的量尺上的能力值與標準誤（logit；kits 裡叫 theta、se）。",
                        "和上面分數表的 ability 相同：各世代分開估計，沒有經過連結。"),
         shiny::tags$li(shiny::tags$code("ability_linked"), "、", shiny::tags$code("ability_linked_se"),
-                       "：linked 表示經過內部連結，換到參照世代（M03）的量尺上。",
+                       paste0("：linked 表示經過內部連結，換到參照世代（", ref, "）的量尺上。"),
                        "參照世代自己的量尺沒有這兩欄。"),
-        shiny::tags$li(shiny::tags$code("d_score"), "、", shiny::tags$code("d_score_se"),
-                       "：再經過外部連結，D 上的量尺分數與標準誤（kits 裡叫 d）。"),
-        shiny::tags$li(shiny::tags$code("se_link"), "、", shiny::tags$code("se_total"),
-                       "：d_score 的連結誤差，以及測量誤差與連結誤差合起來。"),
+        if (is.null(ref_final)) {
+          shiny::tagList(
+            shiny::tags$li(shiny::tags$code("d_score"), "、", shiny::tags$code("d_score_se"),
+                           "：再經過外部連結，D 上的量尺分數與標準誤（kits 裡叫 d）。"),
+            shiny::tags$li(shiny::tags$code("se_link"), "、", shiny::tags$code("se_total"),
+                           "：d_score 的連結誤差，以及測量誤差與連結誤差合起來。")
+          )
+        } else {
+          shiny::tags$li("外部連結不適用，所以沒有 d_score。")
+        },
         shiny::tags$li("作答組合：這個波次最多孩子作答的那一組題目。表裡只算用這個作答組合的孩子。"),
         shiny::tags$li(shiny::tags$code("n"), "：這個原始分數有幾個孩子。",
                        shiny::tags$code("pct"), "：佔這個作答組合的百分比。"),
