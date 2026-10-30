@@ -62,13 +62,27 @@ kitsui_score_problem <- function(item_id, scores) {
   if (length(problem) == 0) {
     return(list(problem = NA_character_, detail = NA_character_, detail_en = NA_character_))
   }
-  gap <- sprintf("分數不連續，沒有人得 %s 分", paste(missing, collapse = "、"))
+  gap <- sprintf("分數不連續，沒有人得 %s 分", kitsui_runs(missing, "、", "–"))
   what <- c(if (no_zero) "沒有人得 0 分", if (length(missing) > 0) gap)
   # 英文：例如 "no score 0; score gap: no score 2 (scores 1, 3)"
-  gap_en <- paste("score gap: no score", paste(missing, collapse = ", "))
+  gap_en <- paste("score gap: no score", kitsui_runs(missing, ", ", "-"))
   what_en <- c(if (no_zero) "no score 0", if (length(missing) > 0) gap_en)
   list(problem = paste(problem, collapse = ", "),
        detail = paste0(item_id, " ", paste(what, collapse = "；"), seen),
        detail_en = paste0(paste(what_en, collapse = "; "), " (scores ",
                           paste(scores, collapse = ", "), ")"))
+}
+
+#' 分數寫成連續的段：c(1, 2, 3, 5, 7, 8) -> "1–3、5、7–8"（遺漏碼 98 會讓中間少了 90 幾個分數，
+#' 寫成一段才不會列出 90 個數字）
+#' @param sep 段之間的符號；dash 是一段裡的符號
+#' @noRd
+kitsui_runs <- function(x, sep = "、", dash = "–") {
+  x <- sort(unique(x))
+  if (length(x) == 0) return("")
+  start <- x[c(TRUE, diff(x) != 1)]
+  end <- x[c(diff(x) != 1, TRUE)]
+  ends <- dplyr::case_when(end == start ~ "", end == start + 1 ~ paste0(sep, end),
+                           .default = paste0(dash, end))
+  paste0(start, ends, collapse = sep)
 }

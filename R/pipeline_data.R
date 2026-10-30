@@ -50,7 +50,8 @@ kitsui_check_data <- function(df) {
   if (length(miss) > 0) {
     kit_abort("資料缺少 ", paste(miss, collapse = "、"), " 欄位。請加上後再上傳。")
   }
-  if (anyNA(df$domain) || anyNA(df$cohort)) {
+  blank <- \(x) anyNA(x) || any(!nzchar(trimws(x)))
+  if (blank(df$domain) || blank(df$cohort)) {
     kit_abort("domain 或 cohort 有空白。每一列都要填領域與世代。")
   }
   invisible(df)
@@ -181,23 +182,29 @@ kitsui_parse_picks <- function(picks, choices) {
 #' 這一回合的資料：照勾選的世代 × 波次篩選、檢查欄位與作答（幾百萬列也只要幾秒）
 #'
 #' 名稱與固定檔不在這裡檢查：改名稱或換固定檔時不用重跑。
-#' 全部組合都勾時不複製資料。
+#' 全部組合都勾、沒有 wave_m 空白的列、沒有約定以外的欄時不複製資料。
 #' @param data 這個來源的全部資料（還沒選）
 #' @param picks 勾選的世代 × 波次（"M03 3"）；只寫月齡時是所有世代的這個月齡
 #' @param choices kitsui_pick_choices(data)；NULL 時在這裡算
-#' @return list(df, scales, persons, picks, problems, hint)：persons 是 kitsui_persons(df)；
-#'   picks 是勾到的 choices；problems 是紅色的中文訊息；hint 是還沒勾時的提示
+#' @return list(df, scales, persons, picks, problems, hint, notes, dropped)：persons 是
+#'   kitsui_persons(df)；picks 是勾到的 choices；problems 是紅色的中文訊息；hint 是還沒勾時的
+#'   提示；notes 是橘色的提醒（wave_m 空白的列、像遺漏碼的分數）；dropped 是拿掉的約定以外的欄
 #' @noRd
 kitsui_data_select <- function(data, picks, choices = NULL) {
   miss <- setdiff(KITSUI_REQUIRED, names(data))
   if (length(miss) > 0) {
     return(list(problems = paste0("資料缺少這些欄位：", paste(miss, collapse = "、"),
-                                  "。請加上後再上傳。")))
+                                  "。請加上後再上傳。", kitsui_missing_hint(names(data)))))
   }
+  # 約定以外的欄拿掉：kits_resp() 要一個列次裡每一欄都一樣，多的欄會讓每個量尺都停下來
+  dropped <- setdiff(names(data), KITSUI_COLUMNS$column)
+  if (length(dropped) > 0) data <- data[intersect(names(data), KITSUI_COLUMNS$column)]
   choices <- choices %||% kitsui_pick_choices(data)
   sel <- kitsui_parse_picks(picks, choices)
   if (nrow(sel) == 0) return(list(problems = character(), hint = "請勾這一回合的世代與波次。"))
-  df <- if (nrow(sel) == nrow(choices)) data else {
+  # wave_m 空白的列不知道是哪一個波次：勾選框沒有它們，全部都勾時也不放進來
+  no_wave <- sum(is.na(data$wave_m))
+  df <- if (nrow(sel) == nrow(choices) && no_wave == 0) data else {
     dplyr::semi_join(data, sel[c("cohort", "wave_m")], by = c("cohort", "wave_m"))
   }
   problems <- tryCatch({
@@ -206,8 +213,67 @@ kitsui_data_select <- function(data, picks, choices = NULL) {
   }, error = \(e) kit_error_text(e, "檢查資料"))
   if (length(problems) == 0) problems <- kitsui_quick_check(df)
   if (length(problems) > 0) return(list(problems = problems))
+  notes <- c(
+    if (no_wave > 0) {
+      sprintf("wave_m 有 %s 列是空白：不知道是哪一個波次，這些列不放進這一回合。",
+              format(no_wave, big.mark = ","))
+    },
+    kitsui_note_codes(df)
+  )
   list(df = df, scales = kitsui_scales(df), persons = kitsui_persons(df), picks = sel,
-       problems = character())
+       problems = character(), notes = notes, dropped = dropped)
+}
+
+#' 前 n 個，用「、」接起來；還有更多時加「…」
+#' @noRd
+kitsui_first <- function(x, n = 10) {
+  paste0(paste(utils::head(x, n), collapse = "、"), if (length(x) > n) "…")
+}
+
+#' 缺欄位時多一句：看起來是分號或 Tab 分隔、欄名是大寫或前後有空白
+#' @param cols 檔案的欄名
+#' @return 一句中文；看不出原因時 ""
+#' @noRd
+kitsui_missing_hint <- function(cols) {
+  save_as <- "請另存成逗號分隔的 CSV（Excel 的「CSV UTF-8（逗號分隔）」）再上傳。"
+  if (length(cols) == 1 && grepl(";", cols)) {
+    return(paste0("看起來是用分號（;）分隔的檔案。", save_as))
+  }
+  if (length(cols) == 1 && grepl("\t", cols)) {
+    return(paste0("看起來是用 Tab 分隔的檔案。", save_as))
+  }
+  near <- cols[!cols %in% KITSUI_COLUMNS$column & tolower(trimws(cols)) %in% KITSUI_COLUMNS$column]
+  if (length(near) == 0) return("")
+  paste0("欄名要全部小寫、前後不能有空白：", kitsui_first(paste0("「", near, "」"), 4), " 要改成 ",
+         kitsui_first(tolower(trimws(near)), 4), "。")
+}
+
+#' 看起來是遺漏碼的分數：一題裡比其他分數大很多（差 50 以上）、而且是 90 以上的分數，
+#' 例如 0–3 分的題有 95–99，或有 7777、9999
+#'
+#' 只提醒（橘色），分數不改：kits 會把它們當成很高的分數，那一題會分數不連續，
+#' 量尺通常會停下來。遺漏碼要先在 kitJoin ② 轉成空白。
+#' @return 一句中文；沒有時長度 0
+#' @noRd
+kitsui_note_codes <- function(df) {
+  sc <- dplyr::distinct(df, .data$item_id, .data$item_score) |>
+    dplyr::filter(!is.na(.data$item_score))
+  hits <- purrr::map(split(sc$item_score, sc$item_id), \(x) {
+    x <- sort(x)
+    if (length(x) < 2) return(numeric())
+    jump <- which(diff(x) >= 50 & x[-1] >= 90)
+    if (length(jump) == 0) numeric() else x[x > x[jump[1]]]
+  }) |>
+    purrr::compact()
+  if (length(hits) == 0) return(character())
+  codes <- sort(unique(unlist(hits)))
+  each <- purrr::imap_chr(hits, \(x, id) paste0(id, "（", kitsui_first(format(x, trim = TRUE), 4), "）"))
+  paste0(
+    length(hits), " 題有看起來是遺漏碼的分數（比其他分數大很多）：",
+    kitsui_some(each, 3), "。這些值是：", kitsui_first(format(codes, trim = TRUE), 8), "。",
+    "kits 會把它們當成真的分數，這些題會分數不連續，量尺可能停下來。",
+    "請先在 kitJoin「② 遺漏值轉 NA」把遺漏碼改成空白，再上傳。"
+  )
 }
 
 #' 這一回合的資料與檢查（kitsui_data_select() 加上名稱與題庫的計畫）
@@ -268,6 +334,14 @@ kitsui_note_sources <- function(files, fixed) {
   sprintf("%s：這個檔案在第 %s 回合用過。", hit$file, hit$round)
 }
 
+#' 約定以外的欄（kitsui_read_uploads()、kitsui_data_select() 拿掉的）
+#' @noRd
+kitsui_note_dropped <- function(dropped) {
+  if (length(dropped) == 0) return(character())
+  paste0("資料約定以外的欄不用，已經拿掉：", kitsui_first(dropped, 8), "。",
+         "kitsUI 只用「資料檔要有哪些欄位」表上的欄。")
+}
+
 #' 得分不完整的題（kitsui_category_problems()）：每題一句；太多時只列前 n 題
 #' @param problems tibble：scale、item_id、problem、detail_zh（detail_zh 已經有題號）
 #' @noRd
@@ -310,7 +384,8 @@ kitsui_quick_check <- function(df) {
 #' 資料約定的欄位照 KITSUI_TYPES 讀：編號是文字，月齡與分數是數字。
 #' @param files data.frame：name（檔名）、datapath（路徑），就是 shiny::fileInput() 的值
 #' @param progress NULL，或 function(i, n, name)：讀第 i 個（共 n 個）檔案之前呼叫
-#' @return list(data, files)：files 是 tibble（file、rows、md5）
+#' 約定以外的欄拿掉（kits_resp() 要一個列次裡每一欄都一樣），記在 dropped。
+#' @return list(data, files, dropped)：files 是 tibble（file、rows、md5）；dropped 是拿掉的欄
 #' @noRd
 kitsui_read_uploads <- function(files, progress = NULL) {
   if (is.null(files) || nrow(files) == 0) kit_abort("請選擇資料檔（CSV、CSV.GZ 或 SAV）。")
@@ -322,16 +397,22 @@ kitsui_read_uploads <- function(files, progress = NULL) {
     datas[[i]] <- kitsui_read_upload(files$datapath[i], files$name[i])
   }
   datas <- purrr::set_names(datas, files$name)
+  dropped <- unique(unlist(purrr::map(datas, \(d) attr(d, "dropped"))))
   kitsui_same_columns(datas)
   list(data = dplyr::bind_rows(unname(datas)),
        files = tibble::tibble(file = files$name, rows = unname(purrr::map_int(datas, nrow)),
-                              md5 = unname(tools::md5sum(files$datapath))))
+                              md5 = unname(tools::md5sum(files$datapath))),
+       dropped = as.character(dropped))
 }
 
 # 一個檔案：讀成數字的欄有讀不懂的值時停下來（不默默變成空白）。
 # 列數和 Excel 一樣算（第 1 列是欄名）；readr 的提醒由這裡的中文訊息取代
 kitsui_read_upload <- function(path, name) {
   r <- suppressWarnings(read_data_file(path, name, col_types = KITSUI_TYPES))
+  if (ncol(r$data) == 0 || nrow(r$data) == 0) {
+    kit_abort(name, if (ncol(r$data) == 0) " 是空的檔案" else " 只有欄名，沒有作答的列",
+              "。請確認匯出的檔案有資料再上傳。")
+  }
   if (r$n_problems > 0) {
     p <- r$problems[1, ]
     kit_abort(name, " 有 ", r$n_problems, " 個值讀不懂。",
@@ -339,10 +420,20 @@ kitsui_read_upload <- function(path, name) {
               "應該是", if (grepl("double|number", p$expected)) "數字" else p$expected, "。",
               "請修正後再上傳。")
   }
+  # 約定以外的欄拿掉（記在 attr(, "dropped")）；缺約定的欄時留著，① 才說得出缺什麼
+  data <- r$data
+  dropped <- setdiff(names(data), KITSUI_COLUMNS$column)
+  if (length(dropped) > 0 && all(KITSUI_REQUIRED %in% names(data))) {
+    data <- data[intersect(names(data), KITSUI_COLUMNS$column)]
+  } else {
+    dropped <- character()
+  }
   # SAV 的編號可能是數字：轉成文字，檔案之間才接得起來
-  text <- intersect(names(KITSUI_TYPES)[KITSUI_TYPES == "c"], names(r$data))
-  haven::zap_labels(r$data) |>
+  text <- intersect(names(KITSUI_TYPES)[KITSUI_TYPES == "c"], names(data))
+  out <- haven::zap_labels(data) |>
     dplyr::mutate(dplyr::across(dplyr::all_of(text), as.character))
+  attr(out, "dropped") <- dropped
+  out
 }
 
 # 每個檔案的欄位與第一個檔案相同；同一欄的型別也相同（全部空白的欄不算）。

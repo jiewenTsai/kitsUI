@@ -317,13 +317,16 @@ mod_data_server <- function(id, goto, handover = NULL) {
       ui_callout(shiny::tags$strong(h), "左邊第 2 步，一個世代一列，數字是月齡。")
     })
 
-    # 橘色的提醒：波次已經校準過、固定檔不是最新的一回合、資料檔之前用過
+    # 橘色的提醒：波次已經校準過、固定檔不是最新的一回合、資料檔之前用過、
+    # 拿掉的約定以外的欄、wave_m 空白的列、像遺漏碼的分數
     notes <- shiny::reactive({
       ck <- checked()
       c(
         if (!is.null(ck$df)) kitsui_note_waves(plan(), fixed()),
         kitsui_note_stale(fixed()$version$rounds, latest_round()),
-        if (is_upload()) kitsui_note_sources(upload()$files, fixed())
+        if (is_upload()) kitsui_note_sources(upload()$files, fixed()),
+        kitsui_note_dropped(unique(c(if (is_upload()) upload()$dropped, ck$dropped))),
+        ck$notes
       )
     })
     output$notes <- shiny::renderUI(ui_warn_list("請注意", notes()))

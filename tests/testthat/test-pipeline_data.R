@@ -87,10 +87,13 @@ test_that("檔案的欄位或型別不一樣、數字欄有讀不懂的值時，
   files <- upload_files(list(a, dplyr::select(a, -"sex")), c("a.csv", "b.csv"))
   expect_error(kitsui_read_uploads(files), "b.csv 的欄位和 a.csv 不一樣。少了：sex",
                class = "kit_user_error")
+  # 約定以外的欄讀檔時就拿掉，不比；約定的欄型別不一樣時（例如 SAV 的文字欄）說是哪一個檔案
   c2 <- dplyr::mutate(a, extra = 1)
   c1 <- dplyr::mutate(a, extra = "x")
   files <- upload_files(list(c1, c2), c("c1.csv", "c2.csv"))
-  expect_error(kitsui_read_uploads(files), "c2.csv 的 extra 欄是數字", class = "kit_user_error")
+  expect_equal(kitsui_read_uploads(files)$dropped, "extra")
+  expect_error(kitsui_same_columns(list(c1.csv = a, c2.csv = dplyr::mutate(a, wave_m = "x"))),
+               "c2.csv 的 wave_m 欄是文字", class = "kit_user_error")
   bad <- dplyr::mutate(a, wave_m = as.character(wave_m))
   bad$wave_m[2] <- "3a"
   files <- upload_files(list(bad), "bad.csv")
@@ -199,4 +202,80 @@ test_that("上傳的檔案記下 md5；CSV 不再轉一次 UTF-8，BIG5 的中�
   expect_equal(r$encoding, "BIG5")
   expect_equal(r$data$note, "語言")
   expect_true(all(validUTF8(r$data$note)))
+})
+
+test_that("空檔、只有欄名的檔：清楚的錯誤", {
+  dir <- withr::local_tempdir()
+  writeLines(character(), file.path(dir, "empty.csv"))
+  writeLines(paste(KITSUI_REQUIRED, collapse = ","), file.path(dir, "head.csv"))
+  expect_error(kitsui_read_uploads(data.frame(name = "empty.csv",
+                                              datapath = file.path(dir, "empty.csv"))),
+               "empty.csv 是空的檔案", class = "kit_user_error")
+  expect_error(kitsui_read_uploads(data.frame(name = "head.csv",
+                                              datapath = file.path(dir, "head.csv"))),
+               "head.csv 只有欄名，沒有作答的列", class = "kit_user_error")
+})
+
+test_that("缺欄位時看得出原因：分號分隔、欄名大寫", {
+  a <- kitsui_example_data()
+  dir <- withr::local_tempdir()
+  readr::write_delim(a, file.path(dir, "semi.csv"), delim = ";")
+  up <- kitsui_read_uploads(data.frame(name = "semi.csv", datapath = file.path(dir, "semi.csv")))
+  expect_match(kitsui_data_select(up$data, "M03 3")$problems, "看起來是用分號（;）分隔")
+  names(a) <- toupper(names(a))
+  expect_match(kitsui_data_select(a, "M03 3")$problems, "欄名要全部小寫.*「VISIT_ID」")
+  expect_equal(kitsui_missing_hint(c("visit_id", "x")), "")
+})
+
+test_that("約定以外的欄：讀檔與選資料時拿掉，校準不會因為它們停下來", {
+  a <- kitsui_demo("M03", 3, "lan")
+  a$note <- seq_len(nrow(a))
+  files <- upload_files(list(a), "a.csv")
+  up <- kitsui_read_uploads(files)
+  expect_equal(up$dropped, "note")
+  expect_false("note" %in% names(up$data))
+  ck <- kitsui_data_select(a, "M03 3")
+  expect_equal(ck$dropped, "note")
+  expect_false("note" %in% names(ck$df))
+  expect_match(kitsui_note_dropped("note"), "已經拿掉：note")
+  expect_length(kitsui_note_dropped(character()), 0)
+  r <- suppressMessages(kitsui_round(ck$df, kitsui_fixed_empty(), "R1"))
+  expect_true(r$ok)
+})
+
+test_that("wave_m 空白的列：全部都勾時也不放進來，橘色提醒", {
+  d <- kitsui_demo("M03", c(3, 6), "lan")
+  d$wave_m[c(1, 51)] <- NA
+  ck <- kitsui_data_select(d, kitsui_pick_choices(d)$value)
+  expect_false(anyNA(ck$df$wave_m))
+  expect_equal(nrow(ck$df), nrow(d) - 2)
+  expect_match(ck$notes, "wave_m 有 2 列是空白")
+  some <- kitsui_data_select(d, "M03 3")
+  expect_false(anyNA(some$df$wave_m))
+})
+
+test_that("domain、cohort 是空字串時和空白一樣擋下來", {
+  d <- kitsui_demo("M03", 3, "lan")
+  d$domain[1] <- ""
+  expect_error(kitsui_check_data(d), "domain 或 cohort 有空白", class = "kit_user_error")
+})
+
+test_that("看起來是遺漏碼的分數：簡短提醒，指到 kitJoin ②", {
+  d <- kitsui_demo("M03", 3, "lan")
+  ids <- unique(d$item_id)
+  d$item_score[d$item_id == ids[1]][1:3] <- c(98, 99, 98)
+  d$item_score[d$item_id == ids[2]][1] <- 7777
+  note <- kitsui_note_codes(d)
+  expect_match(note, "^2 題有看起來是遺漏碼的分數")
+  expect_match(note, "這些值是：98、99、7777。")
+  expect_match(note, "kitJoin「② 遺漏值轉 NA」")
+  expect_length(kitsui_note_codes(kitsui_demo("M03", 3, "lan")), 0)
+  # 0–100 分這種連續的分數不算
+  e <- tibble::tibble(item_id = "p", item_score = 0:100)
+  expect_length(kitsui_note_codes(e), 0)
+  # 分數不連續的說明寫成一段，不列出 90 個數字
+  expect_equal(kitsui_runs(c(4:97, 99)), "4–97、99")
+  expect_equal(kitsui_runs(c(1, 2, 5)), "1、2、5")
+  p <- kitsui_score_problem("x", c(0, 1, 2, 3, 98))
+  expect_equal(p$detail, "x 分數不連續，沒有人得 4–97 分（分數 0、1、2、3、98）")
 })
