@@ -41,6 +41,11 @@ test_that("換算路線與找人", {
   expect_equal(routes$route[routes$bank == "motor M03"], "motor M03 → D")
   expect_equal(routes$final_scale, c("D", "D"))
   expect_equal(routes$data[routes$bank == "lan M36"], "lan M36（36、48 個月）")
+  # 波次單位是年時，data 也寫年
+  fy <- lk$fixed
+  fy$version$wave_unit <- "years"
+  ry <- kitsui_score_routes(fy, out$subj, r8$round$plan)
+  expect_equal(ry$data[ry$bank == "lan M36"], "lan M36（36、48 年）")
   # 沒有借用另一世代題庫：沒有說明
   expect_true(all(is.na(routes$note)))
   # 沒有 plan 時 data 就是題庫自己

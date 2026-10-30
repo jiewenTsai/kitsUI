@@ -442,7 +442,8 @@ mod_data_server <- function(id, goto, handover = NULL) {
         }
       )))
       # 通過比例照固定檔的通過步驟（示範資料、沒有固定檔時每題都是 1）
-      plot(kitsui_resp_pass(r, kitsui_steps_vec(fixed()$pass_steps)))
+      p <- plot(kitsui_resp_pass(r, kitsui_steps_vec(fixed()$pass_steps)))
+      kitsui_wave_axis(p, kitsui_wave_unit(fixed()))
     })
     output$design <- plotly::renderPlotly(design_plot())
     output$design_steps <- shiny::renderUI(data_steps_note(fixed()$pass_steps))

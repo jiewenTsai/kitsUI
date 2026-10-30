@@ -177,7 +177,7 @@ kitsui_score_routes <- function(fixed, subj, plan = NULL) {
   key <- kitsui_link_key(fixed$links %||% tibble::tibble(kind = character()))
   purrr::imap(subj, \(x, s) {
     steps <- fixed$links$to_scale[match(kitsui_link_path(fixed, s), key)]
-    data <- kitsui_route_data(plan, s)
+    data <- kitsui_route_data(plan, s, kitsui_wave_unit(fixed))
     other <- setdiff(data$data_scale, s)
     note <- if (length(other) > 0) {
       paste0(paste(scale_cohort(other), collapse = "、"), " 的資料，借用另一世代題庫（", s, "）。",
@@ -190,14 +190,14 @@ kitsui_score_routes <- function(fixed, subj, plan = NULL) {
     purrr::list_rbind()
 }
 
-# 校準到這個題庫的資料量尺與波次（plan 沒有時就是題庫自己）
-kitsui_route_data <- function(plan, scale) {
+# 校準到這個題庫的資料量尺與波次（plan 沒有時就是題庫自己）；波次照單位寫（3、6 個月／2009、2011 年）
+kitsui_route_data <- function(plan, scale, unit = "months") {
   part <- if (!is.null(plan)) plan[plan$scale == scale, ]
   if (is.null(part) || nrow(part) == 0) return(tibble::tibble(data_scale = scale, text = scale))
   part |>
-    dplyr::summarise(waves = paste(sort(unique(.data$wave_m)), collapse = "、"),
+    dplyr::summarise(waves = kitsui_waves_text(sort(unique(.data$wave_m)), unit),
                      .by = "data_scale") |>
-    dplyr::mutate(text = paste0(.data$data_scale, "（", .data$waves, " 個月）"))
+    dplyr::mutate(text = paste0(.data$data_scale, "（", .data$waves, "）"))
 }
 
 #' 這一回合 ② 的 flag（check = "flag"）：量尺與原因

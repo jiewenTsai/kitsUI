@@ -43,6 +43,21 @@ kitsui_wave_unit_en <- function(unit = "months") {
   switch(unit, years = "years", waves = "wave number", "months")
 }
 
+#' kits 的圖（plotly）上寫著 "Wave (months)" 的軸，照波次單位改成 "Wave (years)" 等（例如 ① 的作答設計圖）
+#' @noRd
+kitsui_wave_axis <- function(p, unit = "months") {
+  if (unit == "months") return(p)
+  new <- paste0("Wave (", kitsui_wave_unit_en(unit), ")")
+  for (ax in c("xaxis", "yaxis")) {
+    title <- p$x$layout[[ax]]$title %||% p$x$layoutAttrs[[1]][[ax]]$title
+    if (is.list(title)) title <- title$text
+    if (identical(title, "Wave (months)")) {
+      p <- do.call(plotly::layout, c(list(p), stats::setNames(list(list(title = new)), ax)))
+    }
+  }
+  p
+}
+
 # 資料一定要有的欄位（資料約定）
 KITSUI_REQUIRED <- c("visit_id", "cohort", "wave_m", "item_id", "item_score", "domain")
 

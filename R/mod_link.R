@@ -23,7 +23,8 @@ mod_link_ui <- function(id) {
       class = "kit-hint",
       "三個分頁：未連結、內部連結後、外部連結後。",
       "每個波次畫中位數，線段是 P25 到 P75（kits_vertical()）。",
-      "連結後，同一個月齡（波次）各世代的點靠在一起，表示連結合理。",
+      "波次的單位是月時，連結後同一個月齡各世代的點靠在一起，表示連結合理。",
+      "單位是年或波次序號時，同一波各世代的年齡不同，點不一定會靠在一起。",
       "之前回合的點來自固定檔裡的各波次摘要，照現在的連結換算。",
       "所以這一回合只有一個世代時，也看得到連結得怎樣。"
     ),
@@ -582,8 +583,16 @@ vertical_caption <- function(stage, v) {
                            "不和自己量尺的波次連在一起。")
                   }),
     internal = paste0("內部連結後：", paste(setdiff(scales, v$scale), collapse = "、"), " 換到 ",
-                      v$scale, " 的量尺，同一個", kitsui_wave_word(unit),
-                      if (length(scales) > 2) "各世代" else "兩個世代", "的點應該靠在一起。"),
+                      v$scale, " 的量尺，",
+                      if (unit == "months") {
+                        paste0("同一個月齡", if (length(scales) > 2) "各世代" else "兩個世代",
+                               "的點應該靠在一起。")
+                      } else {
+                        paste0("可以直接比。x 軸是", kitsui_wave_word(unit), "，同一",
+                               if (unit == "years") "年" else "波", "各世代的年齡不同，",
+                               "所以點不一定會靠在一起（例如年紀較大的世代分數本來就可能比較高）。",
+                               "連結合不合理，請看上面的內部連結圖與檢查，或比較年齡相同的點。")
+                      }),
     external = "外部連結後：各世代都換到 D，相對位置和內部連結後相同。"
   )
   if (!any(v$table$source == "earlier")) return(text)

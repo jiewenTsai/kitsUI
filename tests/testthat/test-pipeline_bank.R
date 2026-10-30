@@ -169,7 +169,21 @@ test_that("垂直連結圖：單位不是月時 x 軸是波次與單位；沒有
   vy <- kitsui_verticals(two$round, two$df, fx, "lan")
   py <- plotly::plotly_build(kitsui_vertical_plot(vy$internal))
   expect_equal(title(py), "Wave (years)")
-  expect_match(vertical_caption("internal", vy$internal), "同一個年兩個世代的點")
+  cap <- vertical_caption("internal", vy$internal)
+  expect_match(cap, "同一年各世代的年齡不同")
+  expect_no_match(cap, "應該靠在一起")
+  expect_match(vertical_caption("internal", vs$internal), "同一個月齡兩個世代的點應該靠在一起")
+  # ① 的作答設計圖：kits 寫 "Wave (months)" 的軸照單位改
+  rp <- plot(kitsui_resp(two$df, "lan M03"))
+  axis_titles <- \(p) {
+    b <- plotly::plotly_build(p)$x$layout
+    vapply(c("xaxis", "yaxis"), \(a) { t <- b[[a]]$title; if (is.list(t)) t$text %||% "" else t %||% "" }, "")
+  }
+  expect_true("Wave (months)" %in% axis_titles(rp))
+  expect_identical(kitsui_wave_axis(rp, "months"), rp)
+  yr <- axis_titles(kitsui_wave_axis(rp, "years"))
+  expect_true("Wave (years)" %in% yr)
+  expect_false("Wave (months)" %in% yr)
   raw <- list(`a M1` = data.frame(wave_m = 1), `a M2` = data.frame(wave_m = 2),
               `a M3` = data.frame(wave_m = 2))
   expect_null(kitsui_vertical_no_common(raw))
