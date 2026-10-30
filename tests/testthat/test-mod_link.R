@@ -29,9 +29,9 @@ test_that("內部連結與外部連結各做一次，回傳加上連結的固定
     out <- session$returned()
     expect_equal(out$links[["lan M36"]]$to_scale, "lan M03")
     expect_equal(coef(out$links[["lan M36"]]), coef(linked()$internal))
-    expect_match(output$internal_status$html, "這一輪剛做好")
+    expect_match(output$internal_status$html, "這一回合剛做好")
     expect_false(grepl("不能復原", output$internal_status$html))
-    # 這一輪沒有 lan M03 的作答：獨立檢核做不了，說明原因
+    # 這一回合沒有 lan M03 的作答：獨立檢核做不了，說明原因
     html <- output$internal_result$html
     expect_match(html, "這次不能做")
     # 公式與係數直接寫在畫面上；圖還沒畫好時有一句「正在畫」
@@ -63,22 +63,22 @@ test_that("內部連結與外部連結各做一次，回傳加上連結的固定
     expect_false(grepl("object 1", output$d_checks))
     expect_match(output$d_result$html, "外部連結的檢查")
     expect_match(output$code, "kits_link_screen")
-    # R 程式讀真的固定檔檔名（這一輪做的連結在 ④ 下載的新固定檔）
+    # R 程式讀真的固定檔檔名（這一回合做的連結在 ④ 下載的新固定檔）
     expect_match(output$code, "kitsui_fixed_r8.zip")
     expect_false(grepl("fixed_set.zip", output$code))
-    expect_match(output$links_table, "這一輪")
+    expect_match(output$links_table, "這一回合")
     expect_match(output$links_table, "> round </th")
     expect_match(output$links_table, "外部連結")
     expect_match(output$links_table, "內部連結")
     expect_match(output$links_table, "r8")
-    expect_match(output$coverage, "建立外部連結時（第 r8 輪）")
+    expect_match(output$coverage, "建立外部連結時（第 r8 回合）")
     expect_match(output$coverage, "external_link")
     expect_match(output$next_step$html, "go_score")
     expect_match(output$next_step$html, "固定檔裡有 2 條連結")
     # 錨題數之後可能變多，但凍結的連結不重新估計
     expect_match(output$d_status$html, "錨題數可能變多")
     expect_match(output$d_status$html, "不會用新的錨題重新估計")
-    # 這一輪每個領域只有一個世代：垂直連結不畫，一句話說明
+    # 這一回合每個領域只有一個世代：垂直連結不畫，一句話說明
     expect_match(output$vertical_ui$html, "只有一個世代")
   })
 })
@@ -92,15 +92,15 @@ test_that("固定檔裡已有的連結：凍結、沿用，不給建立的按鈕
   shiny::testServer(mod_link_server, args = args, {
     session$setInputs(internal_scale = "lan M36")
     expect_equal(internal()$state, "frozen")
-    expect_match(output$internal_status$html, "之前的輪")
-    expect_match(output$internal_status$html, "這一輪開始時的固定檔")
+    expect_match(output$internal_status$html, "之前的回合")
+    expect_match(output$internal_status$html, "這一回合開始時的固定檔")
     expect_false(grepl("上傳", output$internal_status$html))
-    # 之前的輪做的連結：R 程式讀上傳的固定檔
+    # 之前的回合做的連結：R 程式讀上傳的固定檔
     expect_match(output$code, 'unzip\\("kitsui_fixed_r7.zip"')
     expect_false(grepl("make_internal", output$internal_status$html))
     expect_equal(d_state()$state, "frozen")
     expect_identical(session$returned()$fixed, lk$fixed)
-    expect_match(output$links_table, "之前的輪")
+    expect_match(output$links_table, "之前的回合")
   })
 })
 
@@ -117,7 +117,7 @@ test_that("錨題不到 3 個時不能做外部連結，顯示錨題數與 kits 
   })
 })
 
-test_that("兩個世代都在這一輪時可以做獨立檢核；下載連結圖", {
+test_that("兩個世代都在這一回合時可以做獨立檢核；下載連結圖", {
   skip_on_cran()
   withr::local_envvar(RSTUDIO_PANDOC = "/opt/quarto/bin/tools/x86_64")
   both <- both_cohorts()
@@ -162,7 +162,7 @@ test_that("兩個世代都在這一輪時可以做獨立檢核；下載連結圖
   })
 })
 
-test_that("做連結時分數不重算：垂直連結的分數只跟這一輪與領域有關", {
+test_that("做連結時分數不重算：垂直連結的分數只跟這一回合與領域有關", {
   both <- both_cohorts()
   args <- link_args(both$round, both$df, kitsui_fixed_empty())
   shiny::testServer(mod_link_server, args = args, {

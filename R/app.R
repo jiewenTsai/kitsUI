@@ -60,7 +60,7 @@ kit_server <- function(input, output, session) {
   goto <- function(tab) {
     shiny::updateTabsetPanel(session, "tabs", selected = tab)
   }
-  # ④ 交給 ① 的固定檔（這次連線接著做下一輪）；n 讓同一個固定檔再交一次也算數
+  # ④ 交給 ① 的固定檔（這次連線接著做下一回合）；n 讓同一個固定檔再交一次也算數
   handover <- shiny::reactiveVal(NULL)
   next_round <- function(fixed, round) {
     n <- (shiny::isolate(handover())$n %||% 0) + 1
@@ -71,7 +71,7 @@ kit_server <- function(input, output, session) {
   items <- mod_items_server("items", data, goto)
   links <- mod_link_server("link", data, items, goto)
   mod_score_server("score", data, items, links, goto, next_round)
-  # 有這一輪的結果時，離開頁面前先問一次（kit_js()）
+  # 有這一回合的結果時，離開頁面前先問一次（kit_js()）
   shiny::observe({
     session$sendCustomMessage("kit_unload_guard", !is.null(items()))
   })

@@ -4,7 +4,7 @@ options(kitsui.waves_delay = 0)
 # 測試共用的資料：算一次存起來（各測試檔共用）
 pipeline_cache <- new.env()
 
-# kitm03 lan 3-48 個月，一波一輪（同 chain_v.R）
+# kitm03 lan 3-48 個月，一波一回合（同 chain_v.R）
 lan_chain <- function() {
   if (is.null(pipeline_cache$chain)) {
     fixed <- kitsui_fixed_empty()
@@ -19,7 +19,7 @@ lan_chain <- function() {
   pipeline_cache$chain
 }
 
-# 第 8 輪：lan M36（36、48 個月）與 motor M03（3 個月），兩個量尺都是自由校準
+# 第 8 回合：lan M36（36、48 個月）與 motor M03（3 個月），兩個量尺都是自由校準
 round8 <- function() {
   if (is.null(pipeline_cache$round8)) {
     df <- dplyr::bind_rows(kitsui_demo("M36", c(36, 48), "lan"), kitsui_demo("M03", 3, "motor"))
@@ -29,7 +29,7 @@ round8 <- function() {
   pipeline_cache$round8
 }
 
-# 第 8 輪之後做好三條連結（lan 內部、D）
+# 第 8 回合之後做好三條連結（lan 內部、D）
 linked <- function() {
   if (is.null(pipeline_cache$linked)) {
     fixed <- round8()$round$fixed
@@ -40,7 +40,7 @@ linked <- function() {
   pipeline_cache$linked
 }
 
-# 兩個世代同一輪（M03、M36 的 3、36、48 個月）：內部連結可以做獨立檢核
+# 兩個世代同一回合（M03、M36 的 3、36、48 個月）：內部連結可以做獨立檢核
 both_cohorts <- function() {
   if (is.null(pipeline_cache$both)) {
     df <- kitsui_demo(waves = c(3, 36, 48))
@@ -50,7 +50,7 @@ both_cohorts <- function() {
   pipeline_cache$both
 }
 
-# 兩個世代、兩個領域同一輪（3、6、12、36、48 個月），做好內部連結與 D（截圖的情境）
+# 兩個世代、兩個領域同一回合（3、6、12、36、48 個月），做好內部連結與 D（截圖的情境）
 two_cohorts_linked <- function() {
   if (is.null(pipeline_cache$two)) {
     df <- kitsui_demo(waves = c(3, 6, 12, 36, 48))
@@ -71,8 +71,8 @@ sim_long <- function(X, wave_m = 1) {
   )
 }
 
-# 借題庫：第 1 輪 motor M03 3-48 個月、motor M36 36、48、84、96 個月（都是自由校準），
-# 做好 motor 的內部連結與外部連結；第 2 輪 M03 的 60 個月（自己的題庫只涵蓋 3-48）
+# 借題庫：第 1 回合 motor M03 3-48 個月、motor M36 36、48、84、96 個月（都是自由校準），
+# 做好 motor 的內部連結與外部連結；第 2 回合 M03 的 60 個月（自己的題庫只涵蓋 3-48）
 borrow_chain <- function() {
   if (is.null(pipeline_cache$borrow)) {
     df1 <- dplyr::bind_rows(kitsui_demo("M03", c(3, 6, 12, 18, 24, 36, 48), "motor"),
@@ -87,7 +87,7 @@ borrow_chain <- function() {
   pipeline_cache$borrow
 }
 
-# 模擬資料：12 題 a1-a12 的題庫（第 1 輪自由校準）
+# 模擬資料：12 題 a1-a12 的題庫（第 1 回合自由校準）
 sim_bank <- function() {
   if (is.null(pipeline_cache$sim_bank)) {
     betas <- purrr::set_names(as.list(seq(-2, 2, length.out = 12)), paste0("a", 1:12))

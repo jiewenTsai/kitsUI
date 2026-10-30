@@ -40,10 +40,10 @@ test_that("分數表有 visit_id、subj_id、round、bank、ability、ability_se
     expect_equal(csv$ability, s$ability)
     expect_true(all(c("ability", "ability_se", "d_score", "d_score_se") %in% names(csv)))
 
-    # 分數對照表：ability、ability_int、d_score；預設不列沒有人的原始分數
+    # 分數對照表：ability、ability_linked、d_score；預設不列沒有人的原始分數
     session$setInputs(subj_scale = "lan M36")
     tab <- subj_table()
-    expect_true(all(c("wave_m", "raw", "ability", "ability_int", "d_score", "d_score_se",
+    expect_true(all(c("wave_m", "raw", "ability", "ability_linked", "d_score", "d_score_se",
                       "se_total") %in%
                       names(tab)))
     expect_true(any(tab$n == 0))
@@ -72,13 +72,15 @@ test_that("分數表有 visit_id、subj_id、round、bank、ability、ability_se
     expect_false(grepl("fixed_set.zip", code))
     expect_match(code, "kits_item_table")
 
-    # 題目表：換到 D，通過年齡用這一輪的作答；沒有內容的欄不列出
+    # 題目表：換到 D，通過年齡用這一回合的作答；沒有內容的欄不列出
     session$setInputs(item_scale = "lan M36")
     expect_s3_class(item_table(), "data.frame")
     expect_true(all(c("item_id", "d_threshold", "age50") %in% names(item_table())))
     expect_false(any(c("domain", "column", "stem", "DIF") %in% names(item_table())))
     expect_match(output$item_table_note$html, "kits_dif")
-    expect_match(output$item_table_scale, "在 D 的量尺上")
+    expect_match(output$item_table_scale$html, "題目依 d_threshold 由小到大")
+    expect_true(all(KITSUI_ITEM_THRESHOLDS %in% names(item_table())) ||
+                  all(c("ability_threshold", "d_threshold") %in% names(item_table())))
     csv <- readr::read_csv(output$item_table_dl, show_col_types = FALSE)
     expect_equal(csv$d_threshold, item_table()$d_threshold)
     expect_match(output$checks, "share of misfit")
@@ -97,7 +99,7 @@ test_that("算完分數後：下載分數表與新的固定檔放在一起；zip
     expect_match(html, "fixed_dl")
     expect_match(html, "不會重算")
     expect_match(html, "kitsui_fixed_r8.zip")
-    expect_match(html, "下一輪要上傳")
+    expect_match(html, "下一回合要上傳")
     zip_path <- output$fixed_dl
     back <- kitsui_read_fixed(zip_path)
     expect_equal(back$bank, lk$fixed$bank)
@@ -106,7 +108,7 @@ test_that("算完分數後：下載分數表與新的固定檔放在一起；zip
   })
 })
 
-test_that("用這一輪的固定檔開始下一輪：把含連結的固定檔交出去", {
+test_that("用這一回合的固定檔開始下一回合：把含連結的固定檔交出去", {
   r8 <- round8()
   lk <- linked()
   got <- NULL
@@ -114,7 +116,7 @@ test_that("用這一輪的固定檔開始下一輪：把含連結的固定檔交
   args$next_round <- function(fixed, round) got <<- list(fixed = fixed, round = round)
   shiny::testServer(mod_score_server, args = args, {
     session$setInputs(run = 1)
-    expect_match(output$done$html, "用這一輪的固定檔開始下一輪")
+    expect_match(output$done$html, "用這一回合的固定檔開始下一回合")
     session$setInputs(next_round = 1)
     expect_identical(got$fixed, lk$fixed)
     expect_equal(got$round, "r8")

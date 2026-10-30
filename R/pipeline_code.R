@@ -12,7 +12,7 @@ kitsui_r <- function(x) {
 kitsui_link_var <- function(name) paste0("link_", gsub("[^A-Za-z0-9]", "_", name))
 
 # 讀資料的程式：上傳的檔案（一個或好幾個，readr 會接起來）或示範資料（kitm03、kitm36），
-# 再選這一輪：picks（勾到的世代 × 波次，cohort、wave_m）有給時照組合選（semi_join），
+# 再選這一回合：picks（勾到的世代 × 波次，cohort、wave_m）有給時照組合選（semi_join），
 # 沒有時照波次選（waves）
 kitsui_code_read <- function(data_file = NULL, waves = NULL, picks = NULL) {
   read <- if (is.null(data_file)) {
@@ -32,7 +32,7 @@ kitsui_code_read <- function(data_file = NULL, waves = NULL, picks = NULL) {
 kitsui_code_picks <- function(picks) {
   picks <- dplyr::distinct(as.data.frame(picks)[c("cohort", "wave_m")])
   c(
-    "# 這一輪勾的世代 × 波次",
+    "# 這一回合勾的世代 × 波次",
     sprintf("picks <- tibble(cohort = %s,", kitsui_r(as.character(picks$cohort))),
     sprintf("                wave_m = %s)", kitsui_r(as.numeric(picks$wave_m))),
     'responses <- semi_join(responses, picks, by = c("cohort", "wave_m"))'
@@ -54,12 +54,12 @@ kitsui_code_data <- function(scale, data_file = NULL, waves = NULL, picks = NULL
   ), collapse = "\n")
 }
 
-#' 一輪的程式碼：讀資料、一個量尺的矩陣，自由校準或（有題庫時）偏移把關 + 固定校準
+#' 一回合的程式碼：讀資料、一個量尺的矩陣，自由校準或（有題庫時）偏移把關 + 固定校準
 #'
-#' @param fixed 上一輪的固定檔（決定要自由還是固定校準）；fixed_file 是它的 zip 檔名
+#' @param fixed 上一回合的固定檔（決定要自由還是固定校準）；fixed_file 是它的 zip 檔名
 #' @param data_file 資料檔名（一個或好幾個）；NULL 時用示範資料 kitm03、kitm36；
-#'   waves 是這一輪的波次；picks（cohort、wave_m 的表）有給時照勾到的世代 × 波次選
-#' @param plan NULL 或這一輪的 kitsui_round_plan()：有借用另一世代題庫（或一個資料量尺的波次分到
+#'   waves 是這一回合的波次；picks（cohort、wave_m 的表）有給時照勾到的世代 × 波次選
+#' @param plan NULL 或這一回合的 kitsui_round_plan()：有借用另一世代題庫（或一個資料量尺的波次分到
 #'   不同題庫）時，矩陣用校準到這個量尺的資料量尺與波次
 #' @noRd
 kitsui_code_round <- function(scale, round_label, fixed = NULL, fixed_file = "fixed_set.zip",
@@ -158,34 +158,33 @@ kitsui_code_link <- function(fixed, name, fixed_file = "fixed_set.zip") {
   ), collapse = "\n")
 }
 
-#' 一條連結存在哪一個固定檔：之前的輪做的在這一輪開始時的固定檔（上傳的 zip）；
-#' 這一輪做的（或固定檔是這次連線交過來的）在 ④ 下載的新固定檔
-#' @param earlier 這一輪開始時固定檔裡的連結名稱；fixed_file 是上傳的 zip 檔名（沒有時 NULL）
+#' 一條連結存在哪一個固定檔：之前的回合做的在這一回合開始時的固定檔（上傳的 zip）；
+#' 這一回合做的（或固定檔是這次連線交過來的）在 ④ 下載的新固定檔
+#' @param earlier 這一回合開始時固定檔裡的連結名稱；fixed_file 是上傳的 zip 檔名（沒有時 NULL）
 #' @noRd
 kitsui_link_file <- function(name, earlier, fixed_file, round_label) {
   if (name %in% earlier && length(fixed_file) == 1) fixed_file else kitsui_fixed_name(round_label)
 }
 
-#' 評分的程式碼：接在一輪（X、item）與連結的程式碼後面
+#' 評分的程式碼：接在一回合（X、item）與連結的程式碼後面
 #' @param cohorts 校準到這個量尺的資料的世代（借用另一世代題庫時不只量尺自己的世代）
 #' @noRd
 kitsui_code_score <- function(fixed, scale, cohorts = scale_cohort(scale)) {
   path <- kitsui_link_var(kitsui_link_path(fixed, scale))
   links <- paste(path, collapse = ", ")
   convert <- if (length(path) > 0) sprintf("scores <- kits_convert(scores, %s)", links)
-  thr <- if (length(path) > 0) sprintf("thr <- kits_convert(item, %s)", links) else "thr <- item"
   # 對照表：在校準的量尺上做一次，換算直接換這張表（不用重解每個原始分數）
   inner <- setdiff(path, kitsui_link_var("D"))
   table <- c(
     if (length(inner) > 0) {
-      sprintf("raw_theta <- kits_convert(raw_table, %s) # theta：經過內部連結",
+      sprintf("raw_theta <- kits_convert(raw_table, %s) # ability_linked：經過內部連結",
               paste(inner, collapse = ", "))
     } else {
-      "raw_theta <- raw_table # theta：參照世代自己的量尺，不用換"
+      "raw_theta <- raw_table # 參照世代自己的量尺，不用換"
     },
     "raw_theta",
     if (kitsui_link_var("D") %in% path) {
-      c(sprintf("raw_d <- kits_convert(raw_table, %s) # d：再經過外部連結", links), "raw_d")
+      c(sprintf("raw_d <- kits_convert(raw_table, %s) # d_score：再經過外部連結", links), "raw_d")
     }
   )
   paste(c(
@@ -194,12 +193,19 @@ kitsui_code_score <- function(fixed, scale, cohorts = scale_cohort(scale)) {
     "raw_table <- kits_subj_table(scores)",
     table,
     convert,
-    "# 題目表：門檻和分數用同一組連結；通過年齡用這一輪的作答（沒有常模）",
-    thr,
+    "# 題目表：D 欄在校準的量尺上（ability_threshold）；通過年齡用這一回合的作答（沒有常模）",
     sprintf("ages <- filter(persons, cohort %%in%% %s)", kitsui_r(cohorts)),
     'ages <- ages[match(rownames(X), ages$visit_id), c("visit_id", "age_m", "wave_m")]',
-    "item_table <- kits_item_table(thr, data = cbind(ages, X))",
-    "item_table"
+    "item_table <- kits_item_table(item, data = cbind(ages, X))",
+    "item_table",
+    # 同一題的門檻用分數的連結換到另外兩把尺
+    if (length(inner) > 0) {
+      sprintf("kits_item_table(kits_convert(item, %s)) # D 欄：ability_linked_threshold",
+              paste(inner, collapse = ", "))
+    },
+    if (kitsui_link_var("D") %in% path) {
+      sprintf("kits_item_table(kits_convert(item, %s)) # D 欄：d_threshold", links)
+    }
   ), collapse = "\n")
 }
 

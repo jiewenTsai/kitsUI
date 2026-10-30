@@ -1,6 +1,6 @@
 # 固定檔（fixed set）：一個 zip，寫了就不再改
 #   VERSION（DCF）、bank.csv、versions.csv、links.csv、checks.csv、waves.csv
-#   bank.csv、links.csv 與 waves.csv 的 round 是加進來的那一輪（題目步驟、連結、波次）
+#   bank.csv、links.csv 與 waves.csv 的 round 是加進來的那一回合（題目步驟、連結、波次）
 
 # 各表的欄位與型別（readr 的縮寫：c 文字、i 整數、d 數字）
 KITSUI_FIXED_COLS <- list(
@@ -42,19 +42,19 @@ kitsui_version <- function() {
 
 #' 寫出固定檔（zip）
 #'
-#' 有量尺停下來的一輪（attr(fixed, "stopped")）不能寫出。
+#' 有量尺停下來的一回合（attr(fixed, "stopped")）不能寫出。
 #' 數字以 17 位有效數字寫出，讀回來與原值完全相同（連結才能一模一樣地重建）。
 #' @noRd
 kitsui_write_fixed <- function(fixed, zip_path) {
   stopped <- attr(fixed, "stopped")
   if (length(stopped) > 0) {
-    kit_abort("這一輪有量尺停下來（", paste(stopped, collapse = "、"), "），不產生新的固定檔。",
-              "請看檢查表的原因，處理後重跑這一輪。")
+    kit_abort("這一回合有量尺停下來（", paste(stopped, collapse = "、"), "），不產生新的固定檔。",
+              "請看檢查表的原因，處理後重跑這一回合。")
   }
   dir <- file.path(tempfile("fixed"), "fixed_set")
   dir.create(dir, recursive = TRUE)
   write.dcf(kitsui_dcf(fixed), file.path(dir, "VERSION"), keep.white = "Sources")
-  # 給人看的說明（每個檔案是什麼、下一輪怎麼用）；讀固定檔時不讀它
+  # 給人看的說明（每個檔案是什麼、下一回合怎麼用）；讀固定檔時不讀它
   writeLines(kitsui_fixed_readme(fixed), file.path(dir, "README.txt"), useBytes = TRUE)
   for (name in names(KITSUI_FIXED_COLS)) {
     exact <- dplyr::mutate(fixed[[name]], dplyr::across(
@@ -137,7 +137,7 @@ kitsui_from_dcf <- function(dcf) {
   list(version = version, sources = sources)
 }
 
-#' 這一輪資料檔的 md5（給 VERSION）；示範資料沒有檔案，算資料本身的 md5
+#' 這一回合資料檔的 md5（給 VERSION）；示範資料沒有檔案，算資料本身的 md5
 #'
 #' @param files 檔案路徑，名稱為顯示的檔名；NULL 時用 df
 #' @noRd

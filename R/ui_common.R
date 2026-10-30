@@ -38,12 +38,12 @@ kit_pandoc_notice <- function() {
                   KIT_PANDOC_MISSING)
 }
 
-#' 還沒有這一輪的題目校準：提醒，並連到 ②（按了切換分頁的是 input$go_items）
+#' 還沒有這一回合的題目校準：提醒，並連到 ②（按了切換分頁的是 input$go_items）
 #' @noRd
 ui_go_items <- function(ns) {
   ui_callout(
-    "還沒有這一輪的題目校準。請先到 ",
-    shiny::actionLink(ns("go_items"), "「② 題目校準」"), " 跑這一輪。",
+    "還沒有這一回合的題目校準。請先到 ",
+    shiny::actionLink(ns("go_items"), "「② 題目校準」"), " 跑這一回合。",
     warning = TRUE
   )
 }

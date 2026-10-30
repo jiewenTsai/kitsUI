@@ -1,7 +1,7 @@
-# 這一輪每個資料量尺（領域 × 世代）的每個波次，用哪一個量尺的題庫校準
+# 這一回合每個資料量尺（領域 × 世代）的每個波次，用哪一個量尺的題庫校準
 #   預設照月齡的規則（kitsui_plan_wave()）；② 可以手動改（bank_choice）
 
-#' 這一輪每個資料量尺的每個波次，用哪一個量尺的題庫
+#' 這一回合每個資料量尺的每個波次，用哪一個量尺的題庫
 #'
 #' 題庫「涵蓋」一個波次：固定檔的 waves.csv 裡，這個題庫校準過的波次最小到最大之間。
 #' 規則：
@@ -97,7 +97,7 @@ kitsui_apply_choice <- function(plan, fixed, bank_choice) {
   if (length(bank_choice) == 0) return(plan)
   extra <- setdiff(names(bank_choice), plan$data_scale)
   if (length(extra) > 0) {
-    kit_abort("這一輪的資料沒有 ", paste(extra, collapse = "、"), "，不能選它的題庫。")
+    kit_abort("這一回合的資料沒有 ", paste(extra, collapse = "、"), "，不能選它的題庫。")
   }
   for (s in names(bank_choice)) {
     to <- bank_choice[[s]]

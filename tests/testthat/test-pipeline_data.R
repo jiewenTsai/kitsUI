@@ -23,19 +23,19 @@ test_that("量尺清單與作答矩陣", {
   expect_setequal(rownames(X), unique(df$visit_id[df$cohort == "M03"]))
 })
 
-test_that("這一輪的名稱：預設 R1、R2…（下一個沒用過的）；只能有英文字母與數字", {
+test_that("這一回合的名稱：預設 R1、R2…（下一個沒用過的）；只能有英文字母與數字", {
   expect_equal(kitsui_default_label(), "R1")
   expect_equal(kitsui_default_label("R1"), "R2")
   expect_equal(kitsui_default_label(c("3", "6")), "R3")
   expect_equal(kitsui_default_label(c("R2", "x")), "R3")
   expect_equal(kitsui_default_label(c("a", "R2")), "R3")
   expect_length(kitsui_label_problem("r8", c("3", "6")), 0)
-  expect_match(kitsui_label_problem("第一輪"), "英文字母與數字")
+  expect_match(kitsui_label_problem("第一回合"), "英文字母與數字")
   expect_match(kitsui_label_problem("", "3"), "不能空白")
   expect_match(kitsui_label_problem("6", c("3", "6")), "重複")
 })
 
-test_that("這一輪的資料：選波次、每個量尺 kits_resp()，問題以中文列出", {
+test_that("這一回合的資料：選波次、每個量尺 kits_resp()，問題以中文列出", {
   data <- kitsui_demo("M03", c(3, 6), c("lan", "motor"))
   ck <- kitsui_data_check(data, "3", "3", kitsui_fixed_empty())
   expect_length(ck$problems, 0)
@@ -47,7 +47,7 @@ test_that("這一輪的資料：選波次、每個量尺 kits_resp()，問題以
   # 還沒勾：不是問題，是中性的提示
   none <- kitsui_data_check(data, character(), "3", NULL)
   expect_length(none$problems, 0)
-  expect_match(none$hint, "請勾這一輪的世代與波次")
+  expect_match(none$hint, "請勾這一回合的世代與波次")
   miss <- kitsui_data_check(dplyr::select(data, -"wave_m"), "3", "3", NULL)
   expect_match(miss$problems, "wave_m")
   fixed <- lan_chain()[["3"]]$fixed
@@ -157,25 +157,25 @@ test_that("選資料：只拿勾到的組合；全部都勾時不複製資料；
   expect_equal(ck$scales$scale, c("lan M03", "lan M36"))
   all <- kitsui_data_select(data, kitsui_pick_choices(data)$value)
   expect_identical(rlang::obj_address(all$df), rlang::obj_address(data))
-  expect_match(kitsui_data_select(data, character())$hint, "請勾這一輪的世代與波次")
+  expect_match(kitsui_data_select(data, character())$hint, "請勾這一回合的世代與波次")
   miss <- kitsui_data_select(dplyr::select(data, -"cohort"), "M03 3")
   expect_match(miss$problems, "cohort")
 })
 
-test_that("橘色提醒：波次已經校準過、固定檔不是最新的一輪、資料檔用過、得分不完整的題", {
+test_that("橘色提醒：波次已經校準過、固定檔不是最新的一回合、資料檔用過、得分不完整的題", {
   fixed <- lan_chain()[["6"]]$fixed
   plan <- kitsui_round_plan(kitsui_demo("M03", c(6, 12), "lan"), fixed)
   expect_match(kitsui_note_waves(plan, fixed),
-               "這些波次之前的輪已經校準過：lan M03 的 6 個月（第 6 輪）。")
+               "這些波次之前的回合已經校準過：lan M03 的 6 個月（第 6 回合）。")
   expect_length(kitsui_note_waves(kitsui_round_plan(kitsui_demo("M03", 12, "lan"), fixed),
                                   fixed), 0)
   expect_length(kitsui_note_stale(c("R1", "R2"), "R2"), 0)
   expect_length(kitsui_note_stale("R1", NULL), 0)
-  expect_match(kitsui_note_stale("R1", "R2"), "這個固定檔只到第 R1 輪，這次連線已經做到第 R2 輪")
+  expect_match(kitsui_note_stale("R1", "R2"), "這個固定檔只到第 R1 回合，這次連線已經做到第 R2 回合")
   expect_match(kitsui_note_stale(character(), "R2"), "現在沒有用固定檔")
   fixed$sources <- tibble::tibble(round = c("R1", "R2"), file = "a.csv", md5 = c("aa", "bb"))
   files <- tibble::tibble(file = c("new.csv", "old.csv"), rows = 1, md5 = c("cc", "bb"))
-  expect_equal(kitsui_note_sources(files, fixed), "old.csv：這個檔案在第 R2 輪用過。")
+  expect_equal(kitsui_note_sources(files, fixed), "old.csv：這個檔案在第 R2 回合用過。")
   expect_length(kitsui_note_sources(NULL, fixed), 0)
   probs <- tibble::tibble(scale = "lan M03", item_id = paste0("i", 1:14), problem = "no 0 score",
                           detail_zh = paste0("i", 1:14, " 沒有人得 0 分"))

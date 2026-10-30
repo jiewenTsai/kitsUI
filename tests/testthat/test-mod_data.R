@@ -1,4 +1,4 @@
-# ① 資料：示範資料、上傳、世代 × 波次、固定檔、這一輪的名稱、提醒
+# ① 資料：示範資料、上傳、世代 × 波次、固定檔、這一回合的名稱、提醒
 
 # 上傳用的檔案（fileInput 的格式）
 upload_input <- function(path, name) {
@@ -13,7 +13,7 @@ test_that("示範資料：預設什麼都不勾，只有中性的提示（不是
     session$setInputs(source = "demo", domains = "lan", round_label = "")
     expect_null(session$getReturned()())
     expect_null(output$problems)
-    expect_match(output$hint$html, "請勾這一輪的世代與波次")
+    expect_match(output$hint$html, "請勾這一回合的世代與波次")
     expect_false(grepl("alert-danger", output$hint$html))
     # 勾選框：一個世代一列，值是「世代 月齡」
     expect_match(output$pick_ui$html, 'value="M03 3"')
@@ -60,7 +60,7 @@ test_that("名稱：預設 R1；不合規時回傳 NULL 並用紅字說明；打
     session$setInputs(source = "demo", domains = "lan", waves = "M03 3", round_label = "")
     session$elapse(501)
     expect_equal(session$getReturned()()$round_label, "R1")
-    session$setInputs(round_label = "第一輪")
+    session$setInputs(round_label = "第一回合")
     expect_equal(session$getReturned()()$round_label, "R1")
     session$elapse(501)
     expect_null(session$getReturned()())
@@ -114,7 +114,7 @@ test_that("上傳 CSV；缺欄位時說明缺什麼", {
   })
 })
 
-test_that("上一輪的固定檔：讀入、顯示內容、改成固定校準、預設名稱是下一個 R", {
+test_that("上一回合的固定檔：讀入、顯示內容、改成固定校準、預設名稱是下一個 R", {
   zip <- withr::local_tempfile(fileext = ".zip")
   first <- suppressMessages(kitsui_round(kitsui_demo("M03", 3, "lan"), kitsui_fixed_empty(), "R1"))
   kitsui_write_fixed(first$fixed, zip)
@@ -206,7 +206,7 @@ test_that("得分不完整的題：橘色提醒（不是紅字），說 ② 怎�
     expect_match(html, "kit-callout-warn")
     expect_match(html, it)
     expect_match(html, "固定在題庫的值")
-    expect_match(html, "這一輪先不估它")
+    expect_match(html, "這一回合先不估它")
     expect_match(html, "作答的分數不會被改動")
     expect_null(output$problems)
     expect_false(grepl("資料沒問題", output$next_step$html))
@@ -214,7 +214,7 @@ test_that("得分不完整的題：橘色提醒（不是紅字），說 ② 怎�
   })
 })
 
-test_that("橘色提醒：波次之前的輪校準過、資料檔之前的輪用過", {
+test_that("橘色提醒：波次之前的回合校準過、資料檔之前的回合用過", {
   dir <- withr::local_tempdir()
   path <- file.path(dir, "m03_3.csv")
   readr::write_csv(kitsui_demo("M03", 3, "lan"), path)
@@ -229,15 +229,15 @@ test_that("橘色提醒：波次之前的輪校準過、資料檔之前的輪用
                       fixed_file = upload_input(zip, "fixed_R1.zip"))
     html <- output$notes$html
     expect_match(html, "kit-callout-warn")
-    expect_match(html, "這些波次之前的輪已經校準過：lan M03 的 3 個月（第 R1 輪）")
-    expect_match(html, "m03_3.csv：這個檔案在第 R1 輪用過")
+    expect_match(html, "這些波次之前的回合已經校準過：lan M03 的 3 個月（第 R1 回合）")
+    expect_match(html, "m03_3.csv：這個檔案在第 R1 回合用過")
     # 提醒不擋下一步
     expect_type(session$getReturned()(), "list")
     expect_match(output$next_step$html, "橘色的提醒")
   })
 })
 
-test_that("兩輪接著做：④ 交出的固定檔給 ①（沒有紅字），第二輪固定校準、舊的 beta 不動", {
+test_that("兩回合接著做：④ 交出的固定檔給 ①（沒有紅字），第二回合固定校準、舊的 beta 不動", {
   shiny::testServer(kit_app(), {
     session$setInputs(`data-source` = "demo", `data-domains` = "lan",
                       `data-waves` = "M03 3", `data-round_label` = "")
@@ -246,19 +246,19 @@ test_that("兩輪接著做：④ 交出的固定檔給 ①（沒有紅字），�
     expect_true(first$ok)
     expect_match(output$`data-fixed_choice`$html, "fixed_file")
 
-    # ④：用這一輪的固定檔開始下一輪
+    # ④：用這一回合的固定檔開始下一回合
     session$setInputs(`score-next_round` = 1)
     expect_equal(handover()$round, "R1")
-    expect_match(output$`data-fixed_choice`$html, "上一輪的固定檔：來自這次連線的第 R1 輪")
+    expect_match(output$`data-fixed_choice`$html, "上一回合的固定檔：來自這次連線的第 R1 回合")
     expect_false(grepl("fixed_file", output$`data-fixed_choice`$html))
-    expect_match(output$`data-fixed_info`$html, "這次連線的第 R1 輪")
+    expect_match(output$`data-fixed_info`$html, "這次連線的第 R1 回合")
     # 交過來時沒有紅字（世代與波次清空，只有中性的提示）
     session$setInputs(`data-waves` = character())
     expect_null(output$`data-problems`)
-    expect_match(output$`data-hint`$html, "請勾這一輪的世代與波次")
+    expect_match(output$`data-hint`$html, "請勾這一回合的世代與波次")
     expect_null(items())
 
-    # 第二輪：M03 6 個月，用交過來的固定檔
+    # 第二回合：M03 6 個月，用交過來的固定檔
     session$setInputs(`data-waves` = "M03 6", `data-round_label` = "")
     d <- data()
     expect_equal(d$fixed$version$rounds, "R1")
@@ -278,15 +278,15 @@ test_that("兩輪接著做：④ 交出的固定檔給 ①（沒有紅字），�
     expect_null(output$`data-notes`)
     session$setInputs(`data-fixed_clear` = 1)
     expect_match(output$`data-fixed_choice`$html, "fixed_file")
-    expect_match(output$`data-notes`$html, "現在沒有用固定檔，這次連線已經做到第 R2 輪")
+    expect_match(output$`data-notes`$html, "現在沒有用固定檔，這次連線已經做到第 R2 回合")
     zip <- withr::local_tempfile(fileext = ".zip")
     kitsui_write_fixed(first$fixed, zip)
     session$setInputs(`data-fixed_file` = upload_input(zip, "fixed_R1.zip"))
-    expect_match(output$`data-notes`$html, "這個固定檔只到第 R1 輪")
+    expect_match(output$`data-notes`$html, "這個固定檔只到第 R1 回合")
   })
 })
 
-test_that("第一輪的固定檔（④ 下載）：VERSION 有 kitsUI 的版本與第一輪的 Sources", {
+test_that("第一回合的固定檔（④ 下載）：VERSION 有 kitsUI 的版本與第一回合的 Sources", {
   shiny::testServer(kit_app(), {
     session$setInputs(`data-source` = "demo", `data-domains` = "lan",
                       `data-waves` = "M03 3", `data-round_label` = "")
@@ -382,7 +382,7 @@ test_that("頁面：「加一個新的波次」預設收起來；欄位表只有
   expect_length(guides, 2)
   expect_false(any(grepl("open", guides)))
   expect_equal(lengths(regmatches(html, gregexpr("kit-columns", html))), 1)
-  expect_match(html, "下載這一輪的資料（CSV）")
+  expect_match(html, "下載這一回合的資料（CSV）")
   expect_match(html, "下載欄位範例檔（CSV）")
   expect_false(grepl("（csv）|（html）|固定集|漂移|人次", html))
 })

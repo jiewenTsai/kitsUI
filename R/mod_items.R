@@ -1,4 +1,4 @@
-# ② 題目校準：跑一輪（自由校準或偏移把關 + 固定校準），每個量尺看結果
+# ② 題目校準：跑一回合（自由校準或偏移把關 + 固定校準），每個量尺看結果
 
 # 圖的種類
 ITEMS_PLOTS <- c(
@@ -10,7 +10,7 @@ ITEMS_PAGE <- 9
 # 要選題的圖
 ITEMS_PAGED <- c("category", "observed")
 # flag 的量尺怎麼辦（一句話，各處相同）
-ITEMS_FLAG_NOTE <- "被 flag 的量尺照樣往下做；請看偏移的題，必要時在下一輪處理。"
+ITEMS_FLAG_NOTE <- "被 flag 的量尺照樣往下做；請看偏移的題，必要時在下一回合處理。"
 
 #' @noRd
 mod_items_ui <- function(id) {
@@ -27,7 +27,7 @@ mod_items_ui <- function(id) {
         "橘底的「flag」是要特別看一下的量尺；它照常校準。",
         "沒有紅字時，按「下一步：連結」。"
       ),
-      output = "這一輪每個量尺的題目參數。新的題目步驟會加進固定檔的題庫。"
+      output = "這一回合每個量尺的題目參數。新的題目步驟會加進固定檔的題庫。"
     ),
     shiny::tags$details(
       shiny::tags$summary("進階設定（flag 的條件）"),
@@ -174,7 +174,7 @@ mod_items_server <- function(id, data, goto) {
            log = dplyr::filter(res$log, .data$scale == s), stopped = s %in% res$stopped)
     })
     persons <- shiny::reactive(kitsui_persons(shiny::req(used())$df))
-    # 這一輪這個量尺的分數：算一次存在 round()$memo（③、④ 也用）
+    # 這一回合這個量尺的分數：算一次存在 round()$memo（③、④ 也用）
     scores <- shiny::reactive({
       x <- sel()
       shiny::req(x$item)
@@ -315,7 +315,7 @@ items_result_ui <- function(ns, sc, pick) {
     shiny::selectInput(ns("scale"), "看哪一個量尺", sc, pick),
     shiny::uiOutput(ns("scale_info")),
     shiny::h4("偏移把關"),
-    hint("kits_drift() 先把這一輪的資料自由校準，得到每一步的門檻。",
+    hint("kits_drift() 先把這一回合的資料自由校準，得到每一步的門檻。",
          "再用 mean/sigma 畫一條線，把新的門檻換到題庫的量尺上，和題庫的門檻比。",
          sprintf("離線的距離大於 %s 個標準差（所有判斷的步驟算的）的步驟會被拿掉。", cut),
          "有步驟被拿掉的題就是 drift = TRUE，會換成新版本重新估計。",
@@ -332,11 +332,11 @@ items_result_ui <- function(ns, sc, pick) {
                 "能力值（ability）到這裡時，有一半的機會得到這個分數以上。"),
          "固定在題庫的值的步驟沒有標準誤，表上寫「固定」（csv 裡是 0）。"),
     dl(ns("dl_coef"), "下載題目參數（csv）"),
-    shiny::h4("這一輪的紀錄"),
+    shiny::h4("這一回合的紀錄"),
     hint("新版本、併分數、分數類別的問題、借用另一世代題庫、停下來的原因，都會寫進固定檔的 checks.csv。",
          "status 是 warn 的列要特別看一下。"),
     shiny::tags$div(class = "kit-table-scroll", shiny::tableOutput(ns("log"))),
-    dl(ns("dl_log"), "下載這一輪的紀錄（csv，所有量尺）"),
+    dl(ns("dl_log"), "下載這一回合的紀錄（csv，所有量尺）"),
     shiny::h4("圖"),
     shiny::radioButtons(ns("plot_type"), NULL, ITEMS_PLOTS, inline = TRUE),
     shiny::uiOutput(ns("plot_help")),
@@ -365,7 +365,7 @@ items_progress <- function(i, n, scale) {
   shiny::incProgress(1 / n, detail = sprintf("校準第 %d 個量尺（共 %d 個）：%s", i, n, scale))
 }
 
-#' 一輪的整體狀態：全部完成（綠），或有量尺停下來（紅，不能產生新的固定檔）；
+#' 一回合的整體狀態：全部完成（綠），或有量尺停下來（紅，不能產生新的固定檔）；
 #' 有分數類別問題的題時說怎麼處理；有 flag 的量尺時另一個橘底的框
 #' @noRd
 items_status <- function(res) {
@@ -379,8 +379,8 @@ items_status <- function(res) {
   shiny::tagList(
     ui_alert(
       "danger", "【有量尺停下來】",
-      " 這一輪不能產生新的固定檔。",
-      "請看下面的原因，處理後重跑這一輪。",
+      " 這一回合不能產生新的固定檔。",
+      "請看下面的原因，處理後重跑這一回合。",
       shiny::tags$ul(lapply(seq_len(nrow(why)), \(i) {
         kind <- if (why$check[i] == "error") "kits 出錯" else "停下來"
         shiny::tags$li(shiny::tags$strong(why$scale[i]), "（", kind, "）：", why$detail[i])
@@ -401,7 +401,7 @@ items_category_note <- function(log) {
     class = "kit-hint",
     sprintf("有 %d 題分數類別有問題（沒有人得 0 分、分數不連續或只有一種分數）。", kept + out),
     if (kept > 0) sprintf("題庫裡的 %d 題固定在題庫的值。", kept),
-    if (out > 0) sprintf("不在題庫裡的 %d 題這一輪不放進來。", out),
+    if (out > 0) sprintf("不在題庫裡的 %d 題這一回合不放進來。", out),
     "分數都沒有改；每一題的原因見下面各量尺的紀錄。"
   )
 }
@@ -482,7 +482,7 @@ items_scale_info <- function(x) {
         shiny::tags$li(sprintf("換成新版本：%d 題", n("new version"))),
         count("估不出來、固定在題庫的值", "no CML estimate, kept fixed"),
         count("分數類別有問題、固定在題庫的值", "category problem, kept fixed"),
-        count("分數類別有問題、這一輪不放進來", "category problem, left out"),
+        count("分數類別有問題、這一回合不放進來", "category problem, left out"),
         shiny::tags$li(sprintf("併分數（新步驟有缺口）：%d 題", n("capped")))
       )
     ),
@@ -496,7 +496,7 @@ items_scale_info <- function(x) {
   )
 }
 
-# 這一輪的紀錄表：加上 status（flag 是 warn；stop、error 是 error；其他 ok）
+# 這一回合的紀錄表：加上 status（flag 是 warn；stop、error 是 error；其他 ok）
 items_log_table <- function(log) {
   status <- dplyr::case_when(
     log$check == "flag" ~ "warn",
@@ -524,7 +524,7 @@ items_with_scale <- function(tab, scale) {
 
 # kits_drift() 不判斷的原因（reason）-> 中文
 ITEMS_REASON_ZH <- c(
-  "score range differs" = "這一輪有比題庫更高的分數：舊的步驟固定，新的步驟另外估",
+  "score range differs" = "這一回合有比題庫更高的分數：舊的步驟固定，新的步驟另外估",
   "no 0 score or one score only" = "沒有人得 0 分或只有一種分數：固定在題庫的值",
   "score gap" = "分數不連續：不判斷",
   "too little information" = "步驟上下的人不夠：固定在題庫的值"
@@ -538,7 +538,7 @@ ITEMS_REASON_ZH <- c(
 items_drift_rows <- function(x) {
   if (is.null(x$drift)) {
     note <- if (isTRUE(x$stopped)) {
-      "這個量尺停下來了，沒有偏移表。原因見上面的紅字與這一輪的紀錄。"
+      "這個量尺停下來了，沒有偏移表。原因見上面的紅字與這一回合的紀錄。"
     } else {
       "沒有題庫：自由校準，不用檢查偏移。"
     }

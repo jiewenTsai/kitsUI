@@ -1,11 +1,11 @@
-# 受試者評分：這一輪的資料，kits_subj() -> kits_convert(內部連結) -> kits_convert(外部連結)
-# 早先各輪的分數不重算（各輪自己存）
-# 校準量尺上的分數（kits_subj()）每輪只算一次（kitsui_own_scores()）；換算（kits_convert()）
+# 受試者評分：這一回合的資料，kits_subj() -> kits_convert(內部連結) -> kits_convert(外部連結)
+# 早先各回合的分數不重算（各回合自己存）
+# 校準量尺上的分數（kits_subj()）每回合只算一次（kitsui_own_scores()）；換算（kits_convert()）
 # 只是一條直線，幾乎不花時間。所以做了新的連結，只重做換算，不重算分數
 
 #' 一個量尺校準量尺上的分數（kits_subj()，還沒換算）
 #'
-#' 有 kitsui_own_scores()（pipeline_memo.R，每輪算一次存在 round$memo）時用它；
+#' 有 kitsui_own_scores()（pipeline_memo.R，每回合算一次存在 round$memo）時用它；
 #' 沒有時直接算。
 #' @param persons kitsui_persons(df)（① 算好的）
 #' @noRd
@@ -16,7 +16,7 @@ kitsui_own <- function(round, scale, persons) {
   kits::kits_subj(round$data[[scale]], round$items[[scale]], persons = persons)
 }
 
-#' 這一輪各量尺校準量尺上的分數
+#' 這一回合各量尺校準量尺上的分數
 #' @param progress NULL 或 function(i, n, scale)：每個量尺開始前呼叫一次（同 kitsui_round()）
 #' @return 具名 list（量尺）：kits_subj
 #' @noRd
@@ -44,15 +44,15 @@ kitsui_convert_path <- function(x, path) {
   if (length(path) == 0) x else do.call(kits::kits_convert, c(list(x), path))
 }
 
-#' 這一輪各量尺的分數，合成一張表
+#' 這一回合各量尺的分數，合成一張表
 #'
 #' @param round kitsui_round() 的結果（用 items 與 data：改名、併過的矩陣）
-#' @param df 這一輪的長格式資料（persons 是 NULL 時用來算列次資訊）
+#' @param df 這一回合的長格式資料（persons 是 NULL 時用來算列次資訊）
 #' @param fixed 固定檔（含已做的連結）
 #' @param links NULL 或 kitsui_links(fixed)（已經建好時傳進來，不重建）
 #' @param persons NULL 或 ① 算好的 kitsui_persons(df)
 #' @param progress NULL 或 function(i, n, scale)：每個量尺算分數前呼叫一次
-#' @param round_label 這一輪的名稱（分數表的 round 欄）
+#' @param round_label 這一回合的名稱（分數表的 round 欄）
 #' @return list(scores, subj, own)：scores 一列一列次（kitsui_score_rows()）；subj 是各量尺換算後的
 #'   kits_subj；own 是換算前（校準量尺上）的 kits_subj
 #' @noRd
@@ -114,7 +114,7 @@ KITSUI_SCORE_COLUMNS <- c(
   age_m = "施測時的實際月齡。",
   sex = "性別。",
   domain = "領域。",
-  round = "這一輪的名稱。",
+  round = "這一回合的名稱。",
   bank = "校準用的題庫（量尺）。借用另一世代題庫時，這裡是那個世代的量尺。",
   scale = "分數最後在哪一把尺上。",
   raw = "原始分數（答對或通過的步驟數）。",
@@ -171,7 +171,7 @@ kitsui_route_data <- function(plan, scale) {
     dplyr::mutate(text = paste0(.data$data_scale, "（", .data$waves, " 個月）"))
 }
 
-#' 這一輪 ② 的 flag（check = "flag"）：量尺與原因
+#' 這一回合 ② 的 flag（check = "flag"）：量尺與原因
 #' @return tibble：scale、detail（沒有 flag 時 0 列）
 #' @noRd
 kitsui_round_flags <- function(round) {
@@ -195,29 +195,53 @@ kitsui_score_search <- function(scores, text) {
 
 #' 一個量尺的題目表：kits_item_table()
 #'
-#' 門檻用和分數同一組連結換到最後的量尺（內部連結，有外部連結時再換到 D）。
-#' 通過年齡（age50）用這一輪的作答與月齡算。kitsUI 不做常模（kits_norms()），
-#' 所以沒有常模算的年齡（age_reach 等）。資料沒有 age_m 時只有 D。
-#' @param round kitsui_round() 的結果；df 是這一輪的長格式資料；fixed 是含連結的固定檔
+#' 表本身在校準的量尺上（D 欄是 ability 那把尺的門檻）。同一題的門檻再用和分數同一組連結
+#' 換到另外兩把尺：內部連結後（ability_linked）、再經過外部連結（D）；放在 attr(, "thresholds")。
+#' 通過年齡（age50）用這一回合的作答與月齡算，和量尺無關。kitsUI 不做常模（kits_norms()），
+#' 所以沒有常模算的年齡（age_reach 等）。
+#' @param round kitsui_round() 的結果；df 是這一回合的長格式資料；fixed 是含連結的固定檔
 #' @param links NULL 或 kitsui_links(fixed)；persons NULL 或 kitsui_persons(df)
 #' @noRd
 kitsui_item_table <- function(round, df, fixed, scale, links = NULL, persons = NULL) {
   item <- round$items[[scale]]
-  if (is.null(item)) kit_abort("這一輪沒有 ", scale, " 的校準結果。")
+  if (is.null(item)) kit_abort("這一回合沒有 ", scale, " 的校準結果。")
   links <- links %||% kitsui_links(fixed, kitsui_link_path(fixed, scale))
-  thr <- kitsui_convert_path(item, kitsui_path_links(fixed, links, scale))
   persons <- persons %||% kitsui_persons(df)
   ages <- kitsui_item_ages(round$data[[scale]], persons, kitsui_round_cohorts(round, scale))
-  kits::kits_item_table(thr, data = ages)
+  tab <- kits::kits_item_table(item, data = ages)
+  attr(tab, "thresholds") <- kitsui_item_thresholds(item, fixed, links, scale)
+  tab
 }
 
-#' 畫面上的題目表：拿掉每一列都沒有內容的欄
+#' 同一題的門檻換到內部連結後、外部連結後的量尺
+#' @return NULL 或 tibble：item_id，有內部連結時 ability_linked_threshold，換得到 D 時 d_threshold
+#' @noRd
+kitsui_item_thresholds <- function(item, fixed, links, scale) {
+  first <- function(path, name) {
+    tab <- kits::kits_item_table(kitsui_convert_path(item, path))
+    stats::setNames(tibble::tibble(item_id = tab$item_id, threshold = tab$D), c("item_id", name))
+  }
+  inner <- kitsui_path_links(fixed, links, scale, "internal")
+  full <- kitsui_path_links(fixed, links, scale)
+  parts <- list(
+    if (length(inner) > 0) first(inner, "ability_linked_threshold"),
+    if ("D" %in% kitsui_link_path(fixed, scale)) first(full, "d_threshold")
+  ) |>
+    purrr::compact()
+  if (length(parts) == 0) return(NULL)
+  purrr::reduce(parts, dplyr::full_join, by = "item_id")
+}
+
+#' 畫面上的題目表：三種門檻、拿掉每一列都沒有內容的欄
 #'
+#' 門檻：ability_threshold（校準的量尺，kits 的 D 欄）、ability_linked_threshold（內部連結後）、
+#' d_threshold（D）；依最後一把尺的門檻由小到大。
 #' domain、column 全是空白；stem 和 item_id 一樣（沒有給題目內容）；
 #' DIF 全是 "none" 或空白（kitsUI 不做 DIF）時拿掉。
 #' @return data.frame；attr(, "dropped") 是拿掉的欄
 #' @noRd
 kitsui_item_table_shown <- function(tab) {
+  extra <- attr(tab, "thresholds")
   tab <- as.data.frame(tab)
   empty <- \(x) all(is.na(x) | x == "")
   drop <- names(tab)[purrr::map_lgl(tab, empty)]
@@ -226,14 +250,22 @@ kitsui_item_table_shown <- function(tab) {
   }
   if ("DIF" %in% names(tab) && all(is.na(tab$DIF) | tab$DIF == "none")) drop <- c(drop, "DIF")
   drop <- unique(setdiff(drop, c("item_id", "D")))
-  # 依 D（第一步的門檻）由小到大；畫面與下載叫 d_threshold
-  if ("D" %in% names(tab)) tab <- tab[order(tab$D, tab$item_id, na.last = TRUE), , drop = FALSE]
   tab <- tab[setdiff(names(tab), drop)]
-  names(tab)[names(tab) == "D"] <- "d_threshold"
+  names(tab)[names(tab) == "D"] <- "ability_threshold"
+  if (!is.null(extra)) {
+    tab <- dplyr::left_join(tab, extra, by = "item_id") |>
+      dplyr::relocate(dplyr::any_of(KITSUI_ITEM_THRESHOLDS), .after = "ability_threshold")
+  }
+  last <- utils::tail(intersect(KITSUI_ITEM_THRESHOLDS, names(tab)), 1)
+  if (length(last) == 1) tab <- tab[order(tab[[last]], tab$item_id, na.last = TRUE), , drop = FALSE]
+  rownames(tab) <- NULL
   structure(tab, dropped = drop)
 }
 
-#' 這一輪校準到這個量尺的資料是哪些世代（借用另一世代題庫時不只是量尺自己的世代）
+# 題目表的三種門檻（由校準的量尺到 D）
+KITSUI_ITEM_THRESHOLDS <- c("ability_threshold", "ability_linked_threshold", "d_threshold")
+
+#' 這一回合校準到這個量尺的資料是哪些世代（借用另一世代題庫時不只是量尺自己的世代）
 #' @noRd
 kitsui_round_cohorts <- function(round, scale) {
   plan <- round$plan
@@ -253,7 +285,7 @@ kitsui_item_ages <- function(X, persons, cohorts) {
   cbind(as.data.frame(ages), X)
 }
 
-#' 這一輪有兩個以上世代的領域（兩個世代的垂直連結用）
+#' 這一回合有兩個以上世代的領域（兩個世代的垂直連結用）
 #' @noRd
 kitsui_vertical_domains <- function(round) {
   domains <- scale_domain(names(round$items))
@@ -263,9 +295,9 @@ kitsui_vertical_domains <- function(round) {
 # 垂直連結的三個版本（③ 的分頁標籤）
 KITSUI_VERTICAL_STAGES <- c(none = "未連結", internal = "內部連結後", external = "外部連結後")
 
-#' 一個領域各世代校準量尺上的分數（垂直連結用；只跟這一輪與領域有關，和連結無關）
+#' 一個領域各世代校準量尺上的分數（垂直連結用；只跟這一回合與領域有關，和連結無關）
 #' @param progress NULL 或 function(i, n, scale)：每個世代開始前呼叫一次
-#' @return 具名 list（量尺）：kits_subj；這一輪只有一個世代時是 NULL
+#' @return 具名 list（量尺）：kits_subj；這一回合只有一個世代時是 NULL
 #' @noRd
 kitsui_vertical_scores <- function(round, domain, persons, progress = NULL) {
   scales <- names(round$items)[scale_domain(names(round$items)) == domain]
@@ -290,7 +322,7 @@ kitsui_verticals <- function(round, df, fixed, domain, links = NULL, persons = N
                              raw = NULL) {
   scales <- names(round$items)[scale_domain(names(round$items)) == domain]
   if (length(scales) < 2) {
-    why <- paste0("這一輪的 ", domain, " 只有一個世代，要兩個世代都在這一輪才畫得出來。")
+    why <- paste0("這一回合的 ", domain, " 只有一個世代，要兩個世代都在這一回合才畫得出來。")
     return(purrr::map(KITSUI_VERTICAL_STAGES, \(x) kitsui_vertical_none(scales, why)))
   }
   raw <- raw %||% kitsui_vertical_scores(round, domain, persons %||% kitsui_persons(df))
@@ -353,7 +385,7 @@ kitsui_vertical_why <- function(fixed, scales, links, stage) {
 #' @param path 換算到最後的連結（kitsui_path_links()）；空的 list 時不換算
 #' @param internal 只有內部連結的那一段（kitsui_path_links(stage = "internal")）
 #' @return data.frame：ability、ability_se 在校準的量尺上（kits 的 theta、se）；有內部連結時多
-#'   ability_int、ability_int_se（參照世代的量尺）；換到 D 時多 d_score、d_score_se、
+#'   ability_linked、ability_linked_se（參照世代的量尺）；換到 D 時多 d_score、d_score_se、
 #'   se_link、se_total（se_link、se_total 是 d_score 的）
 #' @noRd
 kitsui_raw_table <- function(own, path = list(), internal = list()) {
@@ -364,11 +396,11 @@ kitsui_raw_table <- function(own, path = list(), internal = list()) {
   out <- as.data.frame(table) |>
     dplyr::select(dplyr::all_of(c(keys, "theta", "se", counts))) |>
     dplyr::rename(ability = "theta", ability_se = "se")
-  # ability_int：經過內部連結（換到參照世代的量尺）
+  # ability_linked：經過內部連結（換到參照世代的量尺）
   if (length(internal) > 0) {
     inner <- as.data.frame(kitsui_convert_path(table, internal)) |>
       dplyr::select(dplyr::all_of(c(keys, "theta", "se"))) |>
-      dplyr::rename(ability_int = "theta", ability_int_se = "se")
+      dplyr::rename(ability_linked = "theta", ability_linked_se = "se")
     out <- dplyr::left_join(out, inner, by = keys)
   }
   conv <- kitsui_convert_path(table, path)
@@ -410,29 +442,29 @@ kitsui_fixed_readme <- function(fixed) {
     "kitsUI 固定檔",
     "",
     "這個 zip 是 kitsUI 的固定檔。",
-    "它存著到這一輪為止的題庫、題目版本與連結。",
-    "下一輪要在 kitsUI 的「① 資料」上傳這個 zip，才能接著用同一個題庫與連結。",
+    "它存著到這一回合為止的題庫、題目版本與連結。",
+    "下一回合要在 kitsUI 的「① 資料」上傳這個 zip，才能接著用同一個題庫與連結。",
     "請不要修改或重新壓縮裡面的檔案。",
-    "固定檔寫了就不再改；每一輪會產生一個新的固定檔。",
+    "固定檔寫了就不再改；每一回合會產生一個新的固定檔。",
     "",
-    paste0("輪：", both(v$rounds)),
+    paste0("回合：", both(v$rounds)),
     paste0("參照世代：", v$reference %||% ""),
     paste0("量尺：", both(v$scales)),
     paste0("連結：", both(links)),
     paste0("kits 版本：", v$kits %||% "", "；kitsUI 版本：", v$kitsUI %||% ""),
     "",
     "裡面的檔案：",
-    "VERSION：版本、建立日期、各輪名稱、參照世代、量尺，與每一輪資料檔的 md5。",
-    "bank.csv：題庫。每個量尺每一題每一步的 beta 與標準誤，和加進來的那一輪。",
+    "VERSION：版本、建立日期、各回合名稱、參照世代、量尺，與每一回合資料檔的 md5。",
+    "bank.csv：題庫。每個量尺每一題每一步的 beta 與標準誤，和加進來的那一回合。",
     "versions.csv：題目版本。偏移的題換成新版本時，原來的題號與目前的題號。",
     "waves.csv：每個題庫校準過的波次（月齡）。",
     "links.csv：連結的點與設定。從這些點可以重建一模一樣的連結。",
-    "checks.csv：每一輪的檢查紀錄（偏移、新版本、flag、借用另一世代題庫等）。",
+    "checks.csv：每一回合的檢查紀錄（偏移、新版本、flag、借用另一世代題庫等）。",
     "",
     "提醒：",
     "舊的 beta 永遠不動。",
-    "連結做好就凍結，之後每一輪都用同一條。",
-    "早先各輪的分數不會重算。",
-    "每一輪的分數表請在那一輪下載保存。"
+    "連結做好就凍結，之後每一回合都用同一條。",
+    "早先各回合的分數不會重算。",
+    "每一回合的分數表請在那一回合下載保存。"
   ), collapse = "\n")
 }

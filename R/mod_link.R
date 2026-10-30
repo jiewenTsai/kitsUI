@@ -1,5 +1,5 @@
 # ③ 連結：內部連結（M36 -> M03，每個領域一條）與外部連結（參照世代 -> D，用錨題）
-# 每條連結只做一次；做好就凍結在固定檔裡，之後每一輪沿用，早先的 D 分數不會變
+# 每條連結只做一次；做好就凍結在固定檔裡，之後每一回合沿用，早先的 D 分數不會變
 # 計算（狀態、錨題數、獨立檢核、總表）在 pipeline_link.R
 
 #' @noRd
@@ -55,11 +55,11 @@ link_guide <- function() {
     ),
     output = paste0(
       "存進固定檔的連結。每條連結只做一次，做好就凍結。",
-      "之後每一輪都用同一條連結，所以早先算好的 D 分數永遠不會變。"
+      "之後每一回合都用同一條連結，所以早先算好的 D 分數永遠不會變。"
     ),
     note = paste0(
       "內部連結把 M36 換到 M03 的量尺；外部連結把 M03 換到 D。",
-      "兩種連結都用題庫裡的題目參數（kits_linking()），不是只用這一輪的資料。"
+      "兩種連結都用題庫裡的題目參數（kits_linking()），不是只用這一回合的資料。"
     )
   )
 }
@@ -148,7 +148,7 @@ mod_link_server <- function(id, data, items, goto) {
     link_outputs(output, "internal", internal_link,
                  shiny::reactive(kitsui_link_var(input$internal_scale)))
 
-    # 獨立檢核（kits_link_check()）：要這一輪兩個世代的作答
+    # 獨立檢核（kits_link_check()）：要這一回合兩個世代的作答
     shiny::observeEvent(input$run_check, {
       link <- shiny::req(internal_link())
       out <- shiny::withProgress(message = "正在做獨立檢核（約需數秒）…", value = 0.4, {
@@ -186,7 +186,7 @@ mod_link_server <- function(id, data, items, goto) {
     link_outputs(output, "d", shiny::reactive(links()[["D"]]), shiny::reactive("link_D"))
 
     # 3. 兩個世代的垂直連結：未連結、內部連結後、外部連結後 ----
-    # 分數只跟這一輪與領域有關（連結變了不重算）；換算跟連結有關（幾乎不花時間）
+    # 分數只跟這一回合與領域有關（連結變了不重算）；換算跟連結有關（幾乎不花時間）
     v_domains <- shiny::reactive(kitsui_vertical_domains(shiny::req(items())))
     v_raw <- shiny::reactive({
       dom <- shiny::req(input$vertical_domain)
@@ -278,7 +278,7 @@ link_next_text <- function(fixed, ready, d) {
     paste0("還可以建立：", paste(todo, collapse = "、"), "。不做也可以先評分。")
   }
   if (n == 0) {
-    return(paste0("還沒有連結，分數會留在各自校準的量尺上。", left %||% "這一輪不用做連結。",
+    return(paste0("還沒有連結，分數會留在各自校準的量尺上。", left %||% "這一回合不用做連結。",
                   "下一步是評分。"))
   }
   paste0("固定檔裡有 ", n, " 條連結。", left %||% "", "下一步是評分。")
@@ -323,14 +323,14 @@ link_code <- function(fixed, file = \(n) "fixed_set.zip") {
 
 # 畫面小元件 ----
 
-#' 還沒有題目校準時的提示；這一輪有量尺停下來時的提醒
+#' 還沒有題目校準時的提示；這一回合有量尺停下來時的提醒
 #' @noRd
 link_source_ui <- function(round, ns) {
   if (is.null(round)) return(ui_go_items(ns))
   if (isTRUE(round$ok)) return(NULL)
   ui_callout(
-    "這一輪有量尺停下來（", paste(round$stopped, collapse = "、"), "）。",
-    "連結仍可以先看，但這一輪不會產生新的固定檔。",
+    "這一回合有量尺停下來（", paste(round$stopped, collapse = "、"), "）。",
+    "連結仍可以先看，但這一回合不會產生新的固定檔。",
     warning = TRUE
   )
 }
@@ -469,17 +469,17 @@ link_anchor_ui <- function(anchors, table_id) {
       class = "kit-hint",
       "外部連結是各領域共用的一條線。",
       "沒有錨題、或之後才進題庫的 M03 量尺，沿用同一條外部連結，不重新估計。",
-      "之後各輪題庫裡的錨題數可能變多。",
+      "之後各回合題庫裡的錨題數可能變多。",
       "但外部連結凍結後，不會用新的錨題重新估計。"
     )
   )
 }
 
-#' 垂直連結：選領域；這一輪沒有兩個世代的領域時，一句話說明
+#' 垂直連結：選領域；這一回合沒有兩個世代的領域時，一句話說明
 #' @noRd
 vertical_pick_ui <- function(ns, domains, pick) {
   if (length(domains) == 0) {
-    return(ui_callout("這一輪每個領域只有一個世代，所以沒有兩個世代的垂直連結。"))
+    return(ui_callout("這一回合每個領域只有一個世代，所以沒有兩個世代的垂直連結。"))
   }
   if (!isTRUE(pick %in% domains)) pick <- domains[1]
   shiny::tagList(

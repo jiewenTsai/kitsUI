@@ -1,26 +1,26 @@
-# 一輪（一波或多波新資料）：每個量尺
+# 一回合（一波或多波新資料）：每個量尺
 #   沒有題庫 -> 自由校準；有題庫 -> 改成目前版本、併掉缺口、偏移把關、新版本、固定校準
 #   用哪一個題庫（自己的或借另一個世代的）見 pipeline_bank.R
 # 舊的 beta 永遠不動；新的步驟才加進題庫
 # 分數類別有問題的題（pipeline_categories.R）不改分數：題庫裡的題固定在題庫的值，
-#   不在題庫的題這一輪不放進來
+#   不在題庫的題這一回合不放進來
 
 # 寫進 checks.csv 的檢查
 KITSUI_CHECKS <- c("drift", "new version", "capped", "flag", "stop", "error", "D extended",
                    "borrowed bank", "bank choice", "no CML estimate, kept fixed",
                    "category problem, kept fixed", "category problem, left out")
 
-#' 跑一輪
+#' 跑一回合
 #'
-#' 已有外部連結時，這一輪新進題庫的參照世代量尺沿用同一條外部連結（kitsui_link_D_extend()）。
-#' @param df 這一輪的長格式資料（可含多個量尺）
-#' @param fixed 上一輪的固定檔（第一輪用 kitsui_fixed_empty()）
-#' @param round_label 這一輪的名稱（只能有英文字母與數字，例如 "12"）；新版本題號加上 "_r" 與它
+#' 已有外部連結時，這一回合新進題庫的參照世代量尺沿用同一條外部連結（kitsui_link_D_extend()）。
+#' @param df 這一回合的長格式資料（可含多個量尺）
+#' @param fixed 上一回合的固定檔（第一回合用 kitsui_fixed_empty()）
+#' @param round_label 這一回合的名稱（只能有英文字母與數字，例如 "12"）；新版本題號加上 "_r" 與它
 #' @param flag_share,flag_fixed flag（不停下來）：偏移題多於 max(1, flag_share × 已判斷題)，
 #'   或可固定的題少於 flag_fixed 時，記下 "flag"（status warn），照常換新版本、固定校準、
 #'   更新題庫與產生固定檔。只有技術上做不了時才停下來：kits 出錯，沒有可固定的題
 #'   （量尺放不上題庫的尺），或拿掉分數類別有問題的題以後沒有題可以估計
-#' @param files 這一輪資料檔的路徑（記下 md5）；NULL 時記資料本身的 md5
+#' @param files 這一回合資料檔的路徑（記下 md5）；NULL 時記資料本身的 md5
 #' @param bank_choice NULL（照規則）或具名字元向量：資料量尺 -> 用哪一個量尺的題庫，
 #'   例如 c("motor M03" = "motor M36")（見 kitsui_round_plan()）
 #' @param progress NULL 或 function(i, n, scale)：每個量尺開始前呼叫一次（第 i 個，共 n 個），
@@ -56,7 +56,7 @@ kitsui_round <- function(df, fixed, round_label, flag_share = 0.2, flag_fixed = 
   ext <- kitsui_link_D_extend(fixed, round_label)
   fixed <- ext$fixed
   log <- dplyr::bind_rows(log, ext$log)
-  # 有量尺停下來時，這一輪不產生新的固定檔
+  # 有量尺停下來時，這一回合不產生新的固定檔
   if (length(stopped) > 0) attr(fixed, "stopped") <- stopped
   list(
     items = purrr::map(ok, "item"), drift = purrr::compact(purrr::map(res, "drift")),
@@ -75,7 +75,7 @@ kitsui_round_rows <- function(pieces, part) {
   vctrs::vec_rbind(!!!pieces$val[hit[!is.na(hit)]])
 }
 
-# 一個量尺的一輪；kits 的錯誤只停這個量尺，其他量尺繼續
+# 一個量尺的一回合；kits 的錯誤只停這個量尺，其他量尺繼續
 # rows 是這個量尺的作答；part 是 kitsui_round_plan() 裡校準到這個量尺的列
 # （借題庫時可能有兩個世代的資料）
 kitsui_round_try <- function(rows, part, fixed, round_label, flag_share, flag_fixed) {
@@ -135,7 +135,7 @@ kitsui_current_ids <- function(df, fixed, scale) {
     dplyr::select(-"current_id")
 }
 
-# 一個量尺的一輪（X 的題號已經是目前的版本）；row_cohorts 是 X 每一列的世代（新版本記在
+# 一個量尺的一回合（X 的題號已經是目前的版本）；row_cohorts 是 X 每一列的世代（新版本記在
 # 有作答的世代名下），borrowed 是借這個題庫的世代（沒有借時長度 0）
 kitsui_round_scale <- function(X, scale, fixed, round_label, flag_share, flag_fixed,
                                row_cohorts = rep(scale_cohort(scale), nrow(X)),
@@ -152,7 +152,7 @@ kitsui_round_scale <- function(X, scale, fixed, round_label, flag_share, flag_fi
                           row(cat$events$item_id, cat$events$check, cat$events$detail))
 
   # 偏移把關：題庫的 beta 當參照（kits_drift() 從 beta 算門檻）。
-  # 這一輪估不出來的題、分數類別有問題的題（kept）不判斷偏移，固定在題庫的值
+  # 這一回合估不出來的題、分數類別有問題的題（kept）不判斷偏移，固定在題庫的值
   ref <- structure(bank[c("item_id", "item_score", "beta")], scale = scale)
   dr <- kitsui_drift_safe(X, ref, cat$kept)
   X <- X[, !colnames(X) %in% dr$out, drop = FALSE]
@@ -198,7 +198,7 @@ kitsui_round_scale <- function(X, scale, fixed, round_label, flag_share, flag_fi
 #' @noRd
 kitsui_drift_cut <- function() eval(formals(kits::kits_drift)$cut)
 
-#' 沒有題庫：自由校準。分數類別有問題的題這一輪不放進來；拿掉以後不到 2 題時停下來
+#' 沒有題庫：自由校準。分數類別有問題的題這一回合不放進來；拿掉以後不到 2 題時停下來
 #' @noRd
 kitsui_round_free <- function(X, scale, bank, row) {
   probs <- kitsui_matrix_problems(X, scale)
@@ -215,9 +215,9 @@ kitsui_round_free <- function(X, scale, bank, row) {
 }
 
 # 寫進紀錄的說明（接在分數類別的問題後面）
-KITSUI_LEFT_OUT <- "：不在題庫裡，這一輪不放進來"
+KITSUI_LEFT_OUT <- "：不在題庫裡，這一回合不放進來"
 KITSUI_KEPT_FIXED <- "：不判斷偏移，固定在題庫的值"
-KITSUI_NO_CML <- "這一輪的資料估不出有限的 CML 估計值（有資訊的人都通過或都沒通過）"
+KITSUI_NO_CML <- "這一回合的資料估不出有限的 CML 估計值（有資訊的人都通過或都沒通過）"
 
 #' 自由校準；kits 說某些題估不出來（分數類別的問題、沒有 CML 估計值）時，拿掉它們再估
 #' @return list(item, X, events)：item 是 NULL 時表示剩不到 2 題
@@ -240,7 +240,7 @@ kitsui_item_free <- function(X, scale) {
 #' 1. kitsui_cap()：題庫裡的題，超過題庫最高步、又不能當新步驟的分數併為能用的最高分；
 #' 2. 併過以後還有分數類別問題的題（沒有 0 分、不連續、只有一種分數）：在題庫裡的不判斷
 #'    偏移，固定在題庫的值，也不加新的步驟（超過題庫最高步的分數併為最高步）；
-#'    不在題庫裡的這一輪不放進來（從 X 拿掉）。分數本身不改。
+#'    不在題庫裡的這一回合不放進來（從 X 拿掉）。分數本身不改。
 #' @return list(X, capped, kept, out, events)：capped 是 kitsui_cap() 的紀錄；kept 是固定的題，
 #'   out 是拿掉的題，events 是要寫進紀錄的列（item_id、check、detail）
 #' @noRd
@@ -282,7 +282,7 @@ kitsui_error_items <- function(e, ids) {
   ids[purrr::map_lgl(esc, \(id) grepl(paste0("(^|[^A-Za-z0-9_.])", id, after), msg))]
 }
 
-#' 這種錯誤寫進紀錄的列：in_bank 的題固定在題庫的值，其他題這一輪不放進來
+#' 這種錯誤寫進紀錄的列：in_bank 的題固定在題庫的值，其他題這一回合不放進來
 #' @noRd
 kitsui_error_events <- function(e, bad, in_bank) {
   no_cml <- length(kitsui_no_cml_items(e)) > 0
@@ -307,7 +307,7 @@ kitsui_no_cml_items <- function(e) {
 }
 
 #' 偏移把關；kits 說某些題估不出來時：題庫裡的題拿掉再判斷一次（之後固定在題庫的值），
-#' 不在題庫的題這一輪不放進來
+#' 不在題庫的題這一回合不放進來
 #' @param kept 一開始就不判斷的題（分數類別有問題的題庫題）
 #' @return list(drift, kept, out, events)：kept 是固定在題庫的值的題（含一開始的），
 #'   out 是拿掉的題，events 是這裡新加的紀錄
@@ -330,9 +330,9 @@ kitsui_drift_safe <- function(X, ref, kept = character()) {
   }
 }
 
-#' 固定校準：偏移的題換成新版本（原來的題號 + "_r" + 輪；再偏移時也從原來的題號做，
+#' 固定校準：偏移的題換成新版本（原來的題號 + "_r" + 回合；再偏移時也從原來的題號做，
 #' 例如 socb13_r72，不會是 socb13_r60_r72）；kits 說新版本或題庫的題估不出來時，
-#' 不換新版本，固定在題庫的值；不在題庫的題估不出來時，這一輪不放進來；再校準一次
+#' 不換新版本，固定在題庫的值；不在題庫的題估不出來時，這一回合不放進來；再校準一次
 #' @param vers 這個量尺的 versions（各世代）；row_cohorts 是 X 每一列的世代
 #' @return list(X, item, versions, moved, kept, events)：versions 是新版本（scale、item_id、
 #'   current_id、cohort；這一題有作答的每個世代一列），moved 是換了新版本的題（換之前的
@@ -407,7 +407,7 @@ kitsui_cap <- function(X, bank, no_new = character()) {
   list(X = X, log = tibble::tibble(item_id = items[hit], detail = paste0(detail, why)))
 }
 
-# 把這一輪沒停下來的量尺寫進固定檔
+# 把這一回合沒停下來的量尺寫進固定檔
 kitsui_fixed_update <- function(fixed, ok, log, sources) {
   stack <- \(x, name) dplyr::bind_rows(x, purrr::list_rbind(purrr::map(ok, name)))
   # 同一題、同一個世代有新版本時，只留最新的一列

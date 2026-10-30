@@ -6,7 +6,7 @@ run_code <- function(code, dir) {
   env
 }
 
-test_that("一輪的程式碼：自由校準與固定校準都能跑，結果相同", {
+test_that("一回合的程式碼：自由校準與固定校準都能跑，結果相同", {
   chain <- lan_chain()
   dir <- withr::local_tempdir()
   code <- kitsui_code_round("lan M03", "3", waves = 3)
@@ -20,7 +20,7 @@ test_that("一輪的程式碼：自由校準與固定校準都能跑，結果相
   expect_equal(coef(env$item), coef(chain[["12"]]$items[["lan M03"]]), ignore_attr = TRUE)
 })
 
-test_that("連結與評分的程式碼接在一輪之後能跑，結果相同", {
+test_that("連結與評分的程式碼接在一回合之後能跑，結果相同", {
   r8 <- round8()
   lk <- linked()
   dir <- withr::local_tempdir()
@@ -48,10 +48,10 @@ test_that("連結與評分的程式碼接在一輪之後能跑，結果相同", 
                           kitsui_path_links(lk$fixed, links, "lan M36", stage = "internal"))
   expect_equal(as.data.frame(env$raw_d)$theta, raw$d_score)
   expect_equal(as.data.frame(env$raw_d)$se_total, raw$se_total)
-  expect_equal(as.data.frame(env$raw_theta)$theta, raw$ability_int)
+  expect_equal(as.data.frame(env$raw_theta)$theta, raw$ability_linked)
 })
 
-test_that("連結的程式讀真的固定檔檔名：之前的輪做的讀上傳的 zip，這一輪做的讀新的固定檔", {
+test_that("連結的程式讀真的固定檔檔名：之前的回合做的讀上傳的 zip，這一回合做的讀新的固定檔", {
   expect_equal(kitsui_link_file("D", "D", "fixed_7.zip", "r8"), "fixed_7.zip")
   expect_equal(kitsui_link_file("D", character(), "fixed_7.zip", "r8"), "kitsui_fixed_r8.zip")
   # 這次連線交過來的固定檔（沒有上傳的檔名）：新的固定檔裡也有之前的連結
@@ -112,7 +112,7 @@ test_that("① 的程式碼：好幾個檔案一起讀（readr 接起來），�
   expect_equal(env$responses$item_score, up$data$item_score)
 })
 
-test_that("借用另一世代題庫的一輪的程式碼能跑，結果和 app 相同", {
+test_that("借用另一世代題庫的一回合的程式碼能跑，結果和 app 相同", {
   bc <- borrow_chain()
   dir <- withr::local_tempdir()
   kitsui_write_fixed(bc$fixed, file.path(dir, "fixed_1.zip"))
@@ -139,7 +139,7 @@ test_that("程式照勾到的世代 × 波次選資料（只勾 M03 36 時不帶
   env <- run_code(code, withr::local_tempdir())
   expect_equal(nrow(env$responses), nrow(sel$df))
   expect_setequal(unique(env$responses$cohort), "M03")
-  # 一輪的程式：同樣的選法，自由校準的結果和 app 相同
+  # 一回合的程式：同樣的選法，自由校準的結果和 app 相同
   lan <- dplyr::filter(sel$df, domain == "lan")
   r <- suppressMessages(kitsui_round(lan, kitsui_fixed_empty(), "1"))
   code <- kitsui_code_round("lan M03", "1", picks = sel$picks)

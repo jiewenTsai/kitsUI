@@ -1,4 +1,4 @@
-# 一輪裡共用的受試者分數：每個量尺只算一次
+# 一回合裡共用的受試者分數：每個量尺只算一次
 
 test_that("kitsui_own_scores()：和 kits_subj() 相同，第二次直接拿存好的", {
   r <- round8()$round
@@ -10,7 +10,7 @@ test_that("kitsui_own_scores()：和 kits_subj() 相同，第二次直接拿存�
   expect_equal(as.data.frame(first), as.data.frame(direct), ignore_attr = TRUE)
   expect_match(kits::kits_info(first)$call, "kits_subj(X, item, persons = persons)", fixed = TRUE)
   expect_true(exists(paste0("own_scores:", s), envir = r$memo))
-  # 存好的就是同一個物件；改了 data 也不重算（同一輪的資料不會變）
+  # 存好的就是同一個物件；改了 data 也不重算（同一回合的資料不會變）
   r2 <- r
   r2$data[[s]] <- r2$data[[s]][1:10, ]
   expect_identical(kitsui_own_scores(r2, s, persons), first)
@@ -21,7 +21,7 @@ test_that("kitsui_own_scores()：和 kits_subj() 相同，第二次直接拿存�
   expect_error(kitsui_own_scores(r, "lan M99"), "停下來", class = "kit_user_error")
 })
 
-test_that("每一輪有自己的 memo：新的一輪不會拿到上一輪的分數", {
+test_that("每一回合有自己的 memo：新的一回合不會拿到上一回合的分數", {
   a <- suppressMessages(kitsui_round(kitsui_demo("M03", 3, "lan"), kitsui_fixed_empty(), "1"))
   b <- suppressMessages(kitsui_round(kitsui_demo("M03", 6, "lan"), kitsui_fixed_empty(), "1"))
   sa <- kitsui_own_scores(a, "lan M03")

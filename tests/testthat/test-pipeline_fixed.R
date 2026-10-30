@@ -60,7 +60,7 @@ test_that("不是 zip 的檔案：說「這不是固定檔（zip）」；zip 少
   expect_error(kitsui_read_fixed(tempfile()), "這不是固定檔（zip）", class = "kit_user_error")
 })
 
-test_that("固定檔的 VERSION：kitsUI 的版本讀 DESCRIPTION（不是 dev）；第一輪的 Sources 寫進去", {
+test_that("固定檔的 VERSION：kitsUI 的版本讀 DESCRIPTION（不是 dev）；第一回合的 Sources 寫進去", {
   desc <- kit_app_description()
   expect_false(is.na(desc$version))
   expect_equal(kitsui_version(), desc$version)

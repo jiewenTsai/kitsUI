@@ -29,7 +29,7 @@ test_that("每個資料量尺的分數類別問題：沒有 0 分、不連續、
   expect_true(is.na(kitsui_score_problem("x", 0:2)$problem))
 })
 
-test_that("沒有 0 分：題庫的題固定在題庫的值；新的題這一輪不放進來；固定檔寫得出來", {
+test_that("沒有 0 分：題庫的題固定在題庫的值；新的題這一回合不放進來；固定檔寫得出來", {
   pb <- poly_bank()
   X2 <- poly_round2()
   X2[X2[, "p1"] == 0, "p1"] <- 1L
@@ -41,7 +41,7 @@ test_that("沒有 0 分：題庫的題固定在題庫的值；新的題這一輪
   expect_equal(kept$detail, "p1 沒有人得 0 分（分數 1、2、3）：不判斷偏移，固定在題庫的值")
   out <- dplyr::filter(r2$log, check == "category problem, left out")
   expect_equal(out$item_id, "n1")
-  expect_equal(out$detail, "n1 沒有人得 0 分（分數 1、2、3）：不在題庫裡，這一輪不放進來")
+  expect_equal(out$detail, "n1 沒有人得 0 分（分數 1、2、3）：不在題庫裡，這一回合不放進來")
   co <- coef(r2$items[["sim M03"]])
   old <- pb$r1$fixed$bank
   expect_equal(co$beta[co$item_id == "p1"], old$beta[old$item_id == "p1"])
@@ -77,7 +77,7 @@ test_that("分數不連續（0、2、3）：題庫的題固定，新的題不放
   expect_false("capped" %in% r2$log$check)
 })
 
-test_that("只有一種分數：題庫的題固定，新的題不放進來；這一輪照樣寫出固定檔", {
+test_that("只有一種分數：題庫的題固定，新的題不放進來；這一回合照樣寫出固定檔", {
   pb <- poly_bank()
   X2 <- poly_round2(14)
   X2[, "a3"] <- 1L
@@ -128,7 +128,7 @@ test_that("併分數與分數類別一致：題庫最高步沒有人得到時併
   expect_equal(as.vector(kitsui_cap(X, bank, no_new = "x")$X), c(0, 1, 1, 0))
 })
 
-test_that("kits 說估不出來的題：讀出題號；自由校準時這一輪不放進來", {
+test_that("kits 說估不出來的題：讀出題號；自由校準時這一回合不放進來", {
   ids <- c("a1", "a12", "a2", "x1", "x2")
   err <- \(msg) simpleError(msg)
   expect_equal(kitsui_error_items(err("Item(s) with no 0 score: a2. Scores must start at 0"), ids),
@@ -144,7 +144,7 @@ test_that("kits 說估不出來的題：讀出題號；自由校準時這一輪�
   expect_equal(kitsui_error_items(err("Fewer than 2 items"), ids), character())
   ev <- kitsui_error_events(no_cml, c("x1", "x2"), c(TRUE, FALSE))
   expect_equal(ev$check, c("no CML estimate, kept fixed", "category problem, left out"))
-  expect_match(ev$detail[2], "估不出有限的 CML 估計值.*這一輪不放進來")
+  expect_match(ev$detail[2], "估不出有限的 CML 估計值.*這一回合不放進來")
   # 自由校準：a10 只有全對的人以外都通過，CML 估不出來
   sb <- sim_bank()
   X <- kits::kits_sim(seq(-3, 3, length.out = 1000), sb$betas, prefix = "h", seed = 16)

@@ -1,4 +1,4 @@
-test_that("kitm03 lan 3-48 個月一波一輪：版本、併分數、舊 beta 不動（同 chain_v.R）", {
+test_that("kitm03 lan 3-48 個月一波一回合：版本、併分數、舊 beta 不動（同 chain_v.R）", {
   chain <- lan_chain()
   last <- chain[["48"]]
   expect_equal(last$fixed$version$rounds, names(chain))
@@ -11,13 +11,13 @@ test_that("kitm03 lan 3-48 個月一波一輪：版本、併分數、舊 beta �
   capped <- dplyr::filter(last$fixed$checks, check == "capped")
   expect_equal(capped$item_id, "lanc09")
   expect_equal(capped$round, "18")
-  # 舊的 beta 一輪一輪都沒動
+  # 舊的 beta 一回合一回合都沒動
   for (i in seq_along(chain)[-1]) {
     old <- chain[[i - 1]]$fixed$bank
     new <- chain[[i]]$fixed$bank
     expect_identical(new[seq_len(nrow(old)), ], old)
   }
-  # 題庫新加的步驟就是這一輪校準的 beta
+  # 題庫新加的步驟就是這一回合校準的 beta
   item <- last$items[["lan M03"]]
   added <- dplyr::filter(last$fixed$bank, round == "48")
   co <- coef(item)[match(paste(added$item_id, added$item_score),
@@ -26,7 +26,7 @@ test_that("kitm03 lan 3-48 個月一波一輪：版本、併分數、舊 beta �
   expect_true("lanc05_r48" %in% colnames(last$data[["lan M03"]]))
 })
 
-test_that("多個量尺的一輪：沒有題庫的量尺自由校準", {
+test_that("多個量尺的一回合：沒有題庫的量尺自由校準", {
   r <- round8()$round
   expect_setequal(names(r$items), c("lan M36", "motor M03"))
   expect_true(r$ok)
@@ -64,14 +64,14 @@ test_that("強烈偏移時量尺被標記（flag），照常校準，產生新�
   expect_match(dplyr::filter(r3$log, check == "flag")$detail, "可固定的題少於 20 題")
 })
 
-test_that("輪的名稱不合用或重複時以中文說明", {
+test_that("回合的名稱不合用或重複時以中文說明", {
   fixed <- lan_chain()[["3"]]$fixed
   df <- kitsui_demo("M03", 6, "lan")
   expect_error(kitsui_round(df, fixed, "3"), "重複", class = "kit_user_error")
   expect_error(kitsui_round(df, fixed, "w 6"), "英文字母", class = "kit_user_error")
 })
 
-test_that("自由校準：分數類別有問題的題這一輪不放進來，量尺照做", {
+test_that("自由校準：分數類別有問題的題這一回合不放進來，量尺照做", {
   # lan M03 只有 36、48 個月時 lanc01 沒有人得 0 分
   df <- dplyr::bind_rows(kitsui_demo("M03", c(36, 48), "lan"), kitsui_demo("M03", 3, "motor"))
   r <- suppressMessages(kitsui_round(df, kitsui_fixed_empty(), "1"))
@@ -80,7 +80,7 @@ test_that("自由校準：分數類別有問題的題這一輪不放進來，量
   out <- dplyr::filter(r$log, check == "category problem, left out", scale == "lan M03")
   expect_true("lanc01" %in% out$item_id)
   expect_match(out$detail[out$item_id == "lanc01"], "^lanc01 沒有人得 0 分（分數 ")
-  expect_match(out$detail[out$item_id == "lanc01"], "不在題庫裡，這一輪不放進來$")
+  expect_match(out$detail[out$item_id == "lanc01"], "不在題庫裡，這一回合不放進來$")
   expect_false("lanc01" %in% coef(r$items[["lan M03"]])$item_id)
   expect_false("lanc01" %in% colnames(r$data[["lan M03"]]))
   expect_false("lanc01" %in% r$fixed$bank$item_id)
@@ -149,10 +149,10 @@ test_that("可固定的題少於 5 題時標記（flag），照常校準", {
   expect_false("flag" %in% r3$log$check)
 })
 
-test_that("這一輪估不出來的題不換新版本，固定在題庫的值；kitsui_round() 不出錯", {
+test_that("這一回合估不出來的題不換新版本，固定在題庫的值；kitsui_round() 不出錯", {
   sb <- sim_bank()
   X2 <- kits::kits_sim(seq(-3, 3, length.out = 1000), sb$betas, prefix = "c", seed = 2)
-  # a10 很難，但這一輪有作答的人（其他題不是全錯）都通過：CML 估不出來
+  # a10 很難，但這一回合有作答的人（其他題不是全錯）都通過：CML 估不出來
   rest <- rowSums(X2[, colnames(X2) != "a10"])
   X2[, "a10"] <- ifelse(rest == 0, 0L, 1L)
   ref <- structure(sb$r1$fixed$bank[c("item_id", "item_score", "beta")], scale = "sim M03")
@@ -210,7 +210,7 @@ test_that("不借題庫：自己的題庫有涵蓋、內部連結還沒凍結、
   covered <- kitsui_round_plan(kitsui_demo("M03", 36, "motor"), bc$fixed)
   expect_false(covered$borrowed)
   expect_equal(covered$scale, "motor M03")
-  # 第 1 輪的固定檔還沒有內部連結
+  # 第 1 回合的固定檔還沒有內部連結
   no_link <- kitsui_round_plan(bc$df2, bc$r1$fixed)
   expect_false(no_link$borrowed)
   r <- suppressMessages(kitsui_round(bc$df2, bc$r1$fixed, "2"))

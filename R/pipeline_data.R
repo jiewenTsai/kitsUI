@@ -1,4 +1,4 @@
-# 資料：示範資料、kits 不知道的欄位（domain、cohort）、量尺清單、作答矩陣、這一輪的名稱
+# 資料：示範資料、kits 不知道的欄位（domain、cohort）、量尺清單、作答矩陣、這一回合的名稱
 # 其他檢查（作答分數、重複列…）交給 kits_resp() 與 kits_check()
 
 # 參照世代（內部連結的目標、外部連結的起點）
@@ -56,23 +56,23 @@ kitsui_check_data <- function(df) {
   invisible(df)
 }
 
-#' 這一輪的名稱能不能用：只能有英文字母與數字，且不能和之前的輪重複
+#' 這一回合的名稱能不能用：只能有英文字母與數字，且不能和之前的回合重複
 #'
 #' ① 資料頁與 kitsui_round() 共用這一條規則。
 #' @return 中文訊息；可以用時長度 0
 #' @noRd
 kitsui_label_problem <- function(label, rounds = character()) {
   if (!grepl("^[A-Za-z0-9]+$", label)) {
-    return("這一輪的名稱只能用英文字母與數字，不能空白。")
+    return("這一回合的名稱只能用英文字母與數字，不能空白。")
   }
   if (label %in% rounds) {
-    return(paste0("這一輪的名稱「", label, "」和固定檔裡之前的輪重複了。請換一個。"))
+    return(paste0("這一回合的名稱「", label, "」和固定檔裡之前的回合重複了。請換一個。"))
   }
   character()
 }
 
-#' 預設的這一輪名稱："R" 加第幾輪（固定檔裡已有 2 輪時是 "R3"）；被用過時往後找沒用過的
-#' @param rounds 固定檔裡之前的輪
+#' 預設的這一回合名稱："R" 加第幾回合（固定檔裡已有 2 回合時是 "R3"）；被用過時往後找沒用過的
+#' @param rounds 固定檔裡之前的回合
 #' @noRd
 kitsui_default_label <- function(rounds = character()) {
   n <- length(rounds) + 1
@@ -135,7 +135,7 @@ kitsui_persons <- function(df) {
   dplyr::distinct(df, dplyr::pick(dplyr::all_of(cols)))
 }
 
-# 這一輪的資料 ----
+# 這一回合的資料 ----
 
 #' 資料裡有哪些世代 × 波次（給 ① 勾選）：參照世代在前，再依世代名稱、月齡
 #' @return tibble：cohort、wave_m、value（勾選框的值，例如 "M03 3"）
@@ -166,7 +166,7 @@ kitsui_parse_picks <- function(picks, choices) {
   choices[hit, ]
 }
 
-#' 這一輪的資料：照勾選的世代 × 波次篩選、檢查欄位與作答（幾百萬列也只要幾秒）
+#' 這一回合的資料：照勾選的世代 × 波次篩選、檢查欄位與作答（幾百萬列也只要幾秒）
 #'
 #' 名稱與固定檔不在這裡檢查：改名稱或換固定檔時不用重跑。
 #' 全部組合都勾時不複製資料。
@@ -184,7 +184,7 @@ kitsui_data_select <- function(data, picks, choices = NULL) {
   }
   choices <- choices %||% kitsui_pick_choices(data)
   sel <- kitsui_parse_picks(picks, choices)
-  if (nrow(sel) == 0) return(list(problems = character(), hint = "請勾這一輪的世代與波次。"))
+  if (nrow(sel) == 0) return(list(problems = character(), hint = "請勾這一回合的世代與波次。"))
   df <- if (nrow(sel) == nrow(choices)) data else {
     dplyr::semi_join(data, sel[c("cohort", "wave_m")], by = c("cohort", "wave_m"))
   }
@@ -198,10 +198,10 @@ kitsui_data_select <- function(data, picks, choices = NULL) {
        problems = character())
 }
 
-#' 這一輪的資料與檢查（kitsui_data_select() 加上名稱與題庫的計畫）
+#' 這一回合的資料與檢查（kitsui_data_select() 加上名稱與題庫的計畫）
 #'
 #' @param waves 勾選的世代 × 波次（"M03 3"），或只寫月齡（"3"）
-#' @param fixed 上一輪的固定檔（名稱不能和之前的輪重複）
+#' @param fixed 上一回合的固定檔（名稱不能和之前的回合重複）
 #' @return kitsui_data_select() 加上 plan（kitsui_round_plan()，每個量尺用誰的題庫）；
 #'   名稱有問題時 problems 是中文訊息
 #' @noRd
@@ -216,7 +216,7 @@ kitsui_data_check <- function(data, waves, round_label, fixed) {
 
 # 提醒（橘色，不擋下一步） ----
 
-#' 勾到的波次之前的輪已經校準過（固定檔的 waves.csv 裡，同一個量尺的同一個月齡）
+#' 勾到的波次之前的回合已經校準過（固定檔的 waves.csv 裡，同一個量尺的同一個月齡）
 #' @param plan kitsui_round_plan()
 #' @return 中文訊息；沒有時長度 0
 #' @noRd
@@ -225,26 +225,26 @@ kitsui_note_waves <- function(plan, fixed) {
   hit <- dplyr::inner_join(dplyr::distinct(plan, .data$data_scale, .data$wave_m), done,
                            by = c(data_scale = "scale", "wave_m"))
   if (nrow(hit) == 0) return(character())
-  paste0("這些波次之前的輪已經校準過：",
-         paste(sprintf("%s 的 %s 個月（第 %s 輪）", hit$data_scale, format(hit$wave_m, trim = TRUE),
+  paste0("這些波次之前的回合已經校準過：",
+         paste(sprintf("%s 的 %s 個月（第 %s 回合）", hit$data_scale, format(hit$wave_m, trim = TRUE),
                        hit$round), collapse = "、"),
          "。再校準一次，同一批孩子會有兩份分數。")
 }
 
-#' 固定檔不是這次連線最新的一輪（④ 交過更新的一輪時）
-#' @param rounds 現在的固定檔裡的輪
-#' @param latest NULL 或這次連線最新的一輪
+#' 固定檔不是這次連線最新的一回合（④ 交過更新的一回合時）
+#' @param rounds 現在的固定檔裡的回合
+#' @param latest NULL 或這次連線最新的一回合
 #' @noRd
 kitsui_note_stale <- function(rounds, latest) {
   if (is.null(latest) || latest %in% rounds) return(character())
   have <- if (length(rounds) == 0) "現在沒有用固定檔" else {
-    paste0("這個固定檔只到第 ", utils::tail(rounds, 1), " 輪")
+    paste0("這個固定檔只到第 ", utils::tail(rounds, 1), " 回合")
   }
-  paste0(have, "，這次連線已經做到第 ", latest, " 輪。",
-         "要接著做，請用第 ", latest, " 輪的固定檔。")
+  paste0(have, "，這次連線已經做到第 ", latest, " 回合。",
+         "要接著做，請用第 ", latest, " 回合的固定檔。")
 }
 
-#' 資料檔之前的輪用過（md5 在固定檔的 sources 裡）
+#' 資料檔之前的回合用過（md5 在固定檔的 sources 裡）
 #' @param files tibble：file、md5（kitsui_read_uploads()$files）
 #' @noRd
 kitsui_note_sources <- function(files, fixed) {
@@ -253,7 +253,7 @@ kitsui_note_sources <- function(files, fixed) {
                            by = "md5", relationship = "many-to-many")
   if (nrow(hit) == 0) return(character())
   hit <- dplyr::summarise(hit, round = paste(unique(.data$round), collapse = "、"), .by = "file")
-  sprintf("%s：這個檔案在第 %s 輪用過。", hit$file, hit$round)
+  sprintf("%s：這個檔案在第 %s 回合用過。", hit$file, hit$round)
 }
 
 #' 得分不完整的題（kitsui_category_problems()）：每題一句；太多時只列前 n 題

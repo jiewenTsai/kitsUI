@@ -1,4 +1,4 @@
-# ② 題目校準：跑一輪、每個量尺的圖表、停下來的量尺；整個 app 能啟動
+# ② 題目校準：跑一回合、每個量尺的圖表、停下來的量尺；整個 app 能啟動
 
 # 和 mod_data_server() 回傳的一樣
 items_data <- function(df, fixed = kitsui_fixed_empty(), label = "3") {
@@ -7,7 +7,7 @@ items_data <- function(df, fixed = kitsui_fixed_empty(), label = "3") {
        scales = kitsui_scales(df), plan = kitsui_round_plan(df, fixed))
 }
 
-test_that("示範資料跑一輪：回傳 items，圖、表、程式都出得來", {
+test_that("示範資料跑一回合：回傳 items，圖、表、程式都出得來", {
   d <- items_data(kitsui_demo("M03", 3, "lan"))
   shiny::testServer(mod_items_server, args = list(data = shiny::reactive(d), goto = \(tab) NULL), {
     expect_null(session$getReturned()())
@@ -70,7 +70,7 @@ test_that("有固定檔：偏移把關；沒有題庫的量尺拿掉分數類別
     expect_match(output$code, "kits_drift")
     session$setInputs(scale = "motor M03")
     expect_match(output$scale_info$html, "自由校準")
-    expect_match(output$scale_info$html, "這一輪不放進來：[1-9]")
+    expect_match(output$scale_info$html, "這一回合不放進來：[1-9]")
     expect_match(output$drift, "沒有題庫：自由校準")
   })
 })
@@ -136,7 +136,7 @@ test_that("flag 的量尺（可固定的題少於 5 題）：照做，② 用橘
     expect_match(output$status$html, "kit-warn-text")
     expect_match(output$status$html, "sim M03（flag）")
     expect_match(output$status$html, "kit-callout-warn")
-    expect_match(output$status$html, "被 flag 的量尺照樣往下做；請看偏移的題，必要時在下一輪處理。")
+    expect_match(output$status$html, "被 flag 的量尺照樣往下做；請看偏移的題，必要時在下一回合處理。")
     expect_match(output$scale_info$html, "flag：")
     expect_match(output$log, "warn")
     expect_match(output$overview, "可固定的題少於 5 題")
@@ -181,7 +181,7 @@ test_that("固定校準：偏移表的 reason 是中文；固定的步驟寫「�
     expect_match(output$status$html, "有 2 題分數類別有問題")
     expect_match(output$status$html, "分數都沒有改")
     expect_match(output$scale_info$html, "分數類別有問題、固定在題庫的值：1 題（p1）")
-    expect_match(output$scale_info$html, "分數類別有問題、這一輪不放進來：1 題（n1）")
+    expect_match(output$scale_info$html, "分數類別有問題、這一回合不放進來：1 題（n1）")
     # 偏移表：p1 沒有交給 kits_drift()，也列出來，原因是中文
     rows <- drift_rows()
     expect_equal(rows$reason_zh[rows$item_id == "p1"],

@@ -1,19 +1,19 @@
-# ① 資料：示範資料或上傳、這一輪的世代與波次、上一輪的固定檔、這一輪的名稱
+# ① 資料：示範資料或上傳、這一回合的世代與波次、上一回合的固定檔、這一回合的名稱
 
 #' @noRd
 mod_data_ui <- function(id) {
   ns <- shiny::NS(id)
   shiny::tagList(
     mod_guide(
-      goal = "選這一輪要校準的資料。第二輪起，再放上一輪下載的固定檔。",
+      goal = "選這一回合要校準的資料。第二回合起，再放上一回合下載的固定檔。",
       steps = c(
         "選資料來源：示範資料，或上傳自己的長格式資料（可以一次選好幾個檔案）。",
-        "勾這一輪的世代與波次（月齡）。一個檔案可以有好幾個波次。更新時通常只勾一波。",
-        "第二輪起：上傳上一輪的固定檔（zip）。第一輪不用。",
+        "勾這一回合的世代與波次（月齡）。一個檔案可以有好幾個波次。更新時通常只勾一波。",
+        "第二回合起：上傳上一回合的固定檔（zip）。第一回合不用。",
         "確認右邊沒有紅字。橘色的提醒請看過。",
         "按「下一步：題目校準」。"
       ),
-      output = "這一輪的資料。還沒有校準；校準在 ② 題目校準。"
+      output = "這一回合的資料。還沒有校準；校準在 ② 題目校準。"
     ),
     data_new_wave_guide(),
     bslib::layout_columns(
@@ -41,7 +41,7 @@ mod_data_ui <- function(id) {
         shiny::textOutput(ns("preview_meta")),
         shiny::tags$div(class = "kit-table-scroll", shiny::tableOutput(ns("preview"))),
         shiny::tags$div(class = "kit-downloads",
-                        ui_download(ns("dl_data"), "下載這一輪的資料（CSV）")),
+                        ui_download(ns("dl_data"), "下載這一回合的資料（CSV）")),
         ui_check_panel(ns("check"), "kits 的檢查（kits_check，作答設計選的量尺）"),
         ui_code_panel(ns("code"))
       )
@@ -49,7 +49,7 @@ mod_data_ui <- function(id) {
   )
 }
 
-# 左欄：資料來源、世代與波次、固定檔、這一輪的名稱
+# 左欄：資料來源、世代與波次、固定檔、這一回合的名稱
 data_choices_ui <- function(ns) {
   shiny::tagList(
     shiny::h5("1. 資料來源"),
@@ -60,9 +60,9 @@ data_choices_ui <- function(ns) {
                                 "lan"),
       shiny::tags$small(
         class = "kit-hint",
-        "第一輪建議：M03 只勾 3 個月。",
-        "M36 的第一輪勾 36 與 48 個月。",
-        "之後每一輪加下一個波次。"
+        "第一回合建議：M03 只勾 3 個月。",
+        "M36 的第一回合勾 36 與 48 個月。",
+        "之後每一回合加下一個波次。"
       )
     ),
     shiny::conditionalPanel(
@@ -81,7 +81,7 @@ data_choices_ui <- function(ns) {
       shiny::tags$div(class = "kit-downloads",
                       ui_download(ns("dl_example"), "下載欄位範例檔（CSV）"))
     ),
-    shiny::h5("2. 這一輪的世代與波次"),
+    shiny::h5("2. 這一回合的世代與波次"),
     shiny::uiOutput(ns("pick_ui")),
     shiny::tags$div(
       class = "d-flex gap-2 mb-1",
@@ -90,19 +90,19 @@ data_choices_ui <- function(ns) {
     ),
     shiny::tags$small(class = "kit-hint", "數字是施測月齡。", "可以一次勾好幾個。",
                       "勾完停 1 秒才開始檢查。"),
-    shiny::h5("3. 上一輪的固定檔（選用）"),
+    shiny::h5("3. 上一回合的固定檔（選用）"),
     shiny::uiOutput(ns("fixed_choice")),
     shiny::uiOutput(ns("fixed_error")),
     shiny::tags$small(
       class = "kit-hint d-block",
-      "固定檔是上一輪在 ④ 下載的 zip。",
+      "固定檔是上一回合在 ④ 下載的 zip。",
       "有它，舊題的參數就固定不動。"
     ),
-    shiny::h5("4. 這一輪的名稱"),
+    shiny::h5("4. 這一回合的名稱"),
     shiny::textInput(ns("round_label"), NULL, ""),
     shiny::tags$small(
       class = "kit-hint",
-      "預設是 R1、R2…（第幾輪）。",
+      "預設是 R1、R2…（第幾回合）。",
       "只能用英文字母與數字。",
       "偏移的題會改名，加上「_r名稱」。"
     )
@@ -135,7 +135,7 @@ data_pick_input <- function(id, choices, selected = character()) {
 }
 
 #' @param goto function(tab) 切換分頁
-#' @param handover NULL 或 reactive：④ 交過來的 list(fixed, round)（這次連線上一輪的固定檔）
+#' @param handover NULL 或 reactive：④ 交過來的 list(fixed, round)（這次連線上一回合的固定檔）
 #' @return reactive：資料沒問題時是 list(df, fixed, round_label, files, source, data_file,
 #'   fixed_file, waves, picks, scales, plan, persons)；有問題或還沒勾時是 NULL。
 #'   files 與 data_file 可以有好幾個檔案；waves 是勾到的月齡，picks 是勾到的世代 × 波次；
@@ -145,9 +145,9 @@ mod_data_server <- function(id, goto, handover = NULL) {
   shiny::moduleServer(id, function(input, output, session) {
     ns <- session$ns
     fixed_rv <- shiny::reactiveVal(NULL)
-    # 固定檔來自這次連線的哪一輪（④ 交過來時）；NULL 時用上傳的 zip
+    # 固定檔來自這次連線的哪一回合（④ 交過來時）；NULL 時用上傳的 zip
     from_session <- shiny::reactiveVal(NULL)
-    # 這次連線最新的一輪（④ 交過來的）；讀不進來的固定檔的訊息
+    # 這次連線最新的一回合（④ 交過來的）；讀不進來的固定檔的訊息
     latest_round <- shiny::reactiveVal(NULL)
     fixed_error <- shiny::reactiveVal(NULL)
 
@@ -228,7 +228,7 @@ mod_data_server <- function(id, goto, handover = NULL) {
       if (is.null(e)) return(NULL)
       fr <- shiny::isolate(fixed_rv())
       keep <- if (is.null(fr)) "現在沒有固定檔。" else {
-        paste0("仍然用之前的固定檔：", fr$name %||% paste0("這次連線的第 ", from_session(), " 輪"),
+        paste0("仍然用之前的固定檔：", fr$name %||% paste0("這次連線的第 ", from_session(), " 回合"),
                "。")
       }
       ui_alert("danger", "【固定檔讀不進來】", shiny::tags$p(e), shiny::tags$p(keep))
@@ -266,14 +266,14 @@ mod_data_server <- function(id, goto, handover = NULL) {
     })
     label_problem <- shiny::reactive(kitsui_label_problem(round_label(), fixed()$version$rounds))
 
-    # 這一輪的資料與檢查：只跟著資料與勾選變（名稱、固定檔變了不重跑）
+    # 這一回合的資料與檢查：只跟著資料與勾選變（名稱、固定檔變了不重跑）
     checked <- shiny::reactive({
       src <- source_df()
       if (!is.null(src$error)) return(list(problems = src$error))
       p <- picks()
       if (length(p) == 0) return(kitsui_data_select(src$data, p, choices()))
       shiny::withProgress(
-        message = "檢查資料…", detail = "整理這一輪的世代、波次、量尺與作答", value = 0.5,
+        message = "檢查資料…", detail = "整理這一回合的世代、波次、量尺與作答", value = 0.5,
         kitsui_data_select(src$data, p, choices())
       )
     })
@@ -308,7 +308,7 @@ mod_data_server <- function(id, goto, handover = NULL) {
       ui_callout(shiny::tags$strong(h), "左邊第 2 步，一個世代一列，數字是月齡。")
     })
 
-    # 橘色的提醒：波次已經校準過、固定檔不是最新的一輪、資料檔之前用過
+    # 橘色的提醒：波次已經校準過、固定檔不是最新的一回合、資料檔之前用過
     notes <- shiny::reactive({
       ck <- checked()
       c(
@@ -346,9 +346,9 @@ mod_data_server <- function(id, goto, handover = NULL) {
     output$fixed_info <- shiny::renderUI({
       fr <- fixed_rv()
       if (is.null(fr)) {
-        return(shiny::tags$p(class = "kit-hint", "沒有固定檔：這一輪每個量尺都是自由校準。"))
+        return(shiny::tags$p(class = "kit-hint", "沒有固定檔：這一回合每個量尺都是自由校準。"))
       }
-      name <- fr$name %||% paste0("這次連線的第 ", from_session(), " 輪（還沒下載）")
+      name <- fr$name %||% paste0("這次連線的第 ", from_session(), " 回合（還沒下載）")
       data_fixed_summary(fr$fixed, name)
     })
 
@@ -397,7 +397,7 @@ mod_data_server <- function(id, goto, handover = NULL) {
     output$preview_meta <- shiny::renderText({
       df <- checked()$df
       shiny::req(df)
-      sprintf("這一輪有 %d 列作答。以下是前 %d 列。", nrow(df), KIT_PREVIEW_ROWS)
+      sprintf("這一回合有 %d 列作答。以下是前 %d 列。", nrow(df), KIT_PREVIEW_ROWS)
     })
     output$preview <- kit_table({
       df <- checked()$df
@@ -437,7 +437,7 @@ data_category_note <- function(problems) {
     sprintf("有 %d 題的得分不完整（沒有 0 分、中間少了分數，或只有一種分數）", NROW(problems)),
     items,
     shiny::tags$p("② 校準時，題庫裡有這一題，就固定在題庫的值。",
-                  "題庫裡沒有這一題，這一輪先不估它。"),
+                  "題庫裡沒有這一題，這一回合先不估它。"),
     shiny::tags$p("作答的分數不會被改動。")
   )
 }
@@ -483,7 +483,7 @@ data_borrowed_note <- function(plan, fixed) {
              shiny::tags$p("在 ② 題目校準可以改用別的題庫。"))
 }
 
-#' 固定檔的內容：之前的輪、量尺、題庫、連結
+#' 固定檔的內容：之前的回合、量尺、題庫、連結
 #' @noRd
 data_fixed_summary <- function(fixed, name) {
   v <- fixed$version
@@ -496,7 +496,7 @@ data_fixed_summary <- function(fixed, name) {
     class = "kit-callout",
     shiny::tags$strong("固定檔：", name),
     shiny::tags$ul(
-      li("之前的輪：", if (length(v$rounds)) paste(v$rounds, collapse = "、") else "（沒有）"),
+      li("之前的回合：", if (length(v$rounds)) paste(v$rounds, collapse = "、") else "（沒有）"),
       li("建立於 ", v$created, "，kits ", v$kits, "，參照世代 ", v$reference),
       li("題庫：", if (nrow(bank) == 0) "（空的）" else paste(
         sprintf("%s %d 題 %d 步", bank$scale, bank$items, bank$steps), collapse = "；"
@@ -509,19 +509,19 @@ data_fixed_summary <- function(fixed, name) {
   )
 }
 
-#' 固定檔的選擇：上傳 zip；或 ④ 交過來的（這次連線上一輪的）固定檔
+#' 固定檔的選擇：上傳 zip；或 ④ 交過來的（這次連線上一回合的）固定檔
 #' @noRd
 data_fixed_choice_ui <- function(ns, round) {
   if (!is.null(round)) {
     return(shiny::tagList(
-      ui_callout(shiny::tags$strong(paste0("上一輪的固定檔：來自這次連線的第 ", round, " 輪"))),
+      ui_callout(shiny::tags$strong(paste0("上一回合的固定檔：來自這次連線的第 ", round, " 回合"))),
       shiny::actionButton(ns("fixed_clear"), "改用上傳的固定檔，或不用",
                           class = "btn-sm btn-outline-secondary")
     ))
   }
   shiny::tagList(
     shiny::fileInput(ns("fixed_file"), NULL, accept = ".zip", buttonLabel = "選擇 zip…",
-                     placeholder = "沒有（第一輪）"),
+                     placeholder = "沒有（第一回合）"),
     shiny::actionButton(ns("fixed_clear"), "不用固定檔", class = "btn-sm btn-outline-secondary")
   )
 }
@@ -558,12 +558,12 @@ data_new_wave_guide <- function() {
     shiny::tags$summary(shiny::tags$strong("加一個新的波次")),
     shiny::tags$ol(
       class = "kit-steps",
-      shiny::tags$li("在 ④ 下載這一輪的固定檔（zip）；或按「用這一輪的固定檔開始下一輪」，留在這次連線裡。"),
+      shiny::tags$li("在 ④ 下載這一回合的固定檔（zip）；或按「用這一回合的固定檔開始下一回合」，留在這次連線裡。"),
       shiny::tags$li("在這一頁勾新的世代與波次，或上傳新的資料。"),
       shiny::tags$li("到 ② 題目校準：有固定檔時，舊題的參數不動，只估新的步驟。"),
       shiny::tags$li("到 ③ 連結：做好的內部連結與外部連結已經凍結，直接沿用。"),
       shiny::tags$li("到 ④ 算新的孩子的分數。"),
-      shiny::tags$li("存好這一輪的分數表與新的固定檔。")
+      shiny::tags$li("存好這一回合的分數表與新的固定檔。")
     )
   )
 }

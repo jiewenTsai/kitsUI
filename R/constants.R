@@ -14,6 +14,6 @@ KIT_NOTIFY_ERROR_SECONDS <- 10
 # 找不到 pandoc 時（圖檔要用 pandoc 存成單一 html）
 KIT_PANDOC_MISSING <- "找不到 pandoc：圖檔（HTML）不能下載。請安裝 RStudio 或 Quarto。"
 
-# 這一輪名稱停手多久才檢查（毫秒）；勾世代與波次停手多久（毫秒）
+# 這一回合名稱停手多久才檢查（毫秒）；勾世代與波次停手多久（毫秒）
 KIT_LABEL_DELAY_MS <- 500
 KIT_PICK_DELAY_MS <- 1000

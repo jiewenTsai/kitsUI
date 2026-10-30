@@ -35,7 +35,7 @@ test_that("換算路線：M36 先內部連結再外部連結，M03 直接外部�
   expect_equal(kitsui_link_path(round8()$round$fixed, "lan M36"), character())
 })
 
-test_that("從點重建的連結和 kits_linking() 相同（題數、設定、診斷）；links.csv 記下哪一輪做的", {
+test_that("從點重建的連結和 kits_linking() 相同（題數、設定、診斷）；links.csv 記下哪一回合做的", {
   lk <- linked()
   links <- kitsui_links(lk$fixed)
   expect_equal(unique(lk$fixed$links$round), "r8")
@@ -51,7 +51,7 @@ test_that("從點重建的連結和 kits_linking() 相同（題數、設定、�
   tab <- kitsui_link_table(lk$fixed, links, earlier = "lan M36")
   expect_named(tab, c("link", "kind", "from", "to", "intercept", "slope", "made", "round"))
   expect_equal(tab$round, c("r8", "r8"))
-  expect_equal(tab$made[tab$link == "lan M36"], "之前的輪")
+  expect_equal(tab$made[tab$link == "lan M36"], "之前的回合")
   expect_equal(tab$kind, c("外部連結", "內部連結"))
 })
 
@@ -95,7 +95,7 @@ test_that("錨題數；內部連結與外部連結的狀態", {
   lk <- linked()
   frozen <- kitsui_d_state(lk$fixed, kitsui_links(lk$fixed), "D", anchors)
   expect_equal(frozen$state, "frozen")
-  expect_match(frozen$text, "之前的輪")
+  expect_match(frozen$text, "之前的回合")
   expect_equal(kitsui_link_names(lk$fixed), c("lan M36", "D"))
 })
 
@@ -133,14 +133,14 @@ test_that("外部連結凍結後，新的 M03 領域沿用同一條外部連結�
   expect_identical(after$d_score, before$d_score)
   expect_identical(after$se_total, before$se_total)
 
-  # 寫出再讀回：延伸後的外部連結；③ 的表標出哪一輪延伸
+  # 寫出再讀回：延伸後的外部連結；③ 的表標出哪一回合延伸
   zip_path <- withr::local_tempfile(fileext = ".zip")
   kitsui_write_fixed(r9$fixed, zip_path)
   expect_identical(kitsui_read_fixed(zip_path)$links, r9$fixed$links)
   cov <- kitsui_d_coverage(r9$fixed, kitsui_anchor_counts(r9$fixed))
-  expect_equal(cov$external_link[cov$scale == "soc M03"], "第 r9 輪延伸（同一條線）")
-  expect_equal(cov$external_link[cov$scale == "lan M03"], "建立外部連結時（第 r8 輪）")
-  # 再一輪沒有新的 M03 量尺：不再延伸
+  expect_equal(cov$external_link[cov$scale == "soc M03"], "第 r9 回合延伸（同一條線）")
+  expect_equal(cov$external_link[cov$scale == "lan M03"], "建立外部連結時（第 r8 回合）")
+  # 再一回合沒有新的 M03 量尺：不再延伸
   again <- kitsui_link_D_extend(r9$fixed, "r10")
   expect_null(again$log)
   expect_identical(again$fixed, r9$fixed)
@@ -202,12 +202,12 @@ test_that("連結只重建需要的；沒有連結時換算路線是空的（不
   expect_equal(again$message, "沿用固定檔裡的連結。")
 })
 
-test_that("凍結的說明：之前的輪做的不說是上傳的（這次連線交過來的也一樣）", {
+test_that("凍結的說明：之前的回合做的不說是上傳的（這次連線交過來的也一樣）", {
   before <- kitsui_frozen_text(TRUE)
-  expect_match(before, "這一輪開始時的固定檔")
+  expect_match(before, "這一回合開始時的固定檔")
   expect_false(grepl("上傳", before))
   expect_false(grepl(paste0("固定", "集"), before))
-  expect_match(kitsui_frozen_text(FALSE), "這一輪剛做好")
+  expect_match(kitsui_frozen_text(FALSE), "這一回合剛做好")
 })
 
 test_that("檢查表加上一句中文說明：領域的平衡、各領域截距的差距", {

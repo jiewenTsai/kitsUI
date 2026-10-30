@@ -45,7 +45,7 @@ kitsui_bank_thr <- function(fixed, scale) {
   structure(thr, scale = scale)
 }
 
-# 已有就沿用；沒有就做一次，把點寫進 fixed$links（round 是這一輪）。
+# 已有就沿用；沒有就做一次，把點寫進 fixed$links（round 是這一回合）。
 # 有沒有先看名稱（kitsui_link_names()），已有時只重建這一條（不重建全部）。
 # kits 的錯誤（例如錨題不到 3 個）變成 message
 kitsui_link_once <- function(fixed, name, kind, make) {
@@ -118,7 +118,7 @@ kitsui_link_rebuild <- function(r, fixed) {
 }
 
 # kits_link_points() 記在點上的資訊，從存下來的點與題庫補回來：
-#   n_items 是點裡的題數；items_total 是做連結那一輪為止，題庫裡兩個量尺各有幾題；
+#   n_items 是點裡的題數；items_total 是做連結那一回合為止，題庫裡兩個量尺各有幾題；
 #   外部連結裡沒有錨題的領域（no_anchors）用同一條線
 kitsui_link_meta <- function(r, fixed) {
   from <- strsplit(r$from_scale[1], ", ")[[1]]
@@ -133,7 +133,7 @@ kitsui_link_meta <- function(r, fixed) {
        items_total = kitsui_items_total(fixed, c(from = from, to = to), r$round[1]))
 }
 
-# 做連結那一輪為止（含），題庫裡各量尺的題數；round 不明時用整個題庫
+# 做連結那一回合為止（含），題庫裡各量尺的題數；round 不明時用整個題庫
 kitsui_items_total <- function(fixed, scales, round) {
   rounds <- fixed$version$rounds
   upto <- if (isTRUE(round %in% rounds)) rounds[seq_len(match(round, rounds))] else rounds
@@ -162,7 +162,7 @@ kitsui_link_D_extend <- function(fixed, round) {
   list(fixed = fixed, log = log)
 }
 
-#' 參照世代各量尺：錨題數、外部連結涵蓋的方式（建立時、第幾輪延伸、還沒有外部連結）
+#' 參照世代各量尺：錨題數、外部連結涵蓋的方式（建立時、第幾回合延伸、還沒有外部連結）
 #' @param anchors kitsui_anchor_counts(fixed)
 #' @return tibble：scale、n_anchors、external_link
 #' @noRd
@@ -172,8 +172,8 @@ kitsui_d_coverage <- function(fixed, anchors) {
   to_d <- dplyr::case_when(
     nrow(d) == 0 ~ "還沒有外部連結",
     anchors$scale %in% ext$scale ~
-      paste0("第 ", ext$round[match(anchors$scale, ext$scale)], " 輪延伸（同一條線）"),
-    TRUE ~ paste0("建立外部連結時（第 ", d$round[1], " 輪）")
+      paste0("第 ", ext$round[match(anchors$scale, ext$scale)], " 回合延伸（同一條線）"),
+    TRUE ~ paste0("建立外部連結時（第 ", d$round[1], " 回合）")
   )
   dplyr::mutate(anchors, external_link = to_d)
 }
@@ -204,7 +204,7 @@ kitsui_internal_scales <- function(fixed) {
 #' 一條內部連結的狀態
 #'
 #' @param links kitsui_links(fixed)
-#' @param earlier 這一輪開始時固定檔裡的連結名稱（kitsui_link_names()）
+#' @param earlier 這一回合開始時固定檔裡的連結名稱（kitsui_link_names()）
 #' @return list(state, link, text)：state 是 "frozen"（已有）、"ready"（可以做）、
 #'   "missing"（缺題庫，text 說明原因）
 #' @noRd
@@ -225,8 +225,8 @@ kitsui_internal_state <- function(fixed, scale, links, earlier) {
 }
 
 kitsui_frozen_text <- function(from_earlier) {
-  when <- if (from_earlier) "之前的輪就做好了（在這一輪開始時的固定檔裡）" else "這一輪剛做好"
-  paste0("這條連結", when, "，已經凍結。這一輪直接沿用，不會重做。")
+  when <- if (from_earlier) "之前的回合就做好了（在這一回合開始時的固定檔裡）" else "這一回合剛做好"
+  paste0("這條連結", when, "，已經凍結。這一回合直接沿用，不會重做。")
 }
 
 #' 參照世代各量尺的錨題數（kits_anchors() 的題號出現在題庫裡的）
@@ -266,21 +266,21 @@ kitsui_d_state <- function(fixed, links, earlier, anchors) {
   list(state = "ready", link = NULL, text = text)
 }
 
-#' 獨立檢核做不了的原因：要這一輪兩個世代的作答與校準；NULL 表示可以做
+#' 獨立檢核做不了的原因：要這一回合兩個世代的作答與校準；NULL 表示可以做
 #' @noRd
 kitsui_link_check_why <- function(round, link) {
   scales <- c(link$from_scale, link$to_scale)
   have <- scales %in% names(round$items) & scales %in% names(round$data)
   if (all(have)) return(NULL)
-  paste0("這一輪的題目校準沒有 ", paste(scales[!have], collapse = "、"), "。",
-         "獨立檢核要用兩個世代這一輪的作答，所以這次不能做。",
+  paste0("這一回合的題目校準沒有 ", paste(scales[!have], collapse = "、"), "。",
+         "獨立檢核要用兩個世代這一回合的作答，所以這次不能做。",
          "下次兩個世代的資料一起進來時就能做。")
 }
 
-#' 獨立檢核：kits_link_check()，兩個世代這一輪的校準與作答
+#' 獨立檢核：kits_link_check()，兩個世代這一回合的校準與作答
 #'
 #' 兩個世代的 visit_id 可能重複，所以列次資訊分開給（persons_from、persons_to）。
-#' @param round kitsui_round() 的結果；df 是這一輪的長格式資料
+#' @param round kitsui_round() 的結果；df 是這一回合的長格式資料
 #' @param persons ① 算好的 kitsui_persons(df)；NULL 時從 df 算
 #' @noRd
 kitsui_link_check <- function(round, df, link, persons = NULL) {
@@ -294,7 +294,7 @@ kitsui_link_check <- function(round, df, link, persons = NULL) {
   )
 }
 
-#' 固定檔裡所有連結的總表：內部或外部連結、係數、哪一輪做的（欄名是英文）
+#' 固定檔裡所有連結的總表：內部或外部連結、係數、哪一回合做的（欄名是英文）
 #' @noRd
 kitsui_link_table <- function(fixed, links, earlier) {
   if (length(links) == 0) return(NULL)
@@ -305,7 +305,7 @@ kitsui_link_table <- function(fixed, links, earlier) {
       link = n, kind = if (n == "D") "外部連結" else "內部連結",
       from = paste(l$from_scale, collapse = "、"), to = l$to_scale,
       intercept = co[["intercept"]], slope = co[["slope"]],
-      made = if (n %in% earlier) "之前的輪" else "這一輪"
+      made = if (n %in% earlier) "之前的回合" else "這一回合"
     )
   }) |>
     purrr::list_rbind() |>
@@ -409,7 +409,7 @@ kitsui_check_explain <- function(tab) {
   tab
 }
 
-#' 這一輪兩個世代沒有共同的月齡時，一句說明（有共同月齡時是 NULL）
+#' 這一回合兩個世代沒有共同的月齡時，一句說明（有共同月齡時是 NULL）
 #' @param raw 具名 list：各量尺換算前的 kits_subj（有 wave_m）
 #' @noRd
 kitsui_vertical_no_common <- function(raw) {
@@ -417,6 +417,6 @@ kitsui_vertical_no_common <- function(raw) {
   if (any(purrr::map_lgl(waves, is.null))) return(NULL)
   if (length(Reduce(intersect, waves)) > 0) return(NULL)
   each <- purrr::imap_chr(waves, \(w, s) paste0(s, "：", paste(w, collapse = "、"), " 個月"))
-  paste0("這一輪兩個世代沒有共同的月齡（", paste(each, collapse = "；"), "）。",
+  paste0("這一回合兩個世代沒有共同的月齡（", paste(each, collapse = "；"), "）。",
          "所以圖上沒有同一個月齡可以直接比的兩個點。")
 }

@@ -357,7 +357,7 @@ kit_css <- function() {
 
 #' 離開頁面前的提醒：伺服器送 kit_unload_guard（TRUE 或 FALSE）開關
 #'
-#' 有這一輪的結果時（② 校準過），關掉或重新整理分頁前，瀏覽器會先問一次。
+#' 有這一回合的結果時（② 校準過），關掉或重新整理分頁前，瀏覽器會先問一次。
 #' @noRd
 kit_js <- function() {
   shiny::HTML("
