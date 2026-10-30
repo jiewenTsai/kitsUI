@@ -2810,10 +2810,79 @@
       "checksum": "226d7cbec671c2e297aebc835d03041f"
     },
     "DESCRIPTION": {
-      "checksum": "192fe420860416e4b9fcd0823ad30e00"
+      "checksum": "52e575f2af651d1c2645566f4b0e88d1"
+    },
+    "inst/manual/img/t1_data_design.webp": {
+      "checksum": "f7e066d8adce96794925cfd46818bdfb"
+    },
+    "inst/manual/img/t1_data_pick.webp": {
+      "checksum": "e881a6d0e41f7416f7a4d40e49cc3aeb"
+    },
+    "inst/manual/img/t1_items_bank.webp": {
+      "checksum": "27557bf7900451e2ff6e987d4478fbb8"
+    },
+    "inst/manual/img/t1_items_coef.webp": {
+      "checksum": "cde8695b3a1b19f66da75cba87f05ef3"
+    },
+    "inst/manual/img/t1_items_done.webp": {
+      "checksum": "786a7831f647b5f24b708be0767eab2c"
+    },
+    "inst/manual/img/t1_items_fit.webp": {
+      "checksum": "f6934fe5535e3cc39016d637a56841b2"
+    },
+    "inst/manual/img/t1_items_plot.webp": {
+      "checksum": "319825898166c0492d15e9b32e408b93"
+    },
+    "inst/manual/img/t1_link_external.webp": {
+      "checksum": "3eb43c1c05fb87389e45d14083460964"
+    },
+    "inst/manual/img/t1_link_fixed.webp": {
+      "checksum": "77ea76cbc273bd2344ac080ff295f142"
+    },
+    "inst/manual/img/t1_link_internal.webp": {
+      "checksum": "0a98f15dc53a72512037615ade1964dd"
+    },
+    "inst/manual/img/t1_link_vertical.webp": {
+      "checksum": "97cf7fbc7a3b5ab4573e0b1b87b259be"
+    },
+    "inst/manual/img/t1_score_done.webp": {
+      "checksum": "84352dc94a54f9e40bfc1e212b3e9594"
+    },
+    "inst/manual/img/t1_score_items.webp": {
+      "checksum": "68eacede355b87f8d0c58b0be040fafd"
+    },
+    "inst/manual/img/t1_score_raw.webp": {
+      "checksum": "e6c2b8ff22899610252ee21acae89b01"
+    },
+    "inst/manual/img/t1_score_table.webp": {
+      "checksum": "effe8654c1e50cd1f3c8bb4dfa7e990e"
+    },
+    "inst/manual/img/t2_data.webp": {
+      "checksum": "4ba90430dc8e1f032841d40a70873ba0"
+    },
+    "inst/manual/img/t2_items_bank.webp": {
+      "checksum": "52c6a413219b55d128e972cb2d0faf63"
+    },
+    "inst/manual/img/t2_items_done.webp": {
+      "checksum": "587b633a04665814f97dc206037493a8"
+    },
+    "inst/manual/img/t2_items_log.webp": {
+      "checksum": "bef31b9fbe440f9dbe8ed0a1d052d870"
+    },
+    "inst/manual/img/t2_link_fixed.webp": {
+      "checksum": "d8a4e58ebb30ad7d07f9894acc14cba9"
+    },
+    "inst/manual/img/t2_link_top.webp": {
+      "checksum": "de863f86c2d1ce4fdf0513cde4178ee6"
+    },
+    "inst/manual/img/t2_score_done.webp": {
+      "checksum": "811b41f7fb0d63afcfab87980d4df609"
+    },
+    "inst/manual/kitsui_manual_body.html": {
+      "checksum": "fc33ad2c4b053e25f0d656f57e27ec67"
     },
     "inst/manual/kitsui_manual.html": {
-      "checksum": "efa852a001f7aa70511c014465d7ec93"
+      "checksum": "d84145f0c844edba6a6891e9553652c9"
     },
     "NAMESPACE": {
       "checksum": "317ae8dff22b06e5d19fde44a9aaf7a7"
@@ -2831,13 +2900,13 @@
       "checksum": "73d371fabc50b7f88a5e9b34021f312f"
     },
     "R/kit_theme.R": {
-      "checksum": "3040945f646ed09acc7539614143ce55"
+      "checksum": "9ba17daaf398b37cb3aed30cdad27a45"
     },
     "R/kitsUI-package.R": {
       "checksum": "4ffd9e6da95e61fd880674093b54b9d5"
     },
     "R/manual.R": {
-      "checksum": "e2a0178be2e14056192d73754d1393b4"
+      "checksum": "0b599f45da22f8a02761ae8c3e5b867f"
     },
     "R/mod_data.R": {
       "checksum": "9b8a30b4d533471b5ec4eadaddc543ac"

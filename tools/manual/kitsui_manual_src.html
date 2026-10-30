@@ -1,5 +1,5 @@
 <title>kitsUI 操作手冊</title>
-<meta name="description" content="KIT 量尺建構工具（kitsUI 0.3.4）的操作手冊：過去波次的基礎計分與新增波次的計分。">
+<meta name="description" content="KIT 量尺建構工具（kitsUI 0.3.5）的操作手冊：過去波次的基礎計分與新增波次的計分。">
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=LXGW+WenKai+TC:wght@400;700&family=Noto+Sans+TC:wght@400;500;700&family=JetBrains+Mono:wght@400;600&display=swap">
@@ -133,14 +133,14 @@ footer { margin-top: 64px; padding-top: 18px; border-top: 1px solid var(--rule);
 
 <div class="wrap">
 <header class="top">
-  <div class="eyebrow">KIT 量尺建構工具 · kitsUI 0.3.4</div>
+  <div class="eyebrow">KIT 量尺建構工具 · kitsUI 0.3.5</div>
   <h1>kitsUI 操作手冊</h1>
   <p class="lede">kitsUI 把 KIT 的作答資料校準、連結，算成每個孩子的分數。這份手冊分成兩個任務：第一次建立量尺時的<strong>基礎計分</strong>，以及之後每收到一波資料時的<strong>新增波次計分</strong>。</p>
   <div class="meta">
     <span>雲端版：<a target="_blank" rel="noopener" href="https://jiewentsai-kitsui.share.connect.posit.cloud/">jiewentsai-kitsui.share.connect.posit.cloud</a></span>
     <span>原始碼：<a target="_blank" rel="noopener" href="https://github.com/jiewenTsai/kitsUI">github.com/jiewenTsai/kitsUI</a></span>
     <span>截圖用的是 app 內建的示範資料</span>
-    <span>app 的最後一頁「使用手冊」也是這份手冊</span>
+    <span class="standalone">app 的最後一頁「使用手冊」也是這份手冊</span>
   </div>
 </header>
 
@@ -267,7 +267,7 @@ footer { margin-top: 64px; padding-top: 18px; border-top: 1px solid var(--rule);
   <h4>圖與適配度</h4>
   <p>圖有四種：類別機率曲線、題目與受試者分布（Wright map）、適配度、觀察與預期（依波次）。題目多時可以分頁看，或自己選題。</p>
   <figure class="shot"><img src="{{t1_items_plot}}" alt="類別機率曲線：每題一小圖，曲線是各得分的機率" loading="lazy"></figure>
-  <p>適配度表的 <span class="col">infit</span>、<span class="col">outfit</span> 接近 1 最好。都在 0.6–1.4 之間時 flag 是 ok；任一個大於 1.4 是 overfit 以外的 underfit（比模型預期亂），小於 0.6 是 overfit（比模型預期整齊）。</p>
+  <p>適配度表的 <span class="col">infit</span>、<span class="col">outfit</span> 接近 1 最好。兩個都在 0.6–1.4 之間時 flag 是 ok；任一個大於 1.4 是 underfit（作答比模型預期亂），小於 0.6 是 overfit（比模型預期整齊）。</p>
   <figure class="shot"><img src="{{t1_items_fit}}" alt="題目適配度表：n、pvalue、rir、infit、outfit、flag" loading="lazy"></figure>
   <p>沒有紅字時，按頁尾的<strong>下一步：連結</strong>。</p>
 
@@ -377,7 +377,7 @@ footer { margin-top: 64px; padding-top: 18px; border-top: 1px solid var(--rule);
   <p><strong>這一回合的紀錄</strong>列出每一個處理：借用題庫、分數類別有問題而固定的題、偏移的題和它的新名字（例如 <code>lanc09 → lanc09_rR2</code>）。這份紀錄也會寫進新的固定檔。</p>
   <figure class="shot"><img src="{{t2_items_log}}" alt="這一回合的紀錄：borrowed bank、category problem kept fixed、drift、new version" loading="lazy"></figure>
   <div class="note warn">
-    <p><strong>flag 的條件：</strong>偏移的題超過已判斷題的 20%（至少 1 題），或可以固定的題少於 5 題。量尺被 flag 時照樣往下做，但請記在報告裡。條件可以在 ② 頁的「進階設定」改。</p>
+    <p><strong>flag 的條件：</strong>偏移的題比已判斷題的 20% 多（而且多於 1 題），或可以固定的題少於 5 題。量尺被 flag 時照樣往下做，但請記在報告裡。條件可以在 ② 頁的「進階設定」改。</p>
   </div>
 
   <h3 id="t2-link"><span class="step-no">③</span> 連結：沿用，不用按</h3>
@@ -407,7 +407,7 @@ footer { margin-top: 64px; padding-top: 18px; border-top: 1px solid var(--rule);
   <h4>可以一次放好幾波新資料嗎？</h4>
   <p>可以上傳，但建議一次只勾一波，一波一回合。這樣每一波的偏移會分開檢查，紀錄也清楚。</p>
   <h4>一個 M36 量尺沒做內部連結會怎樣？</h4>
-  <p>它的分數會停在 M36 自己的量尺上，d_score 是空白。③ 頁會提醒還有哪些量尺沒做。</p>
+  <p>它的分數會停在 M36 自己的量尺上，d_score 是空白。③ 頁尾會寫「還可以建立：…」，列出還沒做的連結。</p>
   <h4>下載圖（HTML）失敗？</h4>
   <p>本機版下載圖要用 pandoc。裝了 RStudio 或 Quarto 就有。雲端版不受影響。</p>
   <h4>不小心關掉頁面？</h4>
@@ -416,6 +416,6 @@ footer { margin-top: 64px; padding-top: 18px; border-top: 1px solid var(--rule);
   <p>每一頁最下面的「用 R 怎麼做」列出這一步背後的 kits 程式碼，可以複製到 R 裡重跑。</p>
 </section>
 
-<footer>kitsUI 0.3.4（2026-10-30）· kits 0.25.2 · 截圖用 app 內建的示範資料（kits::kitm03、kits::kitm36）。</footer>
+<footer>kitsUI 0.3.5（2026-10-30）· kits 0.25.2 · 截圖用 app 內建的示範資料（kits::kitm03、kits::kitm36）。</footer>
 </main>
 </div>
