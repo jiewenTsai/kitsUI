@@ -492,7 +492,7 @@ kitsui_fixed_update <- function(fixed, ok, log, sources, summary = NULL) {
   fixed$sources <- dplyr::bind_rows(fixed$sources, sources)
   fixed$version <- utils::modifyList(fixed$version, list(
     kits = as.character(utils::packageVersion("kits")), kitsUI = kitsui_version(),
-    created = as.character(Sys.Date()), rounds = c(fixed$version$rounds, sources$round[1]),
+    created = kitsui_today(), rounds = c(fixed$version$rounds, sources$round[1]),
     scales = union(fixed$version$scales, names(ok))
   ))
   fixed

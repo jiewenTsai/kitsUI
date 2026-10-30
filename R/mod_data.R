@@ -26,7 +26,7 @@ mod_data_ui <- function(id) {
         shiny::uiOutput(ns("categories")),
         shiny::h4("量尺"),
         shiny::tags$p(class = "kit-hint",
-                      "量尺 = 領域 × 世代，例如 lan M03。", "每個量尺分開校準。"),
+                      shiny::textOutput(ns("scale_example"), inline = TRUE), "每個量尺分開校準。"),
         shiny::tableOutput(ns("scales")),
         shiny::uiOutput(ns("borrowed")),
         shiny::uiOutput(ns("next_step")),
@@ -62,7 +62,7 @@ data_choices_ui <- function(ns) {
                                 "lan"),
       shiny::tags$small(
         class = "kit-hint",
-        "第一回合建議：M03 只勾 3 個月。",
+        "示範資料（KIT 的 M03、M36）第一回合建議：M03 只勾 3 個月。",
         "M36 的第一回合勾 36 與 48 個月。",
         "之後每一回合加下一個波次。"
       )
@@ -93,6 +93,8 @@ data_choices_ui <- function(ns) {
     ),
     shiny::tags$small(class = "kit-hint", "數字是施測月齡。", "可以一次勾好幾個。",
                       "勾完停 1 秒才開始檢查。"),
+    # 參照世代：第一回合選（寫進固定檔）；之後的回合讀固定檔的，只顯示
+    shiny::uiOutput(ns("reference_ui")),
     shiny::h5("3. 上一回合的固定檔（選用）"),
     shiny::uiOutput(ns("fixed_choice")),
     shiny::uiOutput(ns("fixed_error")),
@@ -197,12 +199,24 @@ mod_data_server <- function(id, goto, handover = NULL) {
       if (length(input$domains) == 0) return(list(error = "請至少勾選一個領域。"))
       list(data = kitsui_demo(c("M03", "M36"), NULL, input$domains))
     })
+    # 參照世代：有固定檔時用固定檔的（不能改）；第一回合用 ① 選的（預設 M03 或第一個世代）
+    cohorts <- shiny::reactive(sort(unique(stats::na.omit(source_df()$data$cohort))))
+    reference <- shiny::reactive({
+      fx <- fixed_rv()$fixed
+      if (!is.null(fx)) return(fx$version$reference)
+      kitsui_ref_pick(input$reference, cohorts())
+    })
+    output$reference_ui <- shiny::renderUI({
+      data_reference_ui(ns, cohorts(), fixed_rv()$fixed, shiny::isolate(input$reference))
+    })
     choices <- shiny::reactive(kitsui_pick_choices(source_df()$data %||% data.frame()))
 
     # 世代 × 波次的勾選框跟著資料來源變；還勾著的留著。預設都不勾
     output$pick_ui <- shiny::renderUI({
       ch <- choices()
       if (nrow(ch) == 0) return(shiny::tags$p(class = "kit-hint", "先選資料。"))
+      # 參照世代排在最前面（只影響顯示的順序，不重跑資料的檢查）
+      ch <- ch[order(ch$cohort != reference()), ]
       data_pick_input(ns("waves"), ch, intersect(shiny::isolate(input$waves), ch$value))
     })
     shiny::observeEvent(input$waves_all, {
@@ -212,17 +226,25 @@ mod_data_server <- function(id, goto, handover = NULL) {
       shiny::updateCheckboxGroupInput(session, "waves", selected = character())
     })
 
-    # 固定檔：讀不進來時用紅字說明，之前的固定檔留著
-    shiny::observeEvent(input$fixed_file, {
-      fx <- tryCatch(kitsui_read_fixed(input$fixed_file$datapath), error = \(e) e)
+    # 固定檔：讀不進來時用紅字說明，之前的固定檔留著。
+    # 被改過的（和核對碼不符）先擋下來；按「仍然使用」才讀，之後一直提醒
+    load_fixed <- function(allow_modified = FALSE) {
+      path <- input$fixed_file$datapath
+      fx <- tryCatch(kitsui_read_fixed(path, allow_modified), error = \(e) e)
       if (inherits(fx, "error")) {
         fixed_error(kit_error_text(fx, "讀取固定檔"))
+        fixed_modified(inherits(fx, "kit_fixed_modified"))
         return()
       }
       fixed_error(NULL)
-      fixed_rv(list(fixed = fx, name = input$fixed_file$name))
+      fixed_modified(FALSE)
+      fixed_rv(list(fixed = fx, name = input$fixed_file$name,
+                    integrity = kitsui_fixed_integrity(path)))
       from_session(NULL)
-    })
+    }
+    fixed_modified <- shiny::reactiveVal(FALSE)
+    shiny::observeEvent(input$fixed_file, load_fixed())
+    shiny::observeEvent(input$fixed_force, load_fixed(allow_modified = TRUE))
     shiny::observeEvent(input$fixed_clear, {
       fixed_rv(NULL)
       from_session(NULL)
@@ -236,7 +258,11 @@ mod_data_server <- function(id, goto, handover = NULL) {
         paste0("仍然用之前的固定檔：", fr$name %||% paste0("這次連線的第 ", from_session(), " 回合"),
                "。")
       }
-      ui_alert("danger", "【固定檔讀不進來】", shiny::tags$p(e), shiny::tags$p(keep))
+      force <- if (isTRUE(fixed_modified())) {
+        shiny::tags$p(shiny::actionButton(ns("fixed_force"), "仍然使用這個固定檔（我知道它被改過）",
+                                          class = "btn-sm btn-outline-danger"))
+      }
+      ui_alert("danger", "【固定檔讀不進來】", shiny::tags$p(e), shiny::tags$p(keep), force)
     })
 
     # ④ 交過來的固定檔：不用上傳；世代與波次清空，等使用者勾新的
@@ -251,7 +277,7 @@ mod_data_server <- function(id, goto, handover = NULL) {
       })
     }
     output$fixed_choice <- shiny::renderUI(data_fixed_choice_ui(ns, from_session()))
-    fixed <- shiny::reactive(fixed_rv()$fixed %||% kitsui_fixed_empty())
+    fixed <- shiny::reactive(fixed_rv()$fixed %||% kitsui_fixed_empty(reference()))
 
     # 勾世代與波次時停手 1 秒才檢查：一個一個勾時不用每勾一次就等一次
     # （測試時 options(kitsui.waves_delay = 0) 不等）
@@ -358,8 +384,9 @@ mod_data_server <- function(id, goto, handover = NULL) {
         return(shiny::tags$p(class = "kit-hint", "沒有固定檔：這一回合每個量尺都是自由校準。"))
       }
       name <- fr$name %||% paste0("這次連線的第 ", from_session(), " 回合（還沒下載）")
-      data_fixed_summary(fr$fixed, name)
+      data_fixed_summary(fr$fixed, name, fr$integrity)
     })
+    output$scale_example <- shiny::renderText(data_scale_example(checked()$scales))
 
     # 作答設計：每個量尺一張
     output$design_pick <- shiny::renderUI({
@@ -516,9 +543,48 @@ data_borrowed_note <- function(plan, fixed) {
              shiny::tags$p("在 ② 題目校準可以改用別的題庫。"))
 }
 
-#' 固定檔的內容：之前的回合、量尺、題庫、連結
+#' 參照世代：第一回合（沒有固定檔）選一個，寫進固定檔；有固定檔時只顯示固定檔裡的
+#'
+#' 預設：資料有 M03 時是 M03，沒有時是第一個世代（kitsui_ref_pick()）。
+#' @param cohorts 資料裡的世代；fixed 是上一回合的固定檔（NULL 時是第一回合）；pick 是原本選的
 #' @noRd
-data_fixed_summary <- function(fixed, name) {
+data_reference_ui <- function(ns, cohorts, fixed = NULL, pick = NULL) {
+  if (!is.null(fixed)) {
+    ref <- fixed$version$reference
+    away <- if (length(cohorts) > 0 && !ref %in% cohorts) {
+      paste0("這份資料沒有 ", ref, "：其他世代的內部連結仍然連到題庫裡的 ", ref, "。")
+    }
+    return(shiny::tags$p(
+      class = "kit-hint mt-2", shiny::tags$strong("參照世代：", ref),
+      "（固定檔裡的。第一回合選好以後，之後的回合都一樣，不能改。）", away
+    ))
+  }
+  if (length(cohorts) == 0) return(NULL)
+  shiny::tags$div(
+    class = "mt-2",
+    shiny::selectInput(ns("reference"), "參照世代", cohorts, kitsui_ref_pick(pick, cohorts),
+                       width = "12rem"),
+    shiny::tags$small(
+      class = "kit-hint",
+      "其他世代的量尺都用內部連結換到參照世代的量尺；",
+      "參照世代有 D 分數的錨題時，外部連結也從它開始。",
+      "參照世代會寫進這一回合的固定檔，之後的回合都用同一個，不能再改。",
+      "資料有 M03 時預設是 M03，沒有時是第一個世代。"
+    )
+  )
+}
+
+#' 量尺的例子（量尺表上面的一句話）：用這一回合的第一個量尺；還沒有時用 lan M03
+#' @noRd
+data_scale_example <- function(scales) {
+  ex <- if (NROW(scales) > 0) scales$scale[1] else "lan M03"
+  paste0("量尺 = 領域 × 世代，例如 ", ex, "。")
+}
+
+#' 固定檔的內容：之前的回合、量尺、題庫、連結、核對碼
+#' @param integrity NULL 或 kitsui_fixed_integrity()（這次連線交過來的固定檔沒有）
+#' @noRd
+data_fixed_summary <- function(fixed, name, integrity = NULL) {
   v <- fixed$version
   bank <- dplyr::count(fixed$bank, .data$scale, name = "steps")
   items <- dplyr::summarise(fixed$bank, items = dplyr::n_distinct(.data$item_id), .by = "scale")
@@ -531,6 +597,14 @@ data_fixed_summary <- function(fixed, name) {
     shiny::tags$ul(
       li("之前的回合：", if (length(v$rounds)) paste(v$rounds, collapse = "、") else "（沒有）"),
       li("建立於 ", v$created, "，kits ", v$kits, "，參照世代 ", v$reference),
+      if (!is.null(integrity)) {
+        cls <- if (identical(integrity$status, "ok")) NULL else "kit-warn-text"
+        li(shiny::tags$span(class = cls, "核對碼：", integrity$text))
+      },
+      if (length(integrity$ignored) > 0) {
+        li(shiny::tags$span(class = "kit-warn-text", "zip 裡多出來、沒有讀的檔案：",
+                            paste(integrity$ignored, collapse = "、")))
+      },
       li("題庫：", if (nrow(bank) == 0) "（空的）" else paste(
         sprintf("%s %d 題 %d 步", bank$scale, bank$items, bank$steps), collapse = "；"
       )),

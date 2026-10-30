@@ -169,7 +169,7 @@ test_that("錨題不到 3 個時不能做外部連結，顯示錨題數與 kits 
     expect_equal(d_state()$state, "missing")
     expect_match(output$d_status$html, "至少要 3 個")
     expect_match(output$d_status$html, "at least 3")
-    expect_match(output$internal_status$html, "還沒有 M36")
+    expect_match(output$internal_status$html, "還沒有參照世代（\\s*M03\\s*）以外的世代的量尺")
   })
 })
 

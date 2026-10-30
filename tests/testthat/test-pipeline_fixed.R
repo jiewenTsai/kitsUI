@@ -38,6 +38,7 @@ test_that("舊的固定檔：沒有 waves.csv、versions.csv 沒有 cohort 欄�
   kitsui_write_fixed(fixed, zip_path)
   dir <- withr::local_tempdir()
   utils::unzip(zip_path, exdir = dir)
+  old_version_file(dir)
   file.remove(file.path(dir, c("waves.csv", "wave_summary.csv", "pass_steps.csv")))
   v <- readr::read_csv(file.path(dir, "versions.csv"), show_col_types = FALSE)
   readr::write_csv(v[c("scale", "item_id", "current_id")], file.path(dir, "versions.csv"))

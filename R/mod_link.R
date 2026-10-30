@@ -1,4 +1,5 @@
-# ③ 連結：內部連結（M36 -> M03，每個領域一條）與外部連結（參照世代 -> D，用錨題）
+# ③ 連結：內部連結（參照世代以外的每個世代 -> 參照世代，每個世代、每個領域各一條）與
+# 外部連結（參照世代 -> D，用錨題；參照世代沒有錨題時不適用）
 # 每條連結只做一次；做好就凍結在固定檔裡，之後每一回合沿用，早先的 D 分數不會變
 # 計算（狀態、錨題數、獨立檢核、總表）在 pipeline_link.R
 
@@ -8,23 +9,13 @@ mod_link_ui <- function(id) {
   shiny::tagList(
     link_guide(),
     shiny::uiOutput(ns("source")),
-    shiny::h4("1. 內部連結：M36 → M03"),
-    shiny::tags$small(
-      class = "kit-hint",
-      "兩個世代的題目參數各自在自己的量尺上。",
-      "內部連結用兩邊共同的題目，把 M36 的量尺換到 M03 的量尺。每個領域一條。"
-    ),
+    # 標題與說明用固定檔裡的參照世代與其他世代的名稱
+    shiny::uiOutput(ns("internal_head")),
     shiny::selectInput(ns("internal_scale"), "哪一個量尺要做內部連結？", choices = NULL),
+    shiny::uiOutput(ns("internal_overview_ui")),
     shiny::uiOutput(ns("internal_status")),
     shiny::uiOutput(ns("internal_result")),
-    shiny::h4("2. 外部連結：M03 → D"),
-    shiny::tags$small(
-      class = "kit-hint",
-      "D 分數是國際共用的發展量尺。",
-      "參照世代（M03）的題目裡，有些是錨題：它們在 D 量尺上的位置已知。",
-      "外部連結用錨題把 M03 的量尺換到 D。所有領域共用一條。",
-      "之後才進題庫的 M03 量尺，沿用同一條外部連結。"
-    ),
+    shiny::uiOutput(ns("d_head")),
     shiny::uiOutput(ns("d_status")),
     shiny::uiOutput(ns("d_result")),
     shiny::h4("3. 兩個世代的垂直連結：連結前後"),
@@ -51,8 +42,8 @@ link_guide <- function() {
   mod_guide(
     goal = "把各量尺的分數換到同一把尺上。",
     steps = c(
-      "內部連結：選一個 M36 的量尺，按「建立內部連結」。",
-      "外部連結：錨題夠了，按「建立外部連結」。",
+      "內部連結：選一個參照世代以外的量尺，按「建立內部連結」。每個世代、每個領域各做一條。",
+      "外部連結：錨題夠了，按「建立外部連結」。參照世代沒有 D 分數的錨題時，這一步不適用。",
       "看連結圖、連結前後的垂直連結與檢查，沒有紅字時，按「下一步：受試者評分」。"
     ),
     output = paste0(
@@ -60,7 +51,7 @@ link_guide <- function() {
       "之後每一回合都用同一條連結，所以早先算好的 D 分數永遠不會變。"
     ),
     note = paste0(
-      "內部連結把 M36 換到 M03 的量尺；外部連結把 M03 換到 D。",
+      "內部連結把其他世代換到參照世代（在 ① 第一回合選的）的量尺；外部連結把參照世代換到 D。",
       "兩種連結都用題庫裡的題目參數（kits_linking()），不是只用這一回合的資料。"
     )
   )
@@ -114,6 +105,20 @@ mod_link_server <- function(id, data, items, goto) {
     }
 
     output$source <- shiny::renderUI(link_source_ui(items(), ns))
+    # 標題與說明：還沒有題目校準時用 ① 的固定檔（參照世代）
+    head_fixed <- shiny::reactive(fixed() %||% tryCatch(data()$fixed, error = \(e) NULL))
+    d_ok <- shiny::reactive({
+      fx <- fixed()
+      is.null(fx) || kitsui_d_applicable(fx, anchors())
+    })
+    output$internal_head <- shiny::renderUI({
+      fx <- shiny::req(head_fixed())
+      link_head_ui(kitsui_internal_title(fx), kitsui_internal_hint(fx))
+    })
+    output$d_head <- shiny::renderUI({
+      fx <- shiny::req(head_fixed())
+      link_head_ui(kitsui_d_title(fx, d_ok()), kitsui_d_hint(fx, d_ok()))
+    })
 
     # 1. 內部連結 ----
     shiny::observeEvent(fixed(), {
@@ -135,12 +140,26 @@ mod_link_server <- function(id, data, items, goto) {
     output$internal_status <- shiny::renderUI({
       if (is.null(fixed())) return(NULL)
       if (length(kitsui_internal_scales(fixed())) == 0) {
-        return(ui_callout("題庫裡還沒有 M36 的量尺，這一步不用做。"))
+        return(ui_callout("題庫裡還沒有參照世代（", fixed()$version$reference,
+                          "）以外的世代的量尺，這一步不用做。"))
       }
       link_status_ui(internal(), notes()[[input$internal_scale]], ns("make_internal"),
                      "建立內部連結")
     })
 
+    # 好幾個量尺可以做內部連結時（例如 M06、M40 都連到 M03），列出每一條的狀態
+    output$internal_overview_ui <- shiny::renderUI({
+      if (is.null(fixed()) || length(kitsui_internal_scales(fixed())) < 2) return(NULL)
+      shiny::tagList(
+        shiny::tags$small(class = "kit-hint",
+                          "每個世代、每個領域各有一條內部連結，都連到參照世代：",
+                          "在上面一條一條選、一條一條建立。"),
+        shiny::tableOutput(ns("internal_overview"))
+      )
+    })
+    output$internal_overview <- kit_table(
+      kitsui_internal_overview(shiny::req(fixed()), links(), earlier())
+    )
     internal_link <- shiny::reactive(links()[[shiny::req(input$internal_scale)]])
     output$internal_result <- shiny::renderUI({
       if (is.null(internal()$link)) return(NULL)
@@ -177,7 +196,7 @@ mod_link_server <- function(id, data, items, goto) {
     output$d_status <- shiny::renderUI({
       if (is.null(fixed())) return(NULL)
       shiny::tagList(
-        link_anchor_ui(anchors(), ns("coverage")),
+        if (d_ok()) link_anchor_ui(anchors(), ns("coverage"), fixed()$version$reference),
         link_status_ui(d_state(), notes()[["D"]], ns("make_d"), "建立外部連結")
       )
     })
@@ -288,11 +307,14 @@ link_next_text <- function(fixed, ready, d) {
   left <- if (length(todo) > 0) {
     paste0("還可以建立：", paste(todo, collapse = "、"), "。不做也可以先評分。")
   }
-  if (n == 0) {
-    return(paste0("還沒有連結，分數會留在各自校準的量尺上。", left %||% "這一回合不用做連結。",
-                  "下一步是評分。"))
+  na <- if (identical(d, "na")) {
+    paste0("外部連結不適用，分數停在參照世代（", fixed$version$reference, "）的量尺上。")
   }
-  paste0("固定檔裡有 ", n, " 條連結。", left %||% "", "下一步是評分。")
+  if (n == 0) {
+    return(paste0("還沒有連結，分數會留在各自校準的量尺上。", na,
+                  left %||% "這一回合不用做連結。", "下一步是評分。"))
+  }
+  paste0("固定檔裡有 ", n, " 條連結。", na, left %||% "", "下一步是評分。")
 }
 
 #' 一條連結的輸出：圖、下載圖與點（key 是 "internal" 或 "d"）
@@ -347,6 +369,12 @@ link_code <- function(fixed, file = \(n) "fixed_set.zip") {
 
 # 畫面小元件 ----
 
+#' 一段連結的標題與說明（kitsui_internal_title()、kitsui_d_title() 等）
+#' @noRd
+link_head_ui <- function(title, hint) {
+  shiny::tagList(shiny::h4(title), shiny::tags$small(class = "kit-hint", hint))
+}
+
 #' 還沒有題目校準時的提示；這一回合有量尺停下來時的提醒
 #' @noRd
 link_source_ui <- function(round, ns) {
@@ -359,7 +387,7 @@ link_source_ui <- function(round, ns) {
   )
 }
 
-#' 連結的狀態：已凍結、可以做（按鈕與「做了就凍結」）、還不能做（原因）
+#' 連結的狀態：已凍結、可以做（按鈕與「做了就凍結」）、還不能做（原因）、不適用（不是錯誤）
 #' @noRd
 link_status_ui <- function(st, note, button_id, button_label) {
   shiny::tagList(
@@ -484,8 +512,9 @@ check_result_ui <- function(ns, chk) {
 }
 
 #' 參照世代各量尺：錨題數與外部連結涵蓋的方式
+#' @param ref 參照世代
 #' @noRd
-link_anchor_ui <- function(anchors, table_id) {
+link_anchor_ui <- function(anchors, table_id, ref = KITSUI_REF_COHORT) {
   if (nrow(anchors) == 0) return(NULL)
   shiny::tagList(
     shiny::tags$p("參照世代各量尺在題庫裡的錨題數（kits_anchors()），與外部連結涵蓋哪些量尺："),
@@ -493,7 +522,7 @@ link_anchor_ui <- function(anchors, table_id) {
     shiny::tags$small(
       class = "kit-hint",
       "外部連結是各領域共用的一條線。",
-      "沒有錨題、或之後才進題庫的 M03 量尺，沿用同一條外部連結，不重新估計。",
+      paste0("沒有錨題、或之後才進題庫的 ", ref, " 量尺，沿用同一條外部連結，不重新估計。"),
       "之後各回合題庫裡的錨題數可能變多。",
       "但外部連結凍結後，不會用新的錨題重新估計。"
     )
@@ -526,7 +555,8 @@ vertical_body_ui <- function(ns, vs, pick = NULL) {
 #' 一個分頁：畫不了時一句原因；畫得了時一句說明、圖、沒有共同月齡時的說明與下載
 #' @noRd
 vertical_tab_ui <- function(ns, stage, v) {
-  if (!is.null(v$why)) return(ui_callout(v$why, warning = TRUE))
+  # 外部連結不適用（na）不是錯誤，不用橘色
+  if (!is.null(v$why)) return(ui_callout(v$why, warning = !isTRUE(v$na)))
   id <- \(x) ns(paste0("vertical_", stage, "_", x))
   shiny::tagList(
     shiny::tags$p(class = "kit-hint kit-tab-caption", vertical_caption(stage, v)),
@@ -550,7 +580,8 @@ vertical_caption <- function(stage, v) {
                            "不和自己量尺的波次連在一起。")
                   }),
     internal = paste0("內部連結後：", paste(setdiff(scales, v$scale), collapse = "、"), " 換到 ",
-                      v$scale, " 的量尺，同一個月齡兩個世代的點應該靠在一起。"),
+                      v$scale, " 的量尺，同一個月齡",
+                      if (length(scales) > 2) "各世代" else "兩個世代", "的點應該靠在一起。"),
     external = "外部連結後：各世代都換到 D，相對位置和內部連結後相同。"
   )
   if (!any(v$table$source == "earlier")) return(text)

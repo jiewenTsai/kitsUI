@@ -70,7 +70,9 @@ kitsui_score <- function(round, df, fixed = round$fixed, links = NULL, persons =
 kitsui_score_convert <- function(own, fixed, links = NULL, round_label = NULL) {
   links <- links %||% kitsui_links(fixed)
   subj <- purrr::imap(own, \(x, s) kitsui_convert_path(x, kitsui_path_links(fixed, links, s)))
-  list(scores = kitsui_score_rows(subj, round_label, own), subj = subj, own = own)
+  # 外部連結不適用（參照世代沒有錨題）：最後的分數在參照世代的量尺上（ref_score），沒有 d_score
+  ref <- kitsui_ref_final(fixed)
+  list(scores = kitsui_score_rows(subj, round_label, own, ref), subj = subj, own = own)
 }
 
 #' 分數表：一列一列次一個量尺
@@ -79,26 +81,34 @@ kitsui_score_convert <- function(own, fixed, links = NULL, round_label = NULL) {
 #' ability、ability_se（kits 的 theta、se）是 bank 那把尺上的能力值（各世代分開校準，沒有經過連結）；
 #' d_score、d_score_se 是換到 D 之後的量尺分數（還沒換到 D 的量尺是空白），
 #' se_total 是 d_score_se 與 se_link 合起來。
+#' 外部連結不適用時（ref 不是 NULL），d_score、d_score_se 換成 ref_score、ref_score_se：
+#' 參照世代的量尺上的分數（參照世代自己就是 ability；其他世代經過內部連結；還沒有內部連結時空白），
+#' se_link、se_total 是 ref_score 的。
 #' @param subj 具名 list（校準的量尺）：換算後的 kits_subj
 #' @param own 具名 list（同 subj）：換算前（校準量尺上）的 kits_subj；NULL 時用 subj
+#' @param ref NULL，或外部連結不適用時的參照世代（kitsui_ref_final()）
 #' @noRd
-kitsui_score_rows <- function(subj, round_label = NULL, own = NULL) {
+kitsui_score_rows <- function(subj, round_label = NULL, own = NULL, ref = NULL) {
   own <- own %||% subj
+  last <- if (is.null(ref)) c("d_score", "d_score_se") else c("ref_score", "ref_score_se")
   cols <- c("visit_id", "subj_id", "cohort", "wave_m", "age_m", "sex", "domain", "round", "bank",
-            "scale", "raw", "ability", "ability_se", "d_score", "d_score_se", "se_link", "se_total")
+            "scale", "raw", "ability", "ability_se", last, "se_link", "se_total")
   label <- if (length(round_label) == 0) NA_character_ else round_label
   purrr::imap(subj, \(x, s) {
     base <- tibble::as_tibble(own[[s]])
     conv <- tibble::as_tibble(x)
-    on_d <- identical(attr(x, "scale"), "D")
+    to <- attr(x, "scale")
+    # 最後的量尺：D，或（外部連結不適用時）參照世代的量尺
+    on_d <- if (is.null(ref)) identical(to, "D") else identical(scale_cohort(to), ref)
     base |>
       dplyr::mutate(
-        domain = scale_domain(s), round = label, bank = s, scale = attr(x, "scale"),
+        domain = scale_domain(s), round = label, bank = s, scale = to,
         ability = .data$theta, ability_se = .data$se,
         d_score = if (on_d) conv$theta else NA_real_, d_score_se = if (on_d) conv$se else NA_real_,
         se_link = if (on_d && "se_link" %in% names(conv)) conv$se_link else NA_real_,
         se_total = if (on_d && "se_total" %in% names(conv)) conv$se_total else NA_real_
       ) |>
+      dplyr::rename(dplyr::all_of(stats::setNames(c("d_score", "d_score_se"), last))) |>
       dplyr::select(dplyr::any_of(cols))
   }) |>
     unname() |>
@@ -127,12 +137,31 @@ KITSUI_SCORE_COLUMNS <- c(
   se_total = "d_score 的測量誤差與連結誤差合起來：sqrt(d_score_se² + se_link²)。"
 )
 
+#' 外部連結不適用時（參照世代沒有錨題）的欄：最後的分數在參照世代的量尺上
+#' @noRd
+kitsui_score_columns_ref <- function(ref) {
+  c(
+    ref_score = paste0("參照世代（", ref, "）的量尺上的分數，也就是最後的分數：", ref,
+                       " 自己就是 ability；其他世代經過內部連結換過來；還沒有內部連結的世代是空白。",
+                       "這份資料沒有 D 分數的錨題，外部連結不適用，所以沒有 d_score。"),
+    ref_score_se = "ref_score 的標準誤（測量誤差，參照世代量尺的單位）。",
+    se_link = "內部連結的誤差（換算本身的不確定性）；參照世代自己沒有換算，是空白。",
+    se_total = "ref_score 的測量誤差與連結誤差合起來：sqrt(ref_score_se² + se_link²)。"
+  )
+}
+
 #' 分數表有的欄，各一句說明
+#' @param ref NULL，或外部連結不適用時的參照世代（分數表有 ref_score）
 #' @return tibble（欄名英文）：column、meaning
 #' @noRd
-kitsui_score_columns <- function(scores) {
-  have <- intersect(names(KITSUI_SCORE_COLUMNS), names(scores))
-  tibble::tibble(column = have, meaning = unname(KITSUI_SCORE_COLUMNS[have]))
+kitsui_score_columns <- function(scores, ref = NULL) {
+  words <- KITSUI_SCORE_COLUMNS
+  if (!is.null(ref)) {
+    more <- kitsui_score_columns_ref(ref)
+    words <- c(words[setdiff(names(words), c(names(more), "d_score", "d_score_se"))], more)
+  }
+  have <- intersect(names(words), names(scores))
+  tibble::tibble(column = have, meaning = unname(words[have]))
 }
 
 #' 每個量尺的換算路線：校準的題庫 → 內部連結的終點 → 外部連結（D）
@@ -594,7 +623,8 @@ kitsui_fixed_readme <- function(fixed) {
     "of every round up to this one (each fixed file includes all earlier rounds).",
     "In the next round, upload this zip in kitsUI tab 1 (Data) to keep using",
     "the same item bank and links.",
-    "Do not modify the files in it or re-zip them.",
+    "Do not modify the files in it or re-zip them: VERSION holds the SHA-256 of every file",
+    "(Checksums), and kitsUI warns when a file differs.",
     "A fixed file is never changed after it is written; each round makes a new one.",
     "",
     paste0("Rounds: ", both(v$rounds)),
@@ -605,7 +635,7 @@ kitsui_fixed_readme <- function(fixed) {
     "",
     "Files:",
     paste0("VERSION: versions, date created, round names, reference cohort, scales,",
-           " and the md5 of each round's data file."),
+           " the md5 of each round's data file, and the SHA-256 of the files in this zip."),
     paste0("bank.csv: item bank. Beta and its SE for each step of each item in each scale,",
            " and the round that added it."),
     "versions.csv: item versions. Original and current item IDs of drifted items.",
