@@ -453,3 +453,16 @@ test_that("作答設計圖：通過比例照固定檔的通過步驟；有不是
     expect_equal(unname(b$z[, which(b$x == "lana01")]), mean(r$lana01 >= 1, na.rm = TRUE))
   })
 })
+
+test_that("波次的單位：第一回合在 ① 選，交給 ②；有之前回合的固定檔時只顯示", {
+  shiny::testServer(mod_data_server, args = list(goto = \(tab) NULL), {
+    session$setInputs(source = "demo", domains = "lan", waves = "M03 3", round_label = "",
+                      wave_unit = "years")
+    expect_match(output$unit_ui$html, "波次（wave_m）的單位")
+    expect_equal(session$getReturned()()$fixed$version$wave_unit, "years")
+    expect_equal(output$wave_hint, "數字是年。")
+  })
+  expect_match(data_unit_text("waves"), "波次序號（來自固定檔")
+  expect_match(data_unit_text("waves"), "不算 age50")
+  expect_false(grepl("age50", data_unit_text("months")))
+})

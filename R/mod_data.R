@@ -8,7 +8,7 @@ mod_data_ui <- function(id) {
       goal = "選這一回合要校準的資料。第二回合起，再放上一回合下載的固定檔。",
       steps = c(
         "選資料來源：示範資料，或上傳自己的長格式資料（可以一次選好幾個檔案）。",
-        "勾這一回合的世代與波次（月齡）。一個檔案可以有好幾個波次。新收一波時只勾那一波；已經收完的好幾波可以一次勾。",
+        "勾這一回合的世代與波次（例如月齡）。一個檔案可以有好幾個波次。新收一波時只勾那一波；已經收完的好幾波可以一次勾。",
         "第二回合起：上傳上一回合的固定檔（zip）。第一回合不用。",
         "確認右邊沒有紅字。橘色的提醒請看過。",
         "按「下一步：題目校準」。"
@@ -91,8 +91,9 @@ data_choices_ui <- function(ns) {
       shiny::actionButton(ns("waves_all"), "全選", class = "btn-sm btn-outline-secondary"),
       shiny::actionButton(ns("waves_none"), "全不選", class = "btn-sm btn-outline-secondary")
     ),
-    shiny::tags$small(class = "kit-hint", "數字是施測月齡。", "可以一次勾好幾個。",
-                      "勾完停 1 秒才開始檢查。"),
+    shiny::tags$small(class = "kit-hint", shiny::textOutput(ns("wave_hint"), inline = TRUE),
+                      "可以一次勾好幾個。", "勾完停 1 秒才開始檢查。"),
+    shiny::uiOutput(ns("unit_ui")),
     shiny::h5("3. 上一回合的固定檔（選用）"),
     shiny::uiOutput(ns("fixed_choice")),
     shiny::uiOutput(ns("fixed_error")),
@@ -251,7 +252,22 @@ mod_data_server <- function(id, goto, handover = NULL) {
       })
     }
     output$fixed_choice <- shiny::renderUI(data_fixed_choice_ui(ns, from_session()))
-    fixed <- shiny::reactive(fixed_rv()$fixed %||% kitsui_fixed_empty())
+    # 第一回合（固定檔裡還沒有回合）：波次的單位用 ① 選的；之後沿用固定檔的
+    fixed <- shiny::reactive({
+      fx <- fixed_rv()$fixed %||% kitsui_fixed_empty()
+      if (length(fx$version$rounds) == 0) fx$version$wave_unit <- input$wave_unit %||% "months"
+      fx
+    })
+    output$unit_ui <- shiny::renderUI({
+      fx <- fixed_rv()$fixed
+      if (!is.null(fx) && length(fx$version$rounds) > 0) {
+        return(shiny::tags$small(class = "kit-hint d-block", data_unit_text(kitsui_wave_unit(fx))))
+      }
+      data_unit_ui(ns, shiny::isolate(input$wave_unit))
+    })
+    output$wave_hint <- shiny::renderText(
+      paste0("數字是", data_wave_meaning(kitsui_wave_unit(fixed())), "。")
+    )
 
     # 勾世代與波次時停手 1 秒才檢查：一個一個勾時不用每勾一次就等一次
     # （測試時 options(kitsui.waves_delay = 0) 不等）
@@ -314,7 +330,8 @@ mod_data_server <- function(id, goto, handover = NULL) {
     output$hint <- shiny::renderUI({
       h <- checked()$hint
       if (is.null(h)) return(NULL)
-      ui_callout(shiny::tags$strong(h), "左邊第 2 步，一個世代一列，數字是月齡。")
+      ui_callout(shiny::tags$strong(h), "左邊第 2 步，一個世代一列，數字是",
+                 data_wave_meaning(kitsui_wave_unit(fixed())), "。")
     })
 
     # 橘色的提醒：波次已經校準過、固定檔不是最新的一回合、資料檔之前用過、
@@ -450,6 +467,35 @@ mod_data_server <- function(id, goto, handover = NULL) {
 
     result
   })
+}
+
+#' 波次的單位：第一回合可以選（之後沿用固定檔的）
+#' @noRd
+data_unit_ui <- function(ns, selected = NULL) {
+  shiny::tagList(
+    shiny::radioButtons(ns("wave_unit"), "波次（wave_m）的單位", KITSUI_WAVE_UNITS,
+                        selected %||% "months", inline = TRUE),
+    shiny::tags$small(
+      class = "kit-hint d-block",
+      "第一回合選，寫進固定檔；之後的回合沿用，不能改。",
+      "KIT 的 wave_m 是施測月齡（月）。",
+      "單位是年或波次序號時，不照月齡借另一世代題庫，題目表也不算 age50（通過年齡）。"
+    )
+  )
+}
+
+#' 固定檔裡的波次單位（之後的回合：只顯示，不能改）
+#' @noRd
+data_unit_text <- function(unit) {
+  name <- names(KITSUI_WAVE_UNITS)[match(unit, KITSUI_WAVE_UNITS)]
+  paste0("波次（wave_m）的單位：", name, "（來自固定檔，之後的回合沿用）。",
+         if (unit != "months") "不照月齡借另一世代題庫，題目表也不算 age50。")
+}
+
+#' 勾選框的數字是什麼
+#' @noRd
+data_wave_meaning <- function(unit) {
+  switch(unit, years = "年", waves = "波次序號", "施測月齡")
 }
 
 #' 作答設計圖：固定檔裡有通過步驟不是 1 的題時，一句說明

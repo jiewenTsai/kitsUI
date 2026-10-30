@@ -264,7 +264,9 @@ mod_score_server <- function(id, data, items, links, goto, next_round = NULL) {
       last <- utils::tail(intersect(KITSUI_ITEM_THRESHOLDS, names(tab)), 1)
       shiny::tags$p(class = "kit-hint", paste0("題目依 ", last, " 由小到大排列。"))
     })
-    output$item_table_note <- shiny::renderUI(item_table_note_ui(item_table()))
+    output$item_table_note <- shiny::renderUI(
+      item_table_note_ui(item_table(), kitsui_wave_unit(fixed()))
+    )
 
     # 檢查、R 程式 ----
     output$checks <- kit_table({
@@ -435,7 +437,7 @@ score_columns_ui <- function(scores) {
 
 #' 題目表下面：拿掉了哪些沒有內容的欄
 #' @noRd
-item_table_note_ui <- function(tab) {
+item_table_note_ui <- function(tab, unit = "months") {
   drop <- attr(tab, "dropped")
   li <- \(col, ...) if (col %in% names(tab)) shiny::tags$li(shiny::tags$code(col), ...)
   shiny::tags$details(
@@ -456,6 +458,10 @@ item_table_note_ui <- function(tab) {
          paste0("age50 要從這一回合的資料算：至少兩個波次、通過比例在波次之間跨過 50%，",
                 "而且落在資料的月齡範圍內；",
                 "只有一個波次，或每一波都已經超過（或都還沒到）50% 時是空的。")),
+      if (unit != "months") {
+        shiny::tags$li("age50 不算：波次（wave_m）的單位不是月（在 ① 第一回合選的），",
+                       "kitsUI 只在單位是月時算通過年齡。")
+      },
       if (length(drop) > 0) {
         shiny::tags$li(paste0("每一題都沒有內容的欄不列出：", paste(drop, collapse = "、"), "。"),
                        if ("DIF" %in% drop) "DIF（性別的差異試題功能）要另外做 kits_dif()，kitsUI 沒有做。",

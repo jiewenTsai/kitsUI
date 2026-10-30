@@ -148,6 +148,8 @@ kitsui_dcf <- function(fixed) {
   cbind(
     Kits = v$kits, KitsUI = v$kitsUI, Created = v$created,
     Rounds = paste(v$rounds, collapse = ", "), Reference = v$reference,
+    # 波次的單位（months、years、waves；第一回合在 ① 選）。沒有設定時不寫，讀回來當成月
+    WaveUnit = v$wave_unit,
     Scales = if (any(grepl(", ", v$scales, fixed = TRUE))) {
       paste(c("", v$scales), collapse = "\n")
     } else {
@@ -178,6 +180,9 @@ kitsui_from_dcf <- function(dcf) {
     rounds = split(dcf[["Rounds"]]), reference = dcf[["Reference"]],
     scales = lines(dcf[["Scales"]])
   )
+  if ("WaveUnit" %in% names(dcf) && !is.na(dcf[["WaveUnit"]])) {
+    version$wave_unit <- dcf[["WaveUnit"]]
+  }
   sources <- tibble::tibble(round = pick("\\1"), file = pick("\\3"), md5 = pick("\\2"))
   list(version = version, sources = sources)
 }

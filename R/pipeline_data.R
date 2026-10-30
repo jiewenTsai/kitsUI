@@ -4,17 +4,55 @@
 # 參照世代（內部連結的目標、外部連結的起點）
 KITSUI_REF_COHORT <- "M03"
 
+# 波次（wave_m）的單位：第一回合在 ① 選，寫進固定檔的 VERSION（WaveUnit），之後的回合沿用。
+# 之前的固定檔沒有 WaveUnit：當成月（KIT 的 wave_m 是施測月齡）。
+# 借題庫的規則（比對同一個月齡）與 age50 只在單位是月時用
+KITSUI_WAVE_UNITS <- c("月（施測月齡）" = "months", "年" = "years", "波次序號" = "waves")
+
+#' 固定檔的波次單位："months"、"years" 或 "waves"（沒有寫時是 "months"）
+#' @noRd
+kitsui_wave_unit <- function(fixed) {
+  u <- fixed$version$wave_unit
+  if (length(u) != 1 || is.na(u) || !u %in% KITSUI_WAVE_UNITS) "months" else u
+}
+
+#' 一個波次給使用者看的寫法：月是「36 個月」，年是「2013 年」，波次序號是「第 3 波」
+#' @noRd
+kitsui_wave_text <- function(w, unit = "months") {
+  w <- format(w, trim = TRUE)
+  switch(unit, years = paste0(w, " 年"), waves = paste0("第 ", w, " 波"), paste0(w, " 個月"))
+}
+
+#' 好幾個波次一起寫：「3、6 個月」「2009、2011 年」「第 1、2 波」
+#' @noRd
+kitsui_waves_text <- function(w, unit = "months") {
+  w <- paste(format(w, trim = TRUE), collapse = "、")
+  switch(unit, years = paste0(w, " 年"), waves = paste0("第 ", w, " 波"), paste0(w, " 個月"))
+}
+
+#' 句子裡的「月齡」：月是「月齡」，年是「年」，波次序號是「波次」
+#' @noRd
+kitsui_wave_word <- function(unit = "months") {
+  switch(unit, years = "年", waves = "波次", "月齡")
+}
+
+#' 圖上 x 軸（英文）的波次：月是 "months"，年是 "years"，波次序號是 "wave number"
+#' @noRd
+kitsui_wave_unit_en <- function(unit = "months") {
+  switch(unit, years = "years", waves = "wave number", "months")
+}
+
 # 資料一定要有的欄位（資料約定）
 KITSUI_REQUIRED <- c("visit_id", "cohort", "wave_m", "item_id", "item_score", "domain")
 
 # 資料約定的欄位：讀檔時的型別（readr 的縮寫：c 文字、d 數字）、一定要有嗎、意思
 KITSUI_COLUMNS <- tibble::tribble(
   ~column, ~type, ~meaning,
-  "visit_id", "c", "列次編號：一個孩子的一個波次一個編號。兩個世代不能重複。",
+  "visit_id", "c", "列次編號：一個孩子的一個波次一個編號。不同世代也不能重複。",
   "subj_id", "c", "孩子編號：同一個孩子的各波次相同。",
   "cohort", "c", "世代，例如 M03、M36。參照世代是 M03。",
   "sex", "c", "性別，例如 boy、girl。",
-  "wave_m", "d", "波次（施測月齡），例如 3、6、12。",
+  "wave_m", "d", "波次，例如施測月齡 3、6、12。也可以是年或波次序號（在 ① 選單位）。",
   "age_m", "d", "實際月齡。題目表的通過年齡要用它。",
   "item_id", "c", "題號，例如 lana01。",
   "item_score", "d", "得分：0、1、2…。沒有作答的題不用放。",
@@ -322,17 +360,18 @@ kitsui_data_check <- function(data, waves, round_label, fixed) {
 
 # 提醒（橘色，不擋下一步） ----
 
-#' 勾到的波次之前的回合已經校準過（固定檔的 waves.csv 裡，同一個量尺的同一個月齡）
+#' 勾到的波次之前的回合已經校準過（固定檔的 waves.csv 裡，同一個量尺的同一個波次）
 #' @param plan kitsui_round_plan()
 #' @return 中文訊息；沒有時長度 0
 #' @noRd
 kitsui_note_waves <- function(plan, fixed) {
+  unit <- kitsui_wave_unit(fixed)
   done <- dplyr::filter(fixed$waves, !is.na(.data$wave_m))
   hit <- dplyr::inner_join(dplyr::distinct(plan, .data$data_scale, .data$wave_m), done,
                            by = c(data_scale = "scale", "wave_m"))
   if (nrow(hit) == 0) return(character())
   paste0("這些波次之前的回合已經校準過：",
-         paste(sprintf("%s 的 %s 個月（第 %s 回合）", hit$data_scale, format(hit$wave_m, trim = TRUE),
+         paste(sprintf("%s 的 %s（第 %s 回合）", hit$data_scale, kitsui_wave_text(hit$wave_m, unit),
                        hit$round), collapse = "、"),
          "。再校準一次，同一批孩子會有兩份分數。")
 }

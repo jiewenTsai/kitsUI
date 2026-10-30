@@ -10,6 +10,8 @@
 #' 3. 否則，同一個領域另一個世代的題庫涵蓋這個波次、而且它到參照世代的內部連結已經凍結
 #'    （參照世代自己的題庫不用連結）：借它的題庫。好幾個都可以時，先選參照世代的，再依名稱；
 #' 4. 都不行：用自己的題庫。
+#' 3. 只在波次的單位是月時用（比對的是同一個月齡）；單位是年或波次序號時，同一個數字的兩個
+#'    世代年齡不一定一樣（例如調查年），所以不借，用自己的題庫（② 仍然可以手動選）。
 #' 借的時候，這個波次的資料放到另一個世代的量尺上校準（例如 M03 的 60 個月放到 "motor M36"），
 #' 新的步驟加進那個題庫，分數走那個量尺的換算路線；人的 cohort 欄不變。
 #' @param bank_choice NULL 或具名字元向量（資料量尺 -> 題庫的量尺）：手動改這個資料量尺所有
@@ -32,7 +34,9 @@ kitsui_round_plan <- function(df, fixed, bank_choice = NULL) {
 # 一個資料量尺的一個波次：照規則選題庫
 kitsui_plan_wave <- function(fixed, scale, wave) {
   co <- scale_cohort(scale)
-  w <- format(wave)
+  unit <- kitsui_wave_unit(fixed)
+  # 月時寫「60 月」（和以前一樣）；年、波次序號是「2013 年」「第 3 波」
+  w <- if (unit == "months") paste(format(wave), "月") else kitsui_wave_text(wave, unit)
   # tibble() 裡後面的欄會看到前面的欄，所以 borrowed 先算好
   out <- \(why, to = scale, detail = NA_character_) {
     borrowed <- to != scale
@@ -41,23 +45,29 @@ kitsui_plan_wave <- function(fixed, scale, wave) {
   }
   if (!scale %in% fixed$bank$scale) return(out("自己的題庫是空的：自由校準"))
   own <- kitsui_covers(fixed, scale, wave)
-  if (is.na(own)) return(out("不知道自己的題庫校準過哪些月齡（舊的固定檔）：用自己的題庫"))
+  word <- kitsui_wave_word(unit)
+  if (is.na(own)) return(out(sprintf("不知道自己的題庫校準過哪些%s（舊的固定檔）：用自己的題庫", word)))
   if (own) {
-    return(out(sprintf("%s 題庫有校準過這個月齡（%s 月）", co, kitsui_wave_range(fixed, scale, "–"))))
+    return(out(sprintf("%s 題庫有校準過這個%s（%s）", co, word,
+                       kitsui_wave_range_text(fixed, scale, unit))))
+  }
+  if (unit != "months") {
+    return(out(sprintf(paste0("自己的題庫沒有校準過%s；波次的單位是%s，",
+                              "借另一世代題庫的規則只用在月齡：用自己的題庫"), w, word)))
   }
   same <- unique(fixed$bank$scale[scale_domain(fixed$bank$scale) == scale_domain(scale)])
   covering <- same[same != scale & purrr::map_lgl(same, \(o) isTRUE(kitsui_covers(fixed, o, wave)))]
   hit <- intersect(kitsui_bank_candidates(fixed, scale), covering)
-  if (length(covering) == 0) return(out(sprintf("沒有題庫校準過 %s 月：用自己的題庫", w)))
+  if (length(covering) == 0) return(out(sprintf("沒有題庫校準過 %s：用自己的題庫", w)))
   if (length(hit) == 0) {
-    return(out(sprintf("%s 題庫有校準過 %s 月，但還沒有到參照世代的內部連結：用自己的題庫",
+    return(out(sprintf("%s 題庫有校準過 %s，但還沒有到參照世代的內部連結：用自己的題庫",
                        paste(scale_cohort(covering), collapse = "、"), w)))
   }
   to <- hit[1]
-  why <- sprintf("%s 題庫沒有校準過 %s 月；%s 題庫有（%s 月）", co, w, scale_cohort(to),
-                 kitsui_wave_range(fixed, to, "–"))
-  detail <- sprintf("%s %s months on %s bank (it covers %s months); rule default", co, w, to,
-                    kitsui_wave_range(fixed, to))
+  why <- sprintf("%s 題庫沒有校準過 %s；%s 題庫有（%s）", co, w, scale_cohort(to),
+                 kitsui_wave_range_text(fixed, to, unit))
+  detail <- sprintf("%s %s months on %s bank (it covers %s months); rule default", co,
+                    format(wave), to, kitsui_wave_range(fixed, to))
   out(why, to, detail)
 }
 
@@ -90,6 +100,13 @@ kitsui_wave_range <- function(fixed, scale, sep = "-") {
   paste(unique(format(range(w), trim = TRUE)), collapse = sep)
 }
 
+#' 題庫校準過的波次範圍給使用者看的寫法，例如「36–96 月」「2009–2013 年」「第 1–3 波」
+#' @noRd
+kitsui_wave_range_text <- function(fixed, scale, unit = kitsui_wave_unit(fixed)) {
+  r <- kitsui_wave_range(fixed, scale, "–")
+  switch(unit, years = paste0(r, " 年"), waves = paste0("第 ", r, " 波"), paste0(r, " 月"))
+}
+
 #' 手動選的題庫：只能選自己的，或可以借的題庫；和規則不同時記下來
 #' @noRd
 kitsui_apply_choice <- function(plan, fixed, bank_choice) {
@@ -110,8 +127,9 @@ kitsui_apply_choice <- function(plan, fixed, bank_choice) {
     plan$borrowed[i] <- to != s
     plan$manual[i] <- TRUE
     plan$why[i] <- sprintf("手動選擇：用 %s 的題庫（規則是 %s）", to, plan$rule[i])
-    plan$detail[i] <- sprintf("%s %s months on %s bank; manual choice (rule: %s)",
-                              scale_cohort(s), format(plan$wave_m[i]), to, plan$rule[i])
+    plan$detail[i] <- sprintf("%s %s %s on %s bank; manual choice (rule: %s)",
+                              scale_cohort(s), format(plan$wave_m[i]),
+                              kitsui_wave_unit_en(kitsui_wave_unit(fixed)), to, plan$rule[i])
   }
   plan
 }

@@ -113,3 +113,73 @@ test_that("選題庫的表的 why 欄跟著選擇：照規則時是規則的原�
   expect_equal(kitsui_bank_why(bm, "motor M36"),
                "手動選擇：用 motor M36 的題庫（規則依月齡，各波次不同）")
 })
+
+test_that("波次的單位：寫進固定檔、讀回來；舊的固定檔是月；單位不是月時不借題庫、不算 age50", {
+  expect_equal(kitsui_wave_unit(kitsui_fixed_empty()), "months")
+  expect_equal(kitsui_wave_text(c(3, 36)), c("3 個月", "36 個月"))
+  expect_equal(kitsui_wave_text(2013, "years"), "2013 年")
+  expect_equal(kitsui_wave_text(2, "waves"), "第 2 波")
+  bc <- borrow_chain()
+  fixed <- bc$fixed
+  # 沒寫單位（舊的固定檔）：月，照規則借
+  zip_path <- withr::local_tempfile(fileext = ".zip")
+  kitsui_write_fixed(fixed, zip_path)
+  expect_null(kitsui_read_fixed(zip_path)$version$wave_unit)
+  df <- kitsui_demo("M03", 60, "motor")
+  expect_true(kitsui_round_plan(df, fixed)$borrowed)
+  # 單位是年：不借，原因寫出來；手動仍然可以選
+  yrs <- fixed
+  yrs$version$wave_unit <- "years"
+  p <- kitsui_round_plan(df, yrs)
+  expect_false(p$borrowed)
+  expect_match(p$why, "波次的單位是年，借另一世代題庫的規則只用在月齡：用自己的題庫")
+  expect_match(p$why, "60 年")
+  manual <- kitsui_round_plan(df, yrs, c("motor M03" = "motor M36"))
+  expect_true(manual$borrowed)
+  expect_match(manual$detail, "60 years on motor M36 bank")
+  # VERSION 的 WaveUnit 寫出再讀回
+  kitsui_write_fixed(yrs, zip_path)
+  back <- kitsui_read_fixed(zip_path)
+  expect_equal(back$version$wave_unit, "years")
+  expect_equal(kitsui_wave_unit(back), "years")
+  # age50：單位不是月時不算
+  two <- two_cohorts_linked()
+  tab <- kitsui_item_table(two$round, two$df, two$fixed, "lan M03")
+  expect_true(any(!is.na(tab$age50)))
+  fx <- two$fixed
+  fx$version$wave_unit <- "waves"
+  tab2 <- kitsui_item_table(two$round, two$df, fx, "lan M03")
+  expect_true(all(is.na(tab2$age50 %||% NA)))
+  html <- as.character(item_table_note_ui(kitsui_item_table_shown(tab2), "waves"))
+  expect_match(html, "age50 不算：波次（wave_m）的單位不是月")
+})
+
+test_that("垂直連結圖：單位不是月時 x 軸是波次與單位；沒有共同波次的說明不假設兩個世代", {
+  two <- two_cohorts_linked()
+  vs <- kitsui_verticals(two$round, two$df, two$fixed, "lan")
+  expect_equal(vs$none$wave_unit, "months")
+  p <- plotly::plotly_build(kitsui_vertical_plot(vs$internal))
+  title <- \(p) {
+    t <- p$x$layout$xaxis$title
+    if (is.list(t)) t$text else t
+  }
+  expect_match(title(p), "^Age \\(months")
+  fx <- two$fixed
+  fx$version$wave_unit <- "years"
+  vy <- kitsui_verticals(two$round, two$df, fx, "lan")
+  py <- plotly::plotly_build(kitsui_vertical_plot(vy$internal))
+  expect_equal(title(py), "Wave (years)")
+  expect_match(vertical_caption("internal", vy$internal), "同一個年各世代的點")
+  raw <- list(`a M1` = data.frame(wave_m = 1), `a M2` = data.frame(wave_m = 2),
+              `a M3` = data.frame(wave_m = 2))
+  expect_null(kitsui_vertical_no_common(raw))
+  expect_match(kitsui_vertical_no_common(raw[1:2], "waves"),
+               "^這一回合兩個世代沒有共同的波次（a M1：第 1 波；a M2：第 2 波）")
+  expect_match(kitsui_vertical_no_common(raw[1:2]), "（a M1：1 個月；a M2：2 個月）")
+  expect_equal(kitsui_waves_text(c(3, 6)), "3、6 個月")
+  expect_equal(kitsui_waves_text(c(2009, 2011), "years"), "2009、2011 年")
+  expect_equal(kitsui_waves_text(c(1, 2), "waves"), "第 1、2 波")
+  raw3 <- list(`a M1` = data.frame(wave_m = 1), `a M2` = data.frame(wave_m = 2),
+               `a M3` = data.frame(wave_m = 3))
+  expect_match(kitsui_vertical_no_common(raw3), "^這一回合各世代之間沒有共同的月齡")
+})
