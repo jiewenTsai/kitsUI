@@ -25,6 +25,11 @@ test_that("分數表有 visit_id、subj_id、round、bank、ability、ability_se
     expect_equal(unique(s$scale), "D")
     expect_match(output$routes, "lan M36 → lan M03 → D")
     expect_match(output$routes, "lan M36（36、48 個月）")
+    # 重點：換算路線的表（中文欄名）在下載的上面；其他細節收起來
+    expect_match(output$routes, "換算路線")
+    expect_match(output$done$html, session$ns("routes"))
+    expect_match(output$result$html, "<summary>分數對照表</summary>")
+    expect_false(grepl("<details[^>]*open", output$result$html))
     # 每一欄一句說明
     expect_match(output$columns$html, "se_total")
     expect_match(output$columns$html, "量尺分數（d_score）")
@@ -147,6 +152,8 @@ test_that("用這一回合的固定檔開始下一回合：把含連結的固定
   shiny::testServer(mod_score_server, args = args, {
     session$setInputs(run = 1)
     expect_match(output$done$html, "用這一回合的固定檔開始下一回合")
+    expect_match(output$next_step$html, "下一步：用這一回合的固定檔開始下一回合 →")
+    expect_match(output$status$html, "【完成】")
     session$setInputs(next_round = 1)
     expect_identical(got$fixed, lk$fixed)
     expect_equal(got$round, "r8")
@@ -167,6 +174,9 @@ test_that("有量尺停下來時不能下載固定檔，紅字說明（分數表
     expect_match(html, "disabled")
     expect_match(html, "scores_dl")
     expect_false(grepl("next_round", html))
+    expect_null(output$next_step)
+    expect_match(output$status$html, "【完成，但請注意】")
+    expect_match(output$status$html, "不能下載新的固定檔")
     # 鈕不能按；就算直接打開網址，也是 500 與一句說明，不寫出固定檔
     expect_false(grepl("dataobj", html))
     output$fixed_dl_ui
@@ -259,7 +269,7 @@ steps_upload <- function(dir, item_id, step, name = "steps.csv") {
 
 # 通過步驟的收合區塊：<details ...> 的開頭那一段
 steps_details_tag <- function(html) {
-  regmatches(html, regexpr("<details class=\"kit-fold-box\"[^>]*>", html))
+  regmatches(html, regexpr("<details class=\"kit-advanced\"[^>]*>", html))
 }
 
 test_that("通過步驟：收合區塊預設收起來，標題寫每題都是 1；裡面依序是說明、選題目、表、用檔案設定", {
@@ -267,14 +277,15 @@ test_that("通過步驟：收合區塊預設收起來，標題寫每題都是 1�
   lk <- linked()
   shiny::testServer(mod_score_server, args = score_args(r8$round, r8$df, lk$fixed), {
     session$setInputs(run = 1)
-    html <- output$result$html
+    html <- output$advanced$html
     tag <- steps_details_tag(html)
     expect_length(tag, 1)
     expect_false(grepl("open", tag))
     expect_match(html, "通過步驟（每題都是 1）")
     expect_equal(output$steps_summary, "通過步驟（每題都是 1）")
     at <- \(x) regexpr(x, html, fixed = TRUE)[1]
-    expect_true(at("得分至少幾分算通過。預設每題都是 1。") > at("kit-fold-box"))
+    expect_true(at("得分至少幾分算通過。預設每題都是 1。") > at("kit-advanced"))
+    expect_match(html, "進階設定：")
     expect_match(html, "只影響題目表的門檻與 age50；校準、連結、分數都不受影響。")
     expect_true(at("steps_picker") < at("steps_table"))
     expect_true(at("steps_table") < at("用檔案設定（題目很多時）"))
@@ -336,8 +347,8 @@ test_that("通過步驟：選兩題套用 2，題目表、R 程式、固定檔�
     expect_equal(got$pass_steps, back$pass_steps)
     # 再算一次：區塊打開，標題照樣
     session$setInputs(run = 2)
-    expect_match(steps_details_tag(output$result$html), "open")
-    expect_match(output$result$html, "通過步驟（2 題不是 1：lanb08＝2、lanc02＝2）")
+    expect_match(steps_details_tag(output$advanced$html), "open")
+    expect_match(output$advanced$html, "通過步驟（2 題不是 1：lanb08＝2、lanc02＝2）")
   })
 })
 
@@ -453,7 +464,7 @@ test_that("通過步驟：預設用這一回合開始時固定檔的設定（新
   shiny::testServer(mod_score_server, args = score_args(round, r8$df, start), {
     session$setInputs(run = 1, item_scale = "lan M36")
     expect_equal(item_table()$step[item_table()$item_id == "lanb08"], 3)
-    html <- output$result$html
+    html <- output$advanced$html
     expect_match(steps_details_tag(html), "open")
     expect_match(html, "通過步驟（1 題不是 1：lanb08＝3）")
     expect_match(output$steps_table$html, "data-item=\"lanb08\"")

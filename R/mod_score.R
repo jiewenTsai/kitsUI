@@ -14,10 +14,13 @@ mod_score_ui <- function(id) {
     score_guide(),
     shiny::uiOutput(ns("source")),
     shiny::uiOutput(ns("flags")),
-    shiny::actionButton(ns("run"), "計算這一回合的分數", class = "btn-primary"),
+    shiny::uiOutput(ns("advanced")),
+    shiny::uiOutput(ns("settings")),
+    ui_button(ns("run"), "計算這一回合的分數", "primary"),
     shiny::uiOutput(ns("status")),
     shiny::uiOutput(ns("done")),
-    shiny::uiOutput(ns("result"))
+    shiny::uiOutput(ns("result")),
+    shiny::uiOutput(ns("next_step"))
   )
 }
 
@@ -27,6 +30,7 @@ score_guide <- function() {
   mod_guide(
     goal = "算這一回合每個列次的分數。",
     steps = c(
+      "需要時在「進階設定」改通過步驟（只影響題目表與 age50）。",
       "按「計算這一回合的分數」。",
       paste0("看每個量尺換到哪一把尺：校準的量尺 → 內部連結（參照世代以外的世代才有）→ ",
              "外部連結（到 D；參照世代有 D 分數的錨題時才有）。"),
@@ -77,6 +81,10 @@ mod_score_server <- function(id, data, items, links, goto, next_round = NULL) {
     persons <- shiny::reactive(data()$persons %||% kitsui_persons(data()$df))
     label <- shiny::reactive(score_round_label(data(), fixed()))
     output$source <- shiny::renderUI(if (is.null(items())) ui_go_items(ns))
+    output$settings <- shiny::renderUI({
+      if (is.null(items())) return(NULL)
+      ui_settings_line(kitsui_settings_text(data()))
+    })
     output$flags <- shiny::renderUI(score_flags_ui(kitsui_round_flags(items())))
     shiny::observeEvent(input$go_items, goto("items"))
 
@@ -85,7 +93,8 @@ mod_score_server <- function(id, data, items, links, goto, next_round = NULL) {
       own(NULL)
       if (!is.null(result())) {
         result(NULL)
-        status(ui_callout("題目校準有變動。請按「計算這一回合的分數」重新計算。"))
+        status(ui_status("stale", "題目校準有變動，分數要重新計算。",
+                         shiny::tags$p("請按「計算這一回合的分數」。")))
       }
     }, ignoreInit = TRUE)
     # 只有連結變了：分數不重算，只用新的連結重新換算（幾乎不花時間）
@@ -96,18 +105,20 @@ mod_score_server <- function(id, data, items, links, goto, next_round = NULL) {
                       error = function(e) e)
       if (inherits(out, "error")) {
         result(NULL)
-        status(ui_callout("連結有變動。請按「計算這一回合的分數」重新計算。"))
+        status(ui_status("stale", "連結有變動，分數要重新計算。",
+                         shiny::tags$p("請按「計算這一回合的分數」。")))
         return()
       }
       result(c(out, list(links_rows = fixed()$links)))
-      status(ui_callout("連結有變動，分數已用新的連結重新換算（沒有重算分數）。"))
+      status(ui_status("done", "連結有變動，分數已用新的連結重新換算（沒有重算分數）。"))
     }, ignoreInit = TRUE)
 
     shiny::observeEvent(input$run, {
       result(NULL)
       round <- items()
       if (is.null(round)) {
-        status(ui_callout("還沒有這一回合的題目校準。", warning = TRUE))
+        status(ui_status("stop", "還沒有這一回合的題目校準，沒有計算分數。",
+                         shiny::tags$p("怎麼辦：先到「② 題目校準」按「開始校準」。")))
         return()
       }
       out <- shiny::withProgress(message = "正在計算分數…", value = 0, {
@@ -119,29 +130,41 @@ mod_score_server <- function(id, data, items, links, goto, next_round = NULL) {
         }, error = function(e) e)
       })
       if (inherits(out, "error")) {
-        status(ui_callout("分數沒有算出來：", conditionMessage(out), warning = TRUE))
+        status(ui_status("stop", "分數沒有算出來。",
+                         shiny::tags$p(kitsui_error_ui(kit_error_text(out, "計算分數"))),
+                         shiny::tags$p("怎麼辦：看上面的原因；必要時回到「② 題目校準」重跑這一回合。")))
         return()
       }
       result(c(out, list(links_rows = fixed()$links)))
-      status(ui_callout("完成！共 ", nrow(out$scores), " 列（每個量尺的每個列次一列）。"))
+      status(score_status(out, round))
     })
     output$status <- shiny::renderUI(status())
 
     output$done <- shiny::renderUI({
       if (is.null(result())) return(NULL)
-      next_id <- if (!is.null(next_round)) ns("next_round")
-      score_done_ui(items(), ns("scores_dl"), ns("fixed_dl"), next_id, label())
+      score_done_ui(ns, items(), ref_final(), label())
     })
     output$result <- shiny::renderUI({
       if (is.null(result())) return(NULL)
-      # 有題不是 1 時通過步驟的區塊打開，不把設定藏起來
+      score_result_ui(ns, names(result()$subj), fixed()$version$reference, ref_final())
+    })
+    # 進階設定（通過步驟）：有題不是 1 時打開，不把設定藏起來；算完分數時重畫
+    output$advanced <- shiny::renderUI({
+      shiny::req(items())
+      result()
       shown <- shiny::isolate(tryCatch(shown_steps(), error = \(e) NULL))
-      score_result_ui(ns, names(result()$subj), shown, fixed()$version$reference, ref_final())
+      score_steps_ui(ns, shown)
+    })
+    # 下一步：用這一回合的固定檔開始下一回合（有量尺停下來時沒有）
+    output$next_step <- shiny::renderUI({
+      if (is.null(result()) || is.null(next_round) || !isTRUE(items()$ok)) return(NULL)
+      ui_next_step("這一回合做完了。要接著加新的波次，不用下載固定檔，直接開始下一回合。",
+                   ns("next_round"), "下一步：用這一回合的固定檔開始下一回合")
     })
 
     # 1. 分數表 ----
     output$routes <- kit_table({
-      kitsui_score_routes(fixed(), shiny::req(result())$subj, items()$plan)
+      kitsui_screen_names(kitsui_score_routes(fixed(), shiny::req(result())$subj, items()$plan))
     })
     # 外部連結不適用時的參照世代（分數表是 ref_score，不是 d_score）；適用時 NULL
     ref_final <- shiny::reactive(kitsui_ref_final(shiny::req(fixed())))
@@ -150,7 +173,8 @@ mod_score_server <- function(id, data, items, links, goto, next_round = NULL) {
     pages <- shiny::reactive(max(1, ceiling(nrow(shown()) / SCORE_PAGE_ROWS)))
     page <- shiny::reactive(score_page(input$page, pages()))
     output$page_info <- shiny::renderText({
-      sprintf("符合 %d 列，共 %d 頁；目前第 %d 頁。", nrow(shown()), pages(), page())
+      sprintf("符合 %s 列，共 %s 頁；目前第 %d 頁。", format(nrow(shown()), big.mark = ","),
+              format(pages(), big.mark = ","), page())
     })
     output$scores <- kit_table({
       dplyr::slice(shown(), (page() - 1) * SCORE_PAGE_ROWS + seq_len(SCORE_PAGE_ROWS))
@@ -368,26 +392,67 @@ score_flags_ui <- function(flags) {
   )
 }
 
-#' 完成：下載這一回合的分數表與新的固定檔（一個醒目的區塊，在結果的正下方）
+#' 算完分數的狀態框：【完成】；有量尺停下來或被 flag 時【完成，但請注意】
+#' @param out kitsui_score_convert() 的結果；round 是 ② 的結果
 #' @noRd
-score_done_ui <- function(round, scores_id, fixed_id, next_id, label) {
-  shiny::tags$div(
-    class = "kit-summary kit-done",
-    shiny::h4("這一回合做完了：請現在就存兩個檔案"),
-    shiny::tags$p(class = "kit-warn-text",
-                  "早先各回合的分數之後不會重算。所以這一回合的分數表要現在下載保存。"),
-    shiny::tags$div(
-      class = "kit-downloads",
-      ui_download(scores_id),
-      shiny::tags$small(class = "kit-hint", "下載的是全部的列，不只畫面上這一頁。")
+score_status <- function(out, round) {
+  line <- sprintf("分數算好了：共 %s 列（每個量尺的每個列次一列）。",
+                  format(nrow(out$scores), big.mark = ","))
+  flags <- kitsui_round_flags(round)
+  points <- c(
+    if (!isTRUE(round$ok)) {
+      paste0("有量尺停下來（", paste(round$stopped, collapse = "、"), "），不能下載新的固定檔。")
+    },
+    if (NROW(flags) > 0) {
+      paste0("被 flag 的量尺：", paste(unique(flags$scale), collapse = "、"), "；見上面的提醒。")
+    }
+  )
+  if (length(points) == 0) return(ui_status("done", line))
+  ui_status("warn", line, points = points)
+}
+
+#' 重點：每個量尺換到哪一把尺（一張表），與現在就要存的兩個檔案
+#' @param ref_final 外部連結不適用時的參照世代（kitsui_ref_final()），適用時 NULL
+#' @noRd
+score_done_ui <- function(ns, round, ref_final = NULL, label = NULL) {
+  shiny::tagList(
+    shiny::h4("每個量尺換到哪一把尺"),
+    shiny::tags$small(
+      class = "kit-hint",
+      if (is.null(ref_final)) {
+        "換算路線：校準的量尺 → 內部連結 → 外部連結到 D。"
+      } else {
+        "換算路線：校準的量尺 → 內部連結到參照世代。"
+      },
+      "題庫是校準用的題庫；資料是哪一個世代、哪些波次的資料。"
     ),
-    score_fixed_ui(round, fixed_id, next_id, label)
+    if (!is.null(ref_final)) {
+      ui_callout(
+        shiny::tags$strong("外部連結不適用："),
+        paste0("參照世代（", ref_final, "）沒有 D 分數的錨題，最後的分數是 ref_score，",
+               "在 ", ref_final, " 的量尺上；還沒有內部連結的世代，ref_score 是空白，",
+               "分數留在 ability（自己的量尺）。")
+      )
+    },
+    shiny::tags$div(class = "kit-table-scroll", shiny::tableOutput(ns("routes"))),
+    shiny::tags$div(
+      class = "kit-summary kit-done",
+      shiny::h4("請現在就存兩個檔案"),
+      shiny::tags$p(class = "kit-warn-text",
+                    "早先各回合的分數之後不會重算。所以這一回合的分數表要現在下載保存。"),
+      shiny::tags$div(
+        class = "kit-downloads",
+        ui_download(ns("scores_dl")),
+        shiny::tags$small(class = "kit-hint", "下載的是全部的列，不只畫面上這一頁。")
+      ),
+      score_fixed_ui(round, ns("fixed_dl"), label)
+    )
   )
 }
 
 #' 新的固定檔：這一回合沒問題時給下載鈕；有量尺停下來時鈕不能按，並用紅字說明
 #' @noRd
-score_fixed_ui <- function(round, button_id, next_id = NULL, label = NULL) {
+score_fixed_ui <- function(round, button_id, label = NULL) {
   text <- SCORE_FIXED_LABEL
   if (is.null(round)) return(shiny::tags$p("做完題目校準後，這裡可以下載新的固定檔。"))
   if (!isTRUE(round$ok)) {
@@ -399,23 +464,17 @@ score_fixed_ui <- function(round, button_id, next_id = NULL, label = NULL) {
       shiny::tags$p(class = "text-danger",
                     "請到「② 題目校準」看停下來的原因。", "處理後重跑這一回合，",
                     "或在 ② 把它們改成「這一回合不做」再校準一次。"),
-      shiny::tags$button(class = "btn btn-sm btn-outline-secondary", disabled = NA, text)
+      shiny::tags$button(class = paste("btn", KIT_BTN[["secondary"]]), disabled = NA, text)
     ))
   }
   file <- if (length(label) > 0) paste0("（", kitsui_fixed_name(label), "）")
   shiny::tagList(
-    shiny::tags$div(
-      class = "kit-downloads",
-      ui_download(button_id),
-      if (!is.null(next_id)) {
-        shiny::actionButton(next_id, "用這一回合的固定檔開始下一回合",
-                            class = "btn-sm btn-outline-primary ms-2")
-      }
-    ),
+    shiny::tags$div(class = "kit-downloads", ui_download(button_id)),
     shiny::tags$ul(
       shiny::tags$li("新的固定檔", file, "存著題庫、題目版本與連結。"),
       shiny::tags$li("下一回合要上傳這個 zip，才能接著用同一個題庫與連結。"),
-      shiny::tags$li("在這次連線裡接著做，可以直接按「用這一回合的固定檔開始下一回合」，不用下載。"),
+      shiny::tags$li("在這次連線裡接著做，可以直接按最下面的「下一步：用這一回合的固定檔開始下一回合」，",
+                     "不用下載。"),
       if (length(round$excluded) > 0) {
         why <- kitsui_excluded_reasons(round$log)[round$excluded]
         shown <- ifelse(is.na(why) | !nzchar(why), scale_label(round$excluded),
@@ -434,7 +493,6 @@ score_fixed_ui <- function(round, button_id, next_id = NULL, label = NULL) {
 score_columns_ui <- function(scores, ref = NULL) {
   cols <- kitsui_score_columns(scores, ref)
   shiny::tags$details(
-    open = NA,
     shiny::tags$summary("每一欄是什麼"),
     shiny::tags$ul(
       class = "kit-hint",
@@ -451,7 +509,6 @@ item_table_note_ui <- function(tab, ref = KITSUI_REF_COHORT, unit = "months") {
   drop <- attr(tab, "dropped")
   li <- \(col, ...) if (col %in% names(tab)) shiny::tags$li(shiny::tags$code(col), ...)
   shiny::tags$details(
-    open = NA,
     shiny::tags$summary("每一欄是什麼"),
     shiny::tags$ul(
       class = "kit-hint",
@@ -481,7 +538,7 @@ item_table_note_ui <- function(tab, ref = KITSUI_REF_COHORT, unit = "months") {
   )
 }
 
-#' 題目表的通過步驟：收合區塊，標題是現在的設定
+#' 進階設定（題目表的通過步驟）：收合區塊，標題是現在的設定
 #'
 #' 裡面依序是：一句說明、選題目套用、不是 1 的題（可以改回 1）、用檔案設定（再收一層）。
 #' 有題不是 1 時預設打開。
@@ -491,11 +548,11 @@ score_steps_ui <- function(ns, shown = NULL) {
   here <- if (!is.null(shown)) shown[!is.na(shown$scale), ]
   title <- if (is.null(shown)) "通過步驟（每題都是 1）" else kitsui_steps_summary(shown)
   shiny::tags$details(
-    class = "kit-fold-box",
+    class = "kit-advanced",
     open = if (NROW(here) > 0) NA,
     # 標題跟著設定變（renderText 換掉裡面的字）
-    shiny::tags$summary(shiny::tags$span(id = ns("steps_summary"), class = "shiny-text-output",
-                                         title)),
+    shiny::tags$summary("進階設定：", shiny::tags$span(id = ns("steps_summary"),
+                                                  class = "shiny-text-output", title)),
     shiny::tags$p("得分至少幾分算通過。預設每題都是 1。",
                   "只影響題目表的門檻與 age50；校準、連結、分數都不受影響。"),
     shiny::uiOutput(ns("steps_picker")),
@@ -527,7 +584,7 @@ steps_picker_ui <- function(ns, choices, value = 2) {
                             options = list(placeholder = "選一題或好幾題（可以打字找）")),
       shiny::numericInput(ns("steps_value"), "通過步驟", value = value, min = 1, step = 1,
                           width = "7rem"),
-      shiny::actionButton(ns("steps_apply"), "套用到選的題", class = "btn-sm btn-primary")
+      ui_button(ns("steps_apply"), "套用到選的題")
     ),
     shiny::tags$small(class = "kit-hint",
                       "清單是這一回合每個量尺的全部題目，依量尺分組。",
@@ -547,14 +604,14 @@ steps_table_ui <- function(ns, shown) {
   row <- \(id, step, top) {
     shiny::tags$tr(
       shiny::tags$td(id), shiny::tags$td(step), shiny::tags$td(top),
-      shiny::tags$td(shiny::tags$button(type = "button", class = "btn btn-sm btn-outline-secondary",
+      shiny::tags$td(shiny::tags$button(type = "button", class = paste("btn", KIT_BTN[["secondary"]]),
                                         `data-item` = id, onclick = click, "改回 1"))
     )
   }
   table <- if (nrow(here) == 0) shiny::tags$p("目前每一題都是 1。") else {
     shiny::tags$table(
       class = "table table-sm kit-steps-table",
-      shiny::tags$thead(shiny::tags$tr(shiny::tags$th("item_id"), shiny::tags$th("step"),
+      shiny::tags$thead(shiny::tags$tr(shiny::tags$th("題號"), shiny::tags$th("通過步驟"),
                                        shiny::tags$th("最高分數"), shiny::tags$th())),
       shiny::tags$tbody(purrr::pmap(list(here$item_id, here$step, here$max_score), row))
     )
@@ -569,8 +626,7 @@ steps_table_ui <- function(ns, shown) {
       ))
     },
     if (nrow(shown) > 0) {
-      shiny::tags$div(class = "mb-3", shiny::actionButton(ns("steps_reset"), "全部改回 1",
-                                                          class = "btn-sm btn-outline-secondary"))
+      shiny::tags$div(class = "mb-3", ui_button(ns("steps_reset"), "全部改回 1"))
     }
   )
 }
@@ -597,93 +653,81 @@ steps_error_ui <- function(errors, todo) {
             shiny::tags$p(class = "mb-0", "怎麼辦：", todo))
 }
 
-#' 算完分數之後的畫面：分數表、分數對照表、題目表、檢查、R 程式
-#' @param steps kitsui_steps_shown()：有題不是 1 時通過步驟的區塊打開
+#' 算完分數之後的細節（一排收起來）：分數表（逐列）、分數對照表、題目表、檢查、R 程式
 #' @param ref 參照世代；ref_final 是外部連結不適用時的參照世代（kitsui_ref_final()），適用時 NULL
 #' @noRd
-score_result_ui <- function(ns, scales, steps = NULL, ref = KITSUI_REF_COHORT, ref_final = NULL) {
-  shiny::tagList(
-    shiny::h4("1. 分數表"),
-    shiny::tags$small(
-      class = "kit-hint",
-      if (is.null(ref_final)) {
-        "每個量尺的分數換到哪一把尺上（route：內部連結，再外部連結到 D）。"
-      } else {
-        "每個量尺的分數換到哪一把尺上（route：內部連結到參照世代）。"
-      },
-      "bank 是校準用的題庫；data 是哪一個世代、哪些波次的資料。"
+score_result_ui <- function(ns, scales, ref = KITSUI_REF_COHORT, ref_final = NULL) {
+  ui_details_row(
+    ui_detail(
+      "分數表（逐列）",
+      shiny::textInput(ns("search"), "找人：輸入 visit_id 或 subj_id 的一部分",
+                       placeholder = "例如 c55df9b"),
+      shiny::numericInput(ns("page"), "第幾頁", value = 1, min = 1, step = 1, width = "8rem"),
+      shiny::textOutput(ns("page_info")),
+      shiny::tags$div(class = "kit-table-scroll", shiny::tableOutput(ns("scores"))),
+      shiny::uiOutput(ns("columns"))
     ),
-    if (!is.null(ref_final)) {
-      ui_callout(paste0(
-        "外部連結不適用：參照世代（", ref_final, "）沒有 D 分數的錨題，所以分數表沒有 d_score。",
-        "最後的分數是 ref_score，在參照世代（", ref_final, "）的量尺上；",
-        "還沒有內部連結的世代，ref_score 是空白，分數留在 ability（自己的量尺）。"
-      ))
-    },
-    shiny::tableOutput(ns("routes")),
-    shiny::textInput(ns("search"), "找人：輸入 visit_id 或 subj_id 的一部分",
-                     placeholder = "例如 c55df9b"),
-    shiny::numericInput(ns("page"), "第幾頁", value = 1, min = 1, step = 1, width = "8rem"),
-    shiny::textOutput(ns("page_info")),
-    shiny::tags$div(class = "kit-table-scroll", shiny::tableOutput(ns("scores"))),
-    shiny::uiOutput(ns("columns")),
-    shiny::h4("2. 分數對照表"),
-    shiny::tags$small(class = "kit-hint",
-                      "每個原始分數對應的能力值與人數（kits_subj_table()）。欄位說明在表的下面。"),
-    shiny::selectInput(ns("subj_scale"), "哪一個量尺？", choices = scales),
-    shiny::checkboxInput(ns("show_empty"), "顯示沒有人的原始分數", value = FALSE),
-    shiny::tags$div(class = "kit-table-scroll kit-table-tall",
-                    shiny::tableOutput(ns("subj_table"))),
-    shiny::tags$details(
-      open = NA,
-      shiny::tags$summary("每一欄是什麼"),
-      shiny::tags$ul(
-        class = "kit-hint",
-        shiny::tags$li(shiny::tags$code("ability"), "、", shiny::tags$code("ability_se"),
-                       "：校準的量尺上的能力值與標準誤（logit；kits 裡叫 theta、se）。",
-                       "和上面分數表的 ability 相同：各世代分開估計，沒有經過連結。"),
-        shiny::tags$li(shiny::tags$code("ability_linked"), "、", shiny::tags$code("ability_linked_se"),
-                       paste0("：linked 表示經過內部連結，換到參照世代（", ref, "）的量尺上。"),
-                       "參照世代自己的量尺沒有這兩欄。"),
-        if (is.null(ref_final)) {
-          shiny::tagList(
-            shiny::tags$li(shiny::tags$code("d_score"), "、", shiny::tags$code("d_score_se"),
-                           "：再經過外部連結，D 上的量尺分數與標準誤（kits 裡叫 d）。"),
-            shiny::tags$li(shiny::tags$code("se_link"), "、", shiny::tags$code("se_total"),
-                           "：d_score 的連結誤差，以及測量誤差與連結誤差合起來。")
-          )
-        } else {
-          shiny::tags$li("外部連結不適用，所以沒有 d_score。")
-        },
-        shiny::tags$li("作答組合：這個波次最多孩子作答的那一組題目。表裡只算用這個作答組合的孩子。"),
-        shiny::tags$li(shiny::tags$code("n"), "：這個原始分數有幾個孩子。",
-                       shiny::tags$code("pct"), "：佔這個作答組合的百分比。"),
-        shiny::tags$li(shiny::tags$code("cum_pct"), "：累積百分比，原始分數到這一列為止的孩子佔幾 %。"),
-        shiny::tags$li(shiny::tags$code("wave_n"), "：這個波次全部的孩子數。"),
-        shiny::tags$li(shiny::tags$code("form_pct"), "：這個波次的孩子有幾 % 用這個作答組合。")
+    ui_detail(
+      "分數對照表",
+      shiny::tags$small(class = "kit-hint",
+                        "每個原始分數對應的能力值與人數（kits_subj_table()）。欄位說明在表的下面。"),
+      shiny::selectInput(ns("subj_scale"), "哪一個量尺？", choices = scales),
+      shiny::checkboxInput(ns("show_empty"), "顯示沒有人的原始分數", value = FALSE),
+      shiny::tags$div(class = "kit-table-scroll kit-table-tall",
+                      shiny::tableOutput(ns("subj_table"))),
+      shiny::tags$details(
+        shiny::tags$summary("每一欄是什麼"),
+        shiny::tags$ul(
+          class = "kit-hint",
+          shiny::tags$li(shiny::tags$code("ability"), "、", shiny::tags$code("ability_se"),
+                         "：校準的量尺上的能力值與標準誤（logit；kits 裡叫 theta、se）。",
+                         "和分數表的 ability 相同：各世代分開估計，沒有經過連結。"),
+          shiny::tags$li(shiny::tags$code("ability_linked"), "、",
+                         shiny::tags$code("ability_linked_se"),
+                         paste0("：linked 表示經過內部連結，換到參照世代（", ref, "）的量尺上。"),
+                         "參照世代自己的量尺沒有這兩欄。"),
+          if (is.null(ref_final)) {
+            shiny::tagList(
+              shiny::tags$li(shiny::tags$code("d_score"), "、", shiny::tags$code("d_score_se"),
+                             "：再經過外部連結，D 上的量尺分數與標準誤（kits 裡叫 d）。"),
+              shiny::tags$li(shiny::tags$code("se_link"), "、", shiny::tags$code("se_total"),
+                             "：d_score 的連結誤差，以及測量誤差與連結誤差合起來。")
+            )
+          } else {
+            shiny::tags$li("外部連結不適用，所以沒有 d_score。")
+          },
+          shiny::tags$li("作答組合：這個波次最多孩子作答的那一組題目。表裡只算用這個作答組合的孩子。"),
+          shiny::tags$li(shiny::tags$code("n"), "：這個原始分數有幾個孩子。",
+                         shiny::tags$code("pct"), "：佔這個作答組合的百分比。"),
+          shiny::tags$li(shiny::tags$code("cum_pct"),
+                         "：累積百分比，原始分數到這一列為止的孩子佔幾 %。"),
+          shiny::tags$li(shiny::tags$code("wave_n"), "：這個波次全部的孩子數。"),
+          shiny::tags$li(shiny::tags$code("form_pct"), "：這個波次的孩子有幾 % 用這個作答組合。")
+        )
+      ),
+      shiny::tags$div(
+        class = "kit-downloads",
+        ui_download(ns("subj_table_dl")),
+        shiny::tags$small(class = "kit-hint", "下載的是完整的表，包括沒有人的原始分數。")
       )
     ),
-    shiny::tags$div(
-      class = "kit-downloads",
-      ui_download(ns("subj_table_dl")),
-      shiny::tags$small(class = "kit-hint", "下載的是完整的表，包括沒有人的原始分數。")
-    ),
-    shiny::h4("3. 題目表"),
-    shiny::tags$small(
-      class = "kit-hint",
-      "每一題一列（kits_item_table()）。欄位說明在表的下面。"
-    ),
-    score_steps_ui(ns, steps),
-    shiny::selectInput(ns("item_scale"), "哪一個量尺？", choices = scales),
-    shiny::uiOutput(ns("item_table_scale")),
-    shiny::tags$div(class = "kit-table-scroll kit-table-tall",
-                    shiny::tableOutput(ns("item_table"))),
-    shiny::uiOutput(ns("item_table_note")),
-    shiny::tags$div(class = "kit-downloads",
-                    ui_download(ns("item_table_dl"))),
-    shiny::tags$p(
-      class = "kit-hint",
-      "用常模算的年齡（age_reach 等）要有常模（kits_norms()）；kitsUI 不做常模，所以這裡沒有。"
+    ui_detail(
+      "題目表",
+      shiny::tags$small(
+        class = "kit-hint",
+        "每一題一列（kits_item_table()）。欄位說明在表的下面。",
+        "通過步驟在上面的「進階設定」改。"
+      ),
+      shiny::selectInput(ns("item_scale"), "哪一個量尺？", choices = scales),
+      shiny::uiOutput(ns("item_table_scale")),
+      shiny::tags$div(class = "kit-table-scroll kit-table-tall",
+                      shiny::tableOutput(ns("item_table"))),
+      shiny::uiOutput(ns("item_table_note")),
+      shiny::tags$div(class = "kit-downloads", ui_download(ns("item_table_dl"))),
+      shiny::tags$p(
+        class = "kit-hint",
+        "用常模算的年齡（age_reach 等）要有常模（kits_norms()）；kitsUI 不做常模，所以這裡沒有。"
+      )
     ),
     ui_check_panel(ns("checks")),
     ui_code_panel(ns("code"))
