@@ -2810,7 +2810,7 @@
       "checksum": "226d7cbec671c2e297aebc835d03041f"
     },
     "DESCRIPTION": {
-      "checksum": "f86befa8b64911d5f8aa1232dfcbc178"
+      "checksum": "7a04deed58031a8c072312fa04f96757"
     },
     "inst/manual/img/t1_data_design.webp": {
       "checksum": "f7e066d8adce96794925cfd46818bdfb"
@@ -2900,7 +2900,7 @@
       "checksum": "73d371fabc50b7f88a5e9b34021f312f"
     },
     "R/kit_theme.R": {
-      "checksum": "0452ac66a75fcb187539170d71882a20"
+      "checksum": "265587ad9ca46a94425928738f621c5a"
     },
     "R/kitsUI-package.R": {
       "checksum": "4ffd9e6da95e61fd880674093b54b9d5"
@@ -2915,7 +2915,7 @@
       "checksum": "66c81b0329f35f83c130c25933278142"
     },
     "R/mod_link.R": {
-      "checksum": "e9621012604587c00f9a79d9536d0ac5"
+      "checksum": "0a553cd53ac2da884eb265558e22fae7"
     },
     "R/mod_score.R": {
       "checksum": "753f1f7e9dc3d1b4a052586a9c0646b9"

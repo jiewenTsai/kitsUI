@@ -145,6 +145,8 @@ test_that("兩個世代都在這一回合時可以做獨立檢核；下載連結
     expect_match(output$code, "v_internal <- kits_vertical")
     expect_false(grepl("v_external", output$code))
     expect_match(output$internal_result$html, "做獨立檢核")
+    # 不是每次都要做：收在預設收起來的 details 裡
+    expect_match(output$internal_result$html, "<details class=\"kit-fold\">", fixed = TRUE)
     session$setInputs(run_check = 1)
     expect_s3_class(check_now(), "kits_link_check")
     # 小表與中文判斷；kits 的完整輸出收在 details 裡

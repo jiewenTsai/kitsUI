@@ -226,6 +226,16 @@ kit_css <- function() {
       color: %1$s;
       font-size: 0.85rem;
     }
+    /* 可收合的一整段（標題和 h5 一樣大，預設收起來） */
+    .kit-fold {
+      margin: 0.8rem 0;
+    }
+    .kit-fold > summary {
+      cursor: pointer;
+      font-size: 1.25rem;
+      font-weight: 500;
+      margin-bottom: 0.5rem;
+    }
     .kit-steps {
       margin: 0.2rem 0 0.4rem 1.2rem;
       padding: 0;

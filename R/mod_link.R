@@ -412,11 +412,12 @@ link_plot_box <- function(id, wait, height = "420px") {
   )
 }
 
-#' 內部連結的獨立檢核：能做時給按鈕，不能做時說明原因
+#' 內部連結的獨立檢核：能做時給按鈕，不能做時說明原因（不是每次都要做，預設收起來）
 #' @noRd
 internal_check_ui <- function(ns, why) {
-  shiny::tagList(
-    shiny::h5("內部連結的獨立檢核（kits_link_check()）"),
+  shiny::tags$details(
+    class = "kit-fold",
+    shiny::tags$summary("內部連結的獨立檢核（kits_link_check()）"),
     shiny::tags$small(
       class = "kit-hint",
       "用不靠共同題目的兩種方法再算一次：同年齡組比較、兩個世代一起校準。",
