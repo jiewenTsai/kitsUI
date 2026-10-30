@@ -326,7 +326,7 @@ mod_score_server <- function(id, data, items, links, goto, next_round = NULL) {
         if (!isTRUE(items()$ok)) kit_abort("這一回合有量尺停下來，不產生新的固定檔。")
         kitsui_write_fixed(fixed_out(), file)
       },
-      class = "btn-sm btn-primary"
+      class = KIT_BTN[["secondary"]]
     ))
 
     result

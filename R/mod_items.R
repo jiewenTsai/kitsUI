@@ -338,13 +338,13 @@ mod_items_server <- function(id, data, goto) {
       output[[paste0(id, "_ui")]] <- render_download_csv(session, id, label, table_fun, file)
     }
     output$dl_plot_ui <- render_download_plot(
-      session, "dl_plot", "下載這張圖（html，畫的是上面選的題）", plot_obj, plot_name
+      session, "dl_plot", "下載這張圖（HTML，畫的是上面選的題）", plot_obj, plot_name
     )
-    csv_dl("dl_coef", "下載題目參數（csv）", coef_csv, name("item_coef"))
-    csv_dl("dl_status", "下載每一題的狀態（csv）", status_csv, name("fixed_status"))
-    csv_dl("dl_drift", "下載偏移表（csv）", drift_csv, name("drift"))
-    csv_dl("dl_fit", "下載適配度（csv）", fit_csv, name("item_fit"))
-    csv_dl("dl_log", "下載這一回合的紀錄（csv，所有量尺）", \() items_log_csv(round()$log),
+    csv_dl("dl_coef", "下載題目參數（CSV）", coef_csv, name("item_coef"))
+    csv_dl("dl_status", "下載每一題的狀態（CSV）", status_csv, name("fixed_status"))
+    csv_dl("dl_drift", "下載偏移表（CSV）", drift_csv, name("drift"))
+    csv_dl("dl_fit", "下載適配度（CSV）", fit_csv, name("item_fit"))
+    csv_dl("dl_log", "下載這一回合的紀錄（CSV，所有量尺）", \() items_log_csv(round()$log),
            \() paste0("round_log_", used()$round_label))
 
     output$check <- kit_table({
@@ -697,11 +697,14 @@ items_scale_info <- function(x) {
   log <- x$log
   n <- \(check) sum(log$check == check)
   # 「：3 題（a1、a2、a3）」
+  # 0 題的不列（每個量尺的偏移、固定題數在上面的表裡）
   count <- \(head, check) {
     it <- log$item_id[log$check == check]
-    which <- if (length(it) > 0) paste0("（", paste(it, collapse = "、"), "）")
-    shiny::tags$li(paste0(sprintf("%s：%d 題", head, length(it)), which))
+    if (length(it) == 0) return(NULL)
+    shiny::tags$li(paste0(sprintf("%s：%d 題", head, length(it)),
+                          "（", paste(it, collapse = "、"), "）"))
   }
+  some <- \(text, check) if (n(check) > 0) shiny::tags$li(sprintf(text, n(check)))
   stopped <- is.null(x$item)
   mode <- if (stopped) "停下來了（沒有校準結果）" else log$detail[log$check == "calibration"][1]
   flags <- log$detail[log$check == "flag"]
@@ -713,13 +716,13 @@ items_scale_info <- function(x) {
         if (!stopped) shiny::tags$li(sprintf("%d 列次、%d 題", nrow(x$X), ncol(x$X))),
         lapply(log$detail[log$check == "borrowed bank"],
                \(d) shiny::tags$li(paste0("借用另一世代題庫：", d))),
-        shiny::tags$li(sprintf("偏移：%d 題", n("drift"))),
-        shiny::tags$li(sprintf("換成新版本：%d 題", n("new version"))),
+        some("偏移：%d 題", "drift"),
+        some("換成新版本：%d 題", "new version"),
         count("估不出來、固定在題庫的值", "no CML estimate, kept fixed"),
         count("分數類別有問題、固定在題庫的值", "category problem, kept fixed"),
         count("分數類別有問題、這一回合不放進來", "category problem, left out"),
         count("不能判斷偏移、固定在題庫的值", "drift not judged, kept fixed"),
-        shiny::tags$li(sprintf("併分數（新步驟有缺口）：%d 題", n("capped")))
+        some("併分數（新步驟有缺口）：%d 題", "capped")
       )
     ),
     if (length(flags) > 0) {

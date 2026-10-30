@@ -415,9 +415,11 @@ link_status_ui <- function(st, note, button_id, button_label, kind = "連結", p
   tried <- !is.null(note)
   shiny::tagList(
     if (tried && st$state == "frozen") {
-      ui_status("done", paste0(kind, "建立好了，已凍結在固定檔裡。"), shiny::tags$p(st$text))
+      ui_status("done", paste0(kind, "建立好了，已凍結在固定檔裡。"),
+                shiny::tags$p(kitsui_error_ui(st$text)))
     } else {
-      ui_callout(st$text, warning = st$state == "missing")
+      # kits 的英文原文收起來（kitsui_error_ui()）
+      ui_callout(kitsui_error_ui(st$text), warning = st$state == "missing")
     },
     if (tried && st$state != "frozen") {
       ui_status("stop", paste0(kind, "沒有建立。"), shiny::tags$p(kitsui_error_ui(note)),

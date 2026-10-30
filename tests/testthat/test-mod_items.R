@@ -55,7 +55,7 @@ test_that("示範資料跑一回合：回傳 items，圖、表、程式都出得
                       names(kit_test_dl_csv(output, session, "dl_fit"))))
     # 下載鈕：網址最後一段、download 屬性都是檔名；CSV 和 write_excel_csv() 的位元組一樣
     html <- output$dl_coef_ui$html
-    expect_match(html, "下載題目參數（csv）")
+    expect_match(html, "下載題目參數（CSV）")
     expect_equal(kit_link_attr(html, session$ns("dl_coef"), "download"), "item_coef_lan_M03.csv")
     expect_match(kit_link_attr(html, session$ns("dl_coef"), "href"), "/item_coef_lan_M03\\.csv\\?")
     old <- withr::local_tempfile(fileext = ".csv")

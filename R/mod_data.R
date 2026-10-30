@@ -418,8 +418,6 @@ mod_data_server <- function(id, goto, handover = NULL) {
       if (is.null(r)) return(NULL)
       data_status_ui(r, length(notes()), NROW(categories()), fixed_rv()$integrity)
     })
-    # 作答設計的量尺選單收在細節裡：收起來時也要畫好（kits 的檢查與 R 程式用它選的量尺）
-    shiny::outputOptions(output, "design_pick", suspendWhenHidden = FALSE)
     shiny::observeEvent(input$go_items, goto("items"))
 
     output$fixed_info <- shiny::renderUI({
@@ -438,6 +436,8 @@ mod_data_server <- function(id, goto, handover = NULL) {
       shiny::req(sc)
       shiny::selectInput(ns("design_scale"), "量尺", sc$scale)
     })
+    # 選單收在細節裡：收起來時也要畫好（kits 的檢查與 R 程式用它選的量尺）
+    shiny::outputOptions(output, "design_pick", suspendWhenHidden = FALSE)
     # 作答矩陣（kits_resp()）只做正在看的量尺；同一份資料算過的記起來。
     # 資料一變就換一個新的記憶（舊的丟掉）
     resp_memo <- shiny::reactive({
@@ -593,7 +593,7 @@ data_category_note <- function(problems) {
                   "題庫裡沒有這一題，這一回合先不估它。"),
     shiny::tags$p("作答的分數不會被改動。",
                   "要平移或合併分數，可以在 kitJoin「⑥ 轉成 kits 作答檔」的題目設定改好再上傳。",
-                  ui_kitjoin_button(class = "btn-sm btn-outline-primary"))
+                  ui_kitjoin_button())
   )
 }
 
