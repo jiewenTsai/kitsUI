@@ -96,20 +96,18 @@ test_that("自由校準：分數類別有問題的題這一回合不放進來，
 
 test_that("kits 出錯的量尺停下來並記下原因（中文），其他量尺照做", {
   sb <- sim_bank()
-  # 只有 20 人：每一步上下都不到 30 人，kits_drift() 判斷不了偏移
-  X2 <- kits::kits_sim(seq(-3, 3, length.out = 20), sb$betas, prefix = "k", seed = 7)
-  df <- dplyr::bind_rows(sim_long(X2, 2), kitsui_demo("M03", 3, "motor"))
+  df <- dplyr::bind_rows(sim_long(one_item_each(), 2), kitsui_demo("M03", 3, "motor"))
   r <- suppressMessages(kitsui_round(df, sb$r1$fixed, "2"))
   expect_equal(r$stopped, "sim M03")
   expect_false(r$ok)
   expect_equal(names(r$items), "motor M03")
   err <- dplyr::filter(r$log, check == "error")
   expect_equal(err$scale, "sim M03")
-  expect_match(err$detail, "^kits 出錯，這個量尺停下來。kits 的訊息：Only")
+  expect_match(err$detail, "^kits 出錯，這個量尺停下來。每個列次都只剩一題.*kits 的訊息：Every person-wave answered")
   en <- dplyr::filter(r$fixed$checks, check == "error")
   expect_equal(en$scale, "sim M03")
   # checks.csv 是英文：kits 的訊息原文
-  msg <- sub("^kits 出錯，這個量尺停下來。kits 的訊息：", "", err$detail)
+  msg <- sub("^.*kits 的訊息：", "", err$detail)
   expect_equal(en$detail, paste0("kits error, scale stopped: ", msg))
   zip_path <- withr::local_tempfile(fileext = ".zip")
   expect_error(kitsui_write_fixed(r$fixed, zip_path), "sim M03", class = "kit_user_error")
@@ -158,7 +156,9 @@ test_that("可固定的題少於 5 題時標記（flag），照常校準", {
     "\\(fewer than 5 items can be fixed\\); calibrated as usual$"
   ))
   expect_true(all(paste0("b", 1:8) %in% r2$fixed$bank$item_id))
-  expect_equal(formals(kitsui_round)$flag_fixed, 5)
+  # 預設 NA：依題數，12 題的量尺是 5
+  expect_true(is.na(formals(kitsui_round)$flag_fixed))
+  expect_equal(r2$flag_fixed[["sim M03"]], 5)
   # flag_fixed = 3 時不標記
   r3 <- suppressMessages(kitsui_round(sim_long(X2, 2), sb$r1$fixed, "2", flag_fixed = 3))
   expect_false("flag" %in% r3$log$check)
@@ -394,4 +394,127 @@ test_that("停下來的原因的英文：kits 的訊息原文；kitsui 自己的
   # 沒有 en 的 kitsui 訊息：一句通用的英文
   plain <- tryCatch(kit_abort("中文"), error = \(e) e)
   expect_ascii(kitsui_error_detail_en(plain))
+})
+
+test_that("可固定的題少於幾題：預設依題數 min(5, 題數的一半)，有設定時用設定", {
+  expect_equal(kitsui_flag_fixed(NA, 44), 5)
+  expect_equal(kitsui_flag_fixed(NA, 10), 5)
+  expect_equal(kitsui_flag_fixed(NA, 9), 5)
+  expect_equal(kitsui_flag_fixed(NA, 5), 3)
+  expect_equal(kitsui_flag_fixed(NA, 4), 2)
+  expect_equal(kitsui_flag_fixed(NA, 1), 1)
+  expect_equal(kitsui_flag_fixed(5, 4), 5)
+  expect_true(is.na(items_flag_fixed(NA)))
+  expect_true(is.na(items_flag_fixed(NULL)))
+  expect_equal(items_flag_fixed(3), 3)
+  # 4 題的量尺，偏移 1 題、可固定 3 題：以前（5）會 flag，現在（2）不會
+  betas <- list(a1 = -1, a2 = 0, a3 = 0.5, a4 = 1)
+  X1 <- kits::kits_sim(seq(-3, 3, length.out = 1500), betas, seed = 11)
+  r1 <- suppressMessages(kitsui_round(sim_long(X1), kitsui_fixed_empty(), "1"))
+  X2 <- kits::kits_sim(seq(-3, 3, length.out = 1500), utils::modifyList(betas, list(a4 = 3)),
+                       seed = 12)
+  r2 <- suppressMessages(kitsui_round(sim_long(X2, 2), r1$fixed, "2"))
+  expect_equal(r2$flag_fixed[["sim M03"]], 2)
+  expect_false(any(grepl("可固定的題少於", r2$log$detail)))
+  r3 <- suppressMessages(kitsui_round(sim_long(X2, 2), r1$fixed, "2", flag_fixed = 5))
+  expect_true(any(grepl("可固定的題少於 5 題", r3$log$detail)))
+})
+
+test_that("不能判斷偏移（人太少、或能自由校準的題不到 2 題）：題庫的題固定在題庫的值，flag，照常校準", {
+  sb <- sim_bank()
+  # 只有 20 人：每一步上下都不到 30 人，kits_drift() 判斷不了偏移
+  X2 <- kits::kits_sim(seq(-3, 3, length.out = 20), sb$betas, prefix = "k", seed = 7)
+  r <- suppressMessages(kitsui_round(sim_long(X2, 2), sb$r1$fixed, "2"))
+  expect_true(r$ok)
+  expect_null(r$drift[["sim M03"]])
+  kept <- dplyr::filter(r$log, check == "drift not judged, kept fixed")
+  expect_setequal(kept$item_id, colnames(X2))
+  expect_match(kept$detail[1], "上下各有 30 人的步驟只有 [0-9] 個.*不能判斷偏移：固定在題庫的值")
+  expect_match(dplyr::filter(r$log, check == "flag")$detail, "不能判斷偏移")
+  # 固定的步驟和題庫相同；沒有新版本
+  bank <- dplyr::filter(sb$r1$fixed$bank, scale == "sim M03")
+  st <- kitsui_item_status(r$items[["sim M03"]], NULL, r$log, bank)
+  expect_true(all(st$kind == "kept"))
+  expect_true(kitsui_fixed_check(r$items[["sim M03"]], st, bank)$max_diff < 1e-8)
+  expect_false("new version" %in% r$log$check)
+  expect_true("drift not judged, kept fixed" %in% r$fixed$checks$check)
+  # 偏移表、圖的說明
+  x <- list(drift = NULL, log = r$log, stopped = FALSE)
+  expect_match(items_drift_rows(x)$note, "^沒有偏移表：")
+
+  # 能自由校準的題不到 2 題（kits："Fewer than 2 items of the new data have a 0 score…"）
+  X3 <- kits::kits_sim(seq(-3, 3, length.out = 1000), sb$betas, prefix = "m", seed = 9)
+  ref <- structure(sb$r1$fixed$bank[c("item_id", "item_score", "beta")], scale = "sim M03")
+  expect_error(kits::kits_drift(X3[, "a1", drop = FALSE], ref), "Fewer than 2 items")
+  dr <- kitsui_drift_safe(X3[, c("a1", "a2")], ref, kept = "a2")
+  expect_null(dr$drift)
+  expect_equal(dr$kept, c("a2", "a1"))
+  expect_equal(dr$events$check, "drift not judged, kept fixed")
+  expect_match(dr$events$detail, "能自由校準的題不到 2 題")
+  expect_match(dr$events$detail_en, "^fewer than 2 items")
+  # 其他 kits 錯誤不是「不能判斷偏移」
+  expect_null(kitsui_drift_unjudged(simpleError("No item of the new data is in `ref`.")))
+})
+
+test_that("這一回合不做的量尺：不校準、題庫不動、checks.csv 記 excluded，可以寫出固定檔", {
+  sb <- sim_bank()
+  df <- dplyr::bind_rows(sim_long(one_item_each(), 2), kitsui_demo("M03", 3, "motor"))
+  r <- suppressMessages(kitsui_round(df, sb$r1$fixed, "2", exclude = "sim M03"))
+  expect_true(r$ok)
+  expect_equal(r$excluded, "sim M03")
+  expect_equal(names(r$items), "motor M03")
+  ex <- dplyr::filter(r$fixed$checks, check == "excluded")
+  expect_equal(ex$scale, "sim M03")
+  expect_match(ex$detail, "^left out of this round by the user")
+  expect_identical(dplyr::filter(r$fixed$bank, scale == "sim M03"),
+                   dplyr::filter(sb$r1$fixed$bank, scale == "sim M03"))
+  expect_false(any(r$fixed$waves$scale == "sim M03" & r$fixed$waves$round == "2"))
+  # 資料檔照樣記下（這一回合用了它）
+  expect_equal(nrow(r$fixed$sources), nrow(sb$r1$fixed$sources) + 1)
+  zip_path <- withr::local_tempfile(fileext = ".zip")
+  kitsui_write_fixed(r$fixed, zip_path)
+  back <- kitsui_read_fixed(zip_path)
+  expect_roundtrip(back$checks, r$fixed$checks)
+  expect_equal(items_overview(r)$calibration[items_overview(r)$scale == "sim M03"], "這一回合不做")
+  expect_equal(items_log_table(r$log)$status[r$log$check == "excluded"], "warn")
+  expect_error(kitsui_round(df, sb$r1$fixed, "2", exclude = "lan M03"), "沒有 lan M03",
+               class = "kit_user_error")
+  expect_error(kitsui_round(df, sb$r1$fixed, "2", exclude = c("sim M03", "motor M03")),
+               "沒有量尺可以校準", class = "kit_user_error")
+  # 停下來時：說可以改成「這一回合不做」，按鈕不做停下來的資料量尺
+  stopped <- suppressMessages(kitsui_round(df, sb$r1$fixed, "2"))
+  expect_equal(items_stopped_data(stopped), "sim M03")
+  html <- as.character(items_status(stopped, "skip"))
+  expect_match(html, "這一回合不做 sim M03，再校準一次")
+  expect_error(kitsui_write_fixed(stopped$fixed, zip_path), "這一回合不做",
+               class = "kit_user_error")
+})
+
+test_that("kits 的英文錯誤：常見的翻成白話中文，原文收在 details 裡", {
+  expect_match(kitsui_kits_zh("Every person-wave answered only one item, so CML has no information"),
+               "這一回合不做")
+  expect_match(kitsui_kits_zh("Column(s) item_score2 of `data` change within a person-wave; x"),
+               "同一個列次")
+  expect_match(kitsui_kits_zh("No item of the new data is in `ref`."), "沒有共同的題")
+  expect_null(kitsui_kits_zh("something else"))
+  e <- simpleError("Every person-wave answered only one item, so CML has no information.")
+  d <- kitsui_error_detail(e)
+  expect_match(d, "^kits 出錯，這個量尺停下來。每個列次都只剩一題.*kits 的訊息：Every person-wave")
+  # checks.csv 仍是 kits 的原文（英文）
+  expect_equal(kitsui_error_detail_en(e),
+               "kits error, scale stopped: Every person-wave answered only one item, so CML has no information.")
+  html <- as.character(kitsui_error_ui(d))
+  expect_match(html, "<details")
+  expect_match(html, "<summary>kits 的原文</summary>")
+  expect_match(html, "<code>Every person-wave answered only one item")
+  expect_equal(kitsui_error_ui("沒有可固定的題"), "沒有可固定的題")
+})
+
+test_that("① 先說：題庫裡沒有這一回合的任何一題", {
+  fixed <- lan_chain()[["3"]]$fixed
+  d <- kitsui_demo("M03", 6, "lan")
+  expect_length(kitsui_note_no_common(d, kitsui_round_plan(d, fixed), fixed), 0)
+  d$item_id <- paste0("new_", d$item_id)
+  note <- kitsui_note_no_common(d, kitsui_round_plan(d, fixed), fixed)
+  expect_match(note, "^lan M03：lan M03 的題庫裡沒有這一回合的任何一題")
 })

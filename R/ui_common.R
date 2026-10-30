@@ -77,6 +77,19 @@ ui_kitjoin_hint <- function(class = "btn-sm btn-outline-primary", hint_class = "
   )
 }
 
+#' 停下來的原因：中文在前；kits 的英文原文（「kits 的訊息：」後面）收在可以打開的 details 裡
+#' @param detail kitsui_error_detail() 的一句
+#' @noRd
+kitsui_error_ui <- function(detail) {
+  at <- regexpr(KITSUI_KITS_SAYS, detail, fixed = TRUE)
+  if (at < 0) return(detail)
+  head <- substr(detail, 1, at - 1)
+  said <- substr(detail, at + nchar(KITSUI_KITS_SAYS), nchar(detail))
+  shiny::tagList(head, shiny::tags$details(
+    class = "d-inline", shiny::tags$summary("kits 的原文"), shiny::tags$code(said)
+  ))
+}
+
 #' 下一步：一句話與一個切換分頁的按鈕
 #' @noRd
 ui_next_step <- function(text, button_id, label) {

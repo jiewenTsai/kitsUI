@@ -9,7 +9,8 @@
 # 紀錄每一列有 detail（中文，畫面用）與 detail_en（英文，寫進固定檔的 checks.csv）
 KITSUI_CHECKS <- c("drift", "new version", "capped", "flag", "stop", "error", "D extended",
                    "borrowed bank", "bank choice", "no CML estimate, kept fixed",
-                   "category problem, kept fixed", "category problem, left out")
+                   "category problem, kept fixed", "category problem, left out",
+                   "drift not judged, kept fixed", "excluded")
 
 #' 跑一回合
 #'
@@ -20,24 +21,33 @@ KITSUI_CHECKS <- c("drift", "new version", "capped", "flag", "stop", "error", "D
 #' @param flag_share,flag_fixed flag（不停下來）：偏移題多於 max(1, flag_share × 已判斷題)，
 #'   或可固定的題少於 flag_fixed 時，記下 "flag"（status warn），照常換新版本、固定校準、
 #'   更新題庫與產生固定檔。只有技術上做不了時才停下來：kits 出錯，沒有可固定的題
-#'   （量尺放不上題庫的尺），或拿掉分數類別有問題的題以後沒有題可以估計
+#'   （量尺放不上題庫的尺），或拿掉分數類別有問題的題以後沒有題可以估計。
+#'   flag_fixed 是 NA（預設）時每個量尺依題數決定（kitsui_flag_fixed()）
 #' @param files 這一回合資料檔的路徑（記下 md5）；NULL 時記資料本身的 md5
 #' @param bank_choice NULL（照規則）或具名字元向量：資料量尺 -> 用哪一個量尺的題庫，
 #'   例如 c("motor M03" = "motor M36")（見 kitsui_round_plan()）
 #' @param progress NULL 或 function(i, n, scale)：每個量尺開始前呼叫一次（第 i 個，共 n 個），
 #'   例如在 app 裡更新進度條
-#' @return list(items, drift, data, fixed, stopped, ok, log, plan, memo)：log 有 detail（中文）
+#' @param exclude NULL 或這一回合不做的資料量尺（領域 × 世代，例如 "tsupport B82"）：
+#'   這些量尺的作答不放進來，題庫、版本、連結都不動，checks.csv 記一列 "excluded"
+#' @return list(items, drift, data, fixed, stopped, ok, log, plan, memo, excluded, flag_fixed)：
+#'   excluded 是不做的資料量尺；flag_fixed 是各量尺用的「可固定的題少於幾題」；log 有 detail（中文）
 #'   與 detail_en（英文，寫進 checks.csv）；items、data（改名、
 #'   併過的矩陣）只有沒停下來的量尺；kits 出錯的量尺也算停下來（check = "error"）。fixed 是
 #'   更新後的固定檔（還沒寫出）；有量尺停下來時 ok = FALSE，fixed 帶 attr(, "stopped")，
 #'   不能寫出。各量尺以校準的量尺命名（借題庫時是另一個世代的量尺）；plan 是
 #'   kitsui_round_plan()；memo 是存算過的東西的 environment（kitsui_own_scores()）
 #' @noRd
-kitsui_round <- function(df, fixed, round_label, flag_share = 0.2, flag_fixed = 5, files = NULL,
-                         progress = NULL, bank_choice = NULL) {
+kitsui_round <- function(df, fixed, round_label, flag_share = 0.2, flag_fixed = NA, files = NULL,
+                         progress = NULL, bank_choice = NULL, exclude = NULL) {
   kitsui_check_data(df)
   problem <- kitsui_label_problem(round_label, fixed$version$rounds)
   if (length(problem) > 0) kit_abort(problem)
+  # 不做的量尺：作答拿掉（記下來；檔案的 md5 照樣記，因為這一回合用了這個檔案）
+  all_df <- df
+  out <- kitsui_round_exclude(df, exclude, round_label)
+  df <- out$df
+  bank_choice <- bank_choice[!names(bank_choice) %in% out$excluded]
   plan <- kitsui_round_plan(df, fixed, bank_choice)
   # 資料只切一次（領域 × 世代 × 波次），每個量尺拿它要的幾塊
   pieces <- vctrs::vec_split(df, df[c("domain", "cohort", "wave_m")])
@@ -51,12 +61,12 @@ kitsui_round <- function(df, fixed, round_label, flag_share = 0.2, flag_fixed = 
   }) |>
     purrr::set_names(scales)
   ok <- purrr::discard(res, "stopped")
-  log <- purrr::list_rbind(purrr::map(res, "log"))
+  log <- dplyr::bind_rows(out$log, purrr::list_rbind(purrr::map(res, "log")))
   stopped <- names(res)[purrr::map_lgl(res, "stopped")]
   # 各波次的能力值摘要（垂直圖用）；分數存在 memo，之後各分頁不重算
   memo <- new.env(parent = emptyenv())
   summary <- kitsui_round_summary(ok, kitsui_persons(df), round_label, memo)
-  fixed <- kitsui_fixed_update(fixed, ok, log, kitsui_sources(round_label, df, files), summary)
+  fixed <- kitsui_fixed_update(fixed, ok, log, kitsui_sources(round_label, all_df, files), summary)
   # 新的參照世代量尺：已凍結的外部連結延伸過去（同一條線）
   ext <- kitsui_link_D_extend(fixed, round_label)
   fixed <- ext$fixed
@@ -66,8 +76,42 @@ kitsui_round <- function(df, fixed, round_label, flag_share = 0.2, flag_fixed = 
   list(
     items = purrr::map(ok, "item"), drift = purrr::compact(purrr::map(res, "drift")),
     data = purrr::map(ok, "X"), fixed = fixed, stopped = stopped,
-    ok = length(stopped) == 0, log = log, plan = plan, memo = memo
+    ok = length(stopped) == 0, log = log, plan = plan, memo = memo, excluded = out$excluded,
+    flag_fixed = unlist(purrr::compact(purrr::map(res, "flag_fixed")))
   )
+}
+
+#' 這一回合不做的量尺：資料拿掉，紀錄每個量尺一列 "excluded"
+#' @return list(df, excluded, log)
+#' @noRd
+kitsui_round_exclude <- function(df, exclude, round_label) {
+  exclude <- unique(exclude[!is.na(exclude) & nzchar(exclude)])
+  if (length(exclude) == 0) return(list(df = df, excluded = character(), log = NULL))
+  have <- scale_key(df$domain, df$cohort)
+  extra <- setdiff(exclude, have)
+  if (length(extra) > 0) {
+    kit_abort("這一回合的資料沒有 ", paste(extra, collapse = "、"), "，不能選它「這一回合不做」。")
+  }
+  keep <- !have %in% exclude
+  if (!any(keep)) kit_abort("每個量尺都選了「這一回合不做」，沒有量尺可以校準。")
+  log <- tibble::tibble(
+    round = round_label, scale = exclude, item_id = NA_character_, check = "excluded",
+    detail = "這一回合不做這個量尺（在 ② 選的）：作答沒有校準，題庫、版本、連結都不動",
+    detail_en = "left out of this round by the user: not calibrated; bank, versions and links unchanged"
+  )
+  list(df = df[keep, ], excluded = exclude, log = log)
+}
+
+#' 「可固定的題少於幾題」算 flag：有設定時用設定；NA 時依量尺的題數，min(5, 題數的一半)
+#'
+#' 5 是照 KIT 一個量尺幾十題的情況設的；4、5 題的短量表只要有 1 題偏移或不能判斷就會少於 5，
+#' 每一回合都被 flag。改成題數的一半（無條件進位）：10 題以上和以前一樣是 5；4 題的量尺
+#' 可固定的題少於 2 題、5 題的量尺少於 3 題，也就是能固定的題不到一半時才 flag。
+#' @param n_items 這一回合這個量尺的題數（作答矩陣的欄數）
+#' @noRd
+kitsui_flag_fixed <- function(flag_fixed, n_items) {
+  if (length(flag_fixed) == 1 && !is.na(flag_fixed)) return(flag_fixed)
+  min(5, max(1, ceiling(n_items / 2)))
 }
 
 #' 一個量尺要的列：plan 裡這個量尺的資料量尺與波次（vctrs::vec_split() 切好的塊）
@@ -106,12 +150,16 @@ kitsui_round_try <- function(rows, part, fixed, round_label, flag_share, flag_fi
   out
 }
 
-#' 停下來的原因（中文）：kitsui 自己的訊息原文；kits 的訊息前面加一句中文
+#' 停下來的原因（中文）：kitsui 自己的訊息原文；kits 的訊息前面加一句中文，常見的錯誤再加
+#' 白話的說明（kitsui_kits_zh()）。kits 的原文接在「kits 的訊息：」後面（畫面收在 details 裡）
 #' @noRd
 kitsui_error_detail <- function(e) {
   if (inherits(e, "kit_user_error")) return(conditionMessage(e))
-  paste0("kits 出錯，這個量尺停下來。kits 的訊息：", conditionMessage(e))
+  paste0("kits 出錯，這個量尺停下來。", kitsui_kits_zh(conditionMessage(e)),
+         KITSUI_KITS_SAYS, conditionMessage(e))
 }
+# 紀錄裡 kits 原文前面的字（kitsui_error_ui() 照它切開）
+KITSUI_KITS_SAYS <- "kits 的訊息："
 
 #' 停下來的原因（英文，寫進 checks.csv）：kits 的訊息原文（英文）；kitsui 自己的訊息是中文，
 #' 用它帶的 en，沒有時一句通用的英文
@@ -169,6 +217,7 @@ kitsui_round_scale <- function(X, scale, fixed, round_label, flag_share, flag_fi
   ev_row <- \(ev) row(ev$item_id, ev$check, ev$detail, ev$detail_en)
   bank <- dplyr::filter(fixed$bank, .data$scale == !!scale)
   if (nrow(bank) == 0) return(kitsui_round_free(X, scale, bank, row, ev_row))
+  flag_fixed <- kitsui_flag_fixed(flag_fixed, ncol(X))
   vers <- dplyr::filter(fixed$versions, .data$scale == !!scale)
   # 併掉新步驟的缺口；分數類別有問題的題：題庫裡的固定，不在題庫的拿掉
   cat <- kitsui_cap_categories(X, bank, scale)
@@ -187,6 +236,9 @@ kitsui_round_scale <- function(X, scale, fixed, round_label, flag_share, flag_fi
   moved <- drift$items$item_id[drift$items$drift %in% TRUE]
   judged <- sum(!is.na(drift$items$drift))
   n_fixed <- dplyr::n_distinct(drift$fix$item_id)
+  # 不能判斷偏移（drift 是 NULL）：題庫的題都固定在題庫的值
+  unjudged <- is.null(drift)
+  if (unjudged) n_fixed <- length(unique(dr$kept))
   resid <- drift$items$max_abs_resid[match(moved, drift$items$item_id)]
   cut <- kitsui_drift_cut()
   log <- dplyr::bind_rows(log, row(
@@ -204,13 +256,15 @@ kitsui_round_scale <- function(X, scale, fixed, round_label, flag_share, flag_fi
                                      paste0(counts_en, ": no item can be fixed")))
     return(list(stopped = TRUE, drift = drift, log = log))
   }
-  # 偏移題太多或可固定的題太少：flag，照常校準
+  # 偏移題太多、可固定的題太少，或不能判斷偏移：flag，照常校準
   many <- length(moved) > max(1, flag_share * judged)
   few <- n_fixed < flag_fixed
-  if (many || few) {
-    why <- c(if (many) "偏移題太多", if (few) sprintf("可固定的題少於 %s 題", flag_fixed))
+  if (many || few || unjudged) {
+    why <- c(if (many) "偏移題太多", if (few) sprintf("可固定的題少於 %s 題", flag_fixed),
+             if (unjudged) "不能判斷偏移，題庫的題都固定在題庫的值")
     why_en <- c(if (many) "too many drifting items",
-                if (few) sprintf("fewer than %s items can be fixed", flag_fixed))
+                if (few) sprintf("fewer than %s items can be fixed", flag_fixed),
+                if (unjudged) "drift could not be judged; bank items kept at the bank values")
     log <- dplyr::bind_rows(log, row(
       NA_character_, "flag",
       paste0(counts, "（", paste(why, collapse = "、"), "），照常校準"),
@@ -231,7 +285,9 @@ kitsui_round_scale <- function(X, scale, fixed, round_label, flag_share, flag_fi
                         " data use another cohort's bank)")
   }
   log <- dplyr::bind_rows(log, row(NA_character_, "calibration", detail, detail_en))
-  kitsui_scale_done(fit$X, fit$item, drift, bank, new, log)
+  out <- kitsui_scale_done(fit$X, fit$item, drift, bank, new, log)
+  out$flag_fixed <- flag_fixed
+  out
 }
 
 #' kits_drift() 的 cut（殘差大於幾個標準差算偏移；kitsui_round() 用 kits 的預設）
@@ -364,10 +420,12 @@ kitsui_no_cml_items <- function(e) {
 }
 
 #' 偏移把關；kits 說某些題估不出來時：題庫裡的題拿掉再判斷一次（之後固定在題庫的值），
-#' 不在題庫的題這一回合不放進來
+#' 不在題庫的題這一回合不放進來。
+#' kits 說新資料能自由校準的題不到 2 題（kitsui_drift_unjudged()）時，不能判斷偏移：
+#' 題庫裡的題都固定在題庫的值（drift 是 NULL），新題照常估
 #' @param kept 一開始就不判斷的題（分數類別有問題的題庫題）
 #' @return list(drift, kept, out, events)：kept 是固定在題庫的值的題（含一開始的），
-#'   out 是拿掉的題，events 是這裡新加的紀錄
+#'   out 是拿掉的題，events 是這裡新加的紀錄；drift 是 NULL 時表示不能判斷偏移
 #' @noRd
 kitsui_drift_safe <- function(X, ref, kept = character()) {
   out <- character()
@@ -378,6 +436,16 @@ kitsui_drift_safe <- function(X, ref, kept = character()) {
     if (!inherits(drift, "error")) {
       return(list(drift = drift, kept = kept, out = out, events = events))
     }
+    why <- kitsui_drift_unjudged(drift)
+    if (!is.null(why)) {
+      rest <- setdiff(intersect(colnames(X), ref$item_id), c(kept, out))
+      events <- dplyr::bind_rows(events, kitsui_events(
+        rest, rep("drift not judged, kept fixed", length(rest)),
+        rep(paste0(why$zh, "，不能判斷偏移：固定在題庫的值"), length(rest)),
+        rep(paste0(why$en, ", so drift cannot be judged; kept at the bank values"), length(rest))
+      ))
+      return(list(drift = NULL, kept = c(kept, rest), out = out, events = events))
+    }
     bad <- setdiff(kitsui_error_items(drift, colnames(X)), c(kept, out))
     if (length(bad) == 0) stop(drift)
     in_bank <- bad %in% ref$item_id
@@ -385,6 +453,26 @@ kitsui_drift_safe <- function(X, ref, kept = character()) {
     kept <- c(kept, bad[in_bank])
     out <- c(out, bad[!in_bank])
   }
+}
+
+#' kits_drift() 說這一回合的資料不能判斷偏移：能自由校準的題不到 2 題（有 0 分、至少兩種
+#' 分數、分數沒有缺），或上下各有 min_n 人的步驟不到 3 個（畫不出連結線）。
+#' 這時題庫的題還是可以固定在題庫的值（kits_drift() 對資訊不夠的題也是建議固定）
+#' @return NULL（不是這種錯誤），或 list(zh, en)：原因
+#' @noRd
+kitsui_drift_unjudged <- function(e) {
+  msg <- conditionMessage(e)
+  if (grepl("Fewer than 2 items of the new data have a 0 score", msg, fixed = TRUE)) {
+    return(list(zh = "這一回合能自由校準的題不到 2 題（有 0 分、至少兩種分數）",
+                en = "fewer than 2 items of this round can be calibrated freely"))
+  }
+  hit <- regmatches(msg, regexec("^Only ([0-9]+) item step\\(s\\) have at least `min_n` = ([0-9]+)", msg))[[1]]
+  if (length(hit) == 3) {
+    return(list(zh = sprintf("這一回合上下各有 %s 人的步驟只有 %s 個（要 3 個才畫得出連結線）", hit[3], hit[2]),
+                en = sprintf("only %s item steps of this round have %s persons below and above (3 needed)",
+                             hit[2], hit[3])))
+  }
+  NULL
 }
 
 #' 固定校準：偏移的題換成新版本（原來的題號 + "_r" + 回合；再偏移時也從原來的題號做，

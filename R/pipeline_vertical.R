@@ -148,7 +148,8 @@ kitsui_vertical_scores <- function(round, domain, persons, progress = NULL) {
 #'   list(vertical, table, scale, from, scales, why, note)：vertical 是這一回合的 kits_vertical()；
 #'   table 是畫圖的列（這一回合與之前回合，source 是 "this" 或 "earlier"，round 是回合）；
 #'   scale 是畫出來的量尺（未連結時是 NA）；from 是這一回合這個領域的量尺，scales 再加上之前回合
-#'   的量尺；畫不了時 vertical 是 NULL，why 是一句原因；note 是兩個世代沒有共同月齡時的一句說明
+#'   的量尺；畫不了時 vertical 是 NULL，why 是一句原因；note 是世代之間沒有共同波次時的一句說明；
+#'   wave_unit 是固定檔的波次單位（kitsui_wave_unit()）
 #' @noRd
 kitsui_verticals <- function(round, df, fixed, domain, links = NULL, persons = NULL,
                              raw = NULL) {
@@ -170,9 +171,11 @@ kitsui_verticals <- function(round, df, fixed, domain, links = NULL, persons = N
     internal = kitsui_vertical_linked(raw, earlier, fixed, links, "internal", label),
     external = kitsui_vertical_linked(raw, earlier, fixed, links, "external", label)
   )
-  note <- kitsui_vertical_no_common(raw)
+  unit <- kitsui_wave_unit(fixed)
+  note <- kitsui_vertical_no_common(raw, unit)
   every <- union(scales, earlier$scale)
-  purrr::map(out, \(x) utils::modifyList(x, list(from = scales, scales = every, note = note)))
+  purrr::map(out, \(x) utils::modifyList(x, list(from = scales, scales = every, note = note,
+                                                  wave_unit = unit)))
 }
 
 # 畫不了的版本
@@ -211,7 +214,7 @@ kitsui_vertical_borrowed <- function(series) grepl(" bank)", series, fixed = TRU
 # 內部連結後（到參照世代的量尺）或外部連結後（到 D）：換算後用 kits 的 rbind() 合起來
 kitsui_vertical_linked <- function(raw, earlier, fixed, links, stage, label) {
   scales <- union(names(raw), earlier$scale)
-  ref <- paste(scale_domain(scales[1]), fixed$version$reference)
+  ref <- scale_key(scale_domain(scales[1]), fixed$version$reference)
   target <- if (stage == "internal") ref else "D"
   converted <- purrr::imap(raw, \(x, s) {
     kitsui_convert_path(x, kitsui_path_links(fixed, links, s, stage))
@@ -243,25 +246,29 @@ kitsui_vertical_why <- function(fixed, scales, links, stage) {
     return(paste0(paste(off, collapse = "、"), " 還沒有內部連結，", rest))
   }
   if (is.null(links[["D"]])) {
-    return("還沒有外部連結（到 D）。在上面建立外部連結後，這裡會畫出兩個世代在 D 上的垂直連結。")
+    return("還沒有外部連結（到 D）。在上面建立外部連結後，這裡會畫出各世代在 D 上的垂直連結。")
   }
   paste0(paste(scales, collapse = "、"), " 還有量尺不在外部連結裡，換不到 D。")
 }
 
-#' 這一回合任兩個世代都沒有共同的月齡時，一句說明（有兩個世代有共同月齡時是 NULL）
+#' 這一回合任兩個世代都沒有共同的波次時，一句說明（有兩個世代有共同波次時是 NULL）
 #'
-#' 三個以上的世代時，只要有兩個世代有共同的月齡，就有可以直接比的點，不說明。
+#' 三個以上的世代時，只要有兩個世代有共同的波次，就有可以直接比的點，不說明。
 #' @param raw 具名 list：各量尺換算前的 kits_subj（有 wave_m）
+#' @param unit 波次的單位（kitsui_wave_unit()）
 #' @noRd
-kitsui_vertical_no_common <- function(raw) {
+kitsui_vertical_no_common <- function(raw, unit = "months") {
   waves <- purrr::map(raw, \(x) sort(unique(x$wave_m)))
   if (length(waves) < 2 || any(purrr::map_lgl(waves, is.null))) return(NULL)
-  all_waves <- unlist(waves, use.names = FALSE)
-  if (anyDuplicated(all_waves) > 0) return(NULL)
-  each <- purrr::imap_chr(waves, \(w, s) paste0(s, "：", paste(w, collapse = "、"), " 個月"))
-  who <- if (length(waves) > 2) "各世代之間" else "兩個世代"
-  paste0("這一回合", who, "沒有共同的月齡（", paste(each, collapse = "；"), "）。",
-         "所以圖上沒有同一個月齡可以直接比的兩個點。")
+  pairs <- utils::combn(length(waves), 2, simplify = FALSE)
+  if (any(purrr::map_lgl(pairs, \(p) length(intersect(waves[[p[1]]], waves[[p[2]]])) > 0))) {
+    return(NULL)
+  }
+  word <- kitsui_wave_word(unit)
+  each <- purrr::imap_chr(waves, \(w, s) paste0(s, "：", kitsui_waves_text(w, unit)))
+  who <- if (length(waves) == 2) "兩個世代" else "各世代之間"
+  paste0("這一回合", who, "沒有共同的", word, "（", paste(each, collapse = "；"), "）。",
+         "所以圖上沒有同一個", word, "可以直接比的兩個點。")
 }
 
 # 圖 ----
@@ -290,7 +297,10 @@ kitsui_vertical_table <- function(v, earlier, label) {
 #' @noRd
 kitsui_vertical_plot <- function(v) {
   tab <- v$table
-  if (is.null(tab) || !any(tab$source == "earlier")) {
+  unit <- v$wave_unit %||% "months"
+  # 波次的單位不是月：x 軸一律是波次（實際月齡和波次的單位不同，不畫在同一條軸上）
+  if (unit != "months" && !is.null(tab)) tab$age_med <- NA_real_
+  if (unit == "months" && (is.null(tab) || !any(tab$source == "earlier"))) {
     ticks <- kitsui_vertical_ticks(as.data.frame(v$vertical)$wave_m)
     return(kitsui_vertical_axis(plot(v$vertical, type = "median", age_ticks = ticks)))
   }
@@ -300,7 +310,7 @@ kitsui_vertical_plot <- function(v) {
   obj$age_med <- kitsui_vertical_age(tab)
   obj <- structure(obj, class = class(v$vertical), scale = attr(v$vertical, "scale"))
   p <- plot(obj, type = "median", age_ticks = kitsui_vertical_ticks(tab$wave_m))
-  p <- kitsui_vertical_axis(p)
+  p <- kitsui_vertical_axis(p, unit)
   # kits 的圖可能已經 build 過（p$x$data）；沒有時改還沒 build 的 p$x$attrs
   slot <- if (length(p$x$data) > 0) "data" else "attrs"
   p$x[[slot]] <- purrr::map(p$x[[slot]], \(tr) kitsui_vertical_marks(tr, tab))
@@ -327,11 +337,16 @@ KITSUI_AGE_AXIS <- c(
   "Age (months)" = "Age (months; median actual age of each wave)",
   "Wave (months)" = "Age (months; nominal age of each wave)"
 )
-kitsui_vertical_axis <- function(p) {
+# 波次的單位不是月時，名義月齡的軸寫成 "Wave (years)" 或 "Wave (wave number)"
+kitsui_vertical_axis <- function(p, unit = "months") {
   title <- p$x$layout$xaxis$title %||% p$x$layoutAttrs[[1]]$xaxis$title
   if (is.list(title)) title <- title$text
   if (!is.character(title) || !title %in% names(KITSUI_AGE_AXIS)) return(p)
-  plotly::layout(p, xaxis = list(title = unname(KITSUI_AGE_AXIS[title])))
+  text <- unname(KITSUI_AGE_AXIS[title])
+  if (unit != "months" && title == "Wave (months)") {
+    text <- paste0("Wave (", kitsui_wave_unit_en(unit), ")")
+  }
+  plotly::layout(p, xaxis = list(title = text))
 }
 
 # x 軸的刻度（也是格線）：圖上有的每一個波次。kits 預設的刻度只到 96 個月，

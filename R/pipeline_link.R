@@ -23,8 +23,8 @@ kitsui_link_internal <- function(fixed, domain, cohort = NULL, n_boot = 2000, se
                 "請指定是哪一個世代。")
     }
   }
-  from <- paste(domain, cohort)
-  to <- paste(domain, fixed$version$reference)
+  from <- scale_key(domain, cohort)
+  to <- scale_key(domain, fixed$version$reference)
   kitsui_link_once(fixed, from, "internal", function() {
     kits::kits_linking(kitsui_bank_thr(fixed, from), kitsui_bank_thr(fixed, to),
                        n_boot = n_boot, seed = seed)
@@ -137,7 +137,7 @@ kitsui_link_rebuild <- function(r, fixed) {
 #   n_items 是點裡的題數；items_total 是做連結那一回合為止，題庫裡兩個量尺各有幾題；
 #   外部連結裡沒有錨題的領域（no_anchors）用同一條線
 kitsui_link_meta <- function(r, fixed) {
-  from <- strsplit(r$from_scale[1], ", ")[[1]]
+  from <- kitsui_split_scales(r$from_scale[1], fixed)
   to <- r$to_scale[1]
   if (r$kind[1] == "D") {
     no_anchors <- setdiff(scale_domain(from), r$domain)
@@ -167,7 +167,7 @@ kitsui_items_total <- function(fixed, scales, round) {
 #' @noRd
 kitsui_link_D_extend <- function(fixed, round) {
   d <- fixed$links$kind == "D"
-  from <- if (any(d)) strsplit(fixed$links$from_scale[which(d)[1]], ", ")[[1]]
+  from <- if (any(d)) kitsui_split_scales(fixed$links$from_scale[which(d)[1]], fixed)
   new <- setdiff(kitsui_ref_scales(fixed), from)
   if (!any(d) || length(new) == 0) return(list(fixed = fixed, log = NULL))
   fixed$links$from_scale[d] <- paste(c(from, new), collapse = ", ")
@@ -209,7 +209,7 @@ kitsui_link_path <- function(fixed, scale) {
   internal <- dplyr::filter(rows, .data$kind == "internal", .data$from_scale == !!scale)
   now <- if (nrow(internal) > 0) internal$to_scale[1] else scale
   d <- dplyr::filter(rows, .data$kind == "D")
-  to_d <- nrow(d) > 0 && now %in% strsplit(d$from_scale[1], ", ")[[1]]
+  to_d <- nrow(d) > 0 && now %in% kitsui_split_scales(d$from_scale[1], fixed)
   as.character(c(if (nrow(internal) > 0) scale, if (to_d) "D"))
 }
 
@@ -230,7 +230,7 @@ kitsui_internal_overview <- function(fixed, links, earlier) {
   scales <- kitsui_internal_scales(fixed)
   words <- c(frozen = "已凍結", ready = "可以建立", missing = "還不能做（題庫缺一邊）")
   state <- purrr::map_chr(scales, \(s) kitsui_internal_state(fixed, s, links, earlier)$state)
-  tibble::tibble(from = scales, to = paste(scale_domain(scales), fixed$version$reference),
+  tibble::tibble(from = scales, to = scale_key(scale_domain(scales), fixed$version$reference),
                  state = unname(words[state]))
 }
 
@@ -313,7 +313,7 @@ kitsui_ref_final <- function(fixed) {
 #'   "missing"（缺題庫，text 說明原因）
 #' @noRd
 kitsui_internal_state <- function(fixed, scale, links, earlier) {
-  to <- paste(scale_domain(scale), fixed$version$reference)
+  to <- scale_key(scale_domain(scale), fixed$version$reference)
   link <- links[[scale]]
   if (!is.null(link)) {
     return(list(state = "frozen", link = link, text = kitsui_frozen_text(scale %in% earlier)))

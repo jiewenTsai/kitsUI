@@ -28,6 +28,7 @@ Imports:
 Remotes:
     jiewenTsai/kits
 Suggests:
+    callr,
     rmarkdown,
     testthat (>= 3.0.0),
     withr

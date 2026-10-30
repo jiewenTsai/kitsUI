@@ -97,3 +97,24 @@ sim_bank <- function() {
   }
   pipeline_cache$sim_bank
 }
+
+# 每個列次只答一題：CML 沒有資訊，kits_item() 出錯
+one_item_each <- function(n = 300, seed = 7) {
+  X <- kits::kits_sim(seq(-3, 3, length.out = n), sim_bank()$betas, prefix = "k", seed = seed)
+  keep <- (seq_len(n) - 1) %% ncol(X) + 1
+  for (i in seq_len(n)) X[i, -keep[i]] <- NA
+  X
+}
+
+# 固定檔寫出再讀回的比較。數字以 17 位有效數字寫出，讀回來在 x86_64 上和原值位元相同；
+# Apple Silicon（aarch64）沒有 long double，R 的 as.numeric() 不一定正確捨入，最後一位可能差
+# （相對誤差約 1e-16）。所以 double 用容許誤差 1e-12 比，其他都要完全相同：
+# 文字、整數、NA 的位置、欄名、型別、屬性（double 換成 0、保留 NA 以後 identical）
+expect_roundtrip <- function(object, expected, tolerance = 1e-12) {
+  shape <- \(x) rapply(list(x), \(v) {
+    v[!is.na(v)] <- 0
+    v
+  }, classes = "numeric", how = "replace")
+  expect_identical(shape(object), shape(expected))
+  expect_equal(object, expected, tolerance = tolerance)
+}

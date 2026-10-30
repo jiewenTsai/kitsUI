@@ -5,17 +5,55 @@
 # 第一回合在 ① 選（kitsui_ref_pick()），寫進固定檔的 VERSION
 KITSUI_REF_COHORT <- "M03"
 
+# 波次（wave_m）的單位：第一回合在 ① 選，寫進固定檔的 VERSION（WaveUnit），之後的回合沿用。
+# 之前的固定檔沒有 WaveUnit：當成月（KIT 的 wave_m 是施測月齡）。
+# 借題庫的規則（比對同一個月齡）與 age50 只在單位是月時用
+KITSUI_WAVE_UNITS <- c("月（施測月齡）" = "months", "年" = "years", "波次序號" = "waves")
+
+#' 固定檔的波次單位："months"、"years" 或 "waves"（沒有寫時是 "months"）
+#' @noRd
+kitsui_wave_unit <- function(fixed) {
+  u <- fixed$version$wave_unit
+  if (length(u) != 1 || is.na(u) || !u %in% KITSUI_WAVE_UNITS) "months" else u
+}
+
+#' 一個波次給使用者看的寫法：月是「36 個月」，年是「2013 年」，波次序號是「第 3 波」
+#' @noRd
+kitsui_wave_text <- function(w, unit = "months") {
+  w <- format(w, trim = TRUE)
+  switch(unit, years = paste0(w, " 年"), waves = paste0("第 ", w, " 波"), paste0(w, " 個月"))
+}
+
+#' 好幾個波次一起寫：「3、6 個月」「2009、2011 年」「第 1、2 波」
+#' @noRd
+kitsui_waves_text <- function(w, unit = "months") {
+  w <- paste(format(w, trim = TRUE), collapse = "、")
+  switch(unit, years = paste0(w, " 年"), waves = paste0("第 ", w, " 波"), paste0(w, " 個月"))
+}
+
+#' 句子裡的「月齡」：月是「月齡」，年是「年」，波次序號是「波次」
+#' @noRd
+kitsui_wave_word <- function(unit = "months") {
+  switch(unit, years = "年", waves = "波次", "月齡")
+}
+
+#' 圖上 x 軸（英文）的波次：月是 "months"，年是 "years"，波次序號是 "wave number"
+#' @noRd
+kitsui_wave_unit_en <- function(unit = "months") {
+  switch(unit, years = "years", waves = "wave number", "months")
+}
+
 # 資料一定要有的欄位（資料約定）
 KITSUI_REQUIRED <- c("visit_id", "cohort", "wave_m", "item_id", "item_score", "domain")
 
 # 資料約定的欄位：讀檔時的型別（readr 的縮寫：c 文字、d 數字）、一定要有嗎、意思
 KITSUI_COLUMNS <- tibble::tribble(
   ~column, ~type, ~meaning,
-  "visit_id", "c", "列次編號：一個孩子的一個波次一個編號。兩個世代不能重複。",
+  "visit_id", "c", "列次編號：一個孩子的一個波次一個編號。不同世代也不能重複。",
   "subj_id", "c", "孩子編號：同一個孩子的各波次相同。",
   "cohort", "c", "世代，例如 M03、M36。參照世代在第一回合選（有 M03 時預設 M03）。",
   "sex", "c", "性別，例如 boy、girl。",
-  "wave_m", "d", "波次（施測月齡），例如 3、6、12。",
+  "wave_m", "d", "波次，例如施測月齡 3、6、12。也可以是年或波次序號（在 ① 選單位）。",
   "age_m", "d", "實際月齡。題目表的通過年齡要用它。",
   "item_id", "c", "題號，例如 lana01。",
   "item_score", "d", "得分：0、1、2…。沒有作答的題不用放。",
@@ -51,7 +89,8 @@ kitsui_check_data <- function(df) {
   if (length(miss) > 0) {
     kit_abort("資料缺少 ", paste(miss, collapse = "、"), " 欄位。請加上後再上傳。")
   }
-  if (anyNA(df$domain) || anyNA(df$cohort)) {
+  blank <- \(x) anyNA(x) || any(!nzchar(trimws(x)))
+  if (blank(df$domain) || blank(df$cohort)) {
     kit_abort("domain 或 cohort 有空白。每一列都要填領域與世代。")
   }
   invisible(df)
@@ -81,9 +120,35 @@ kitsui_default_label <- function(rounds = character()) {
   paste0("R", n)
 }
 
-# 量尺的名稱："lan M36" -> 領域 "lan"、世代 "M36"
+# 量尺的名稱："lan M36" -> 領域 "lan"、世代 "M36"。
+# 世代名稱裡的空白，在量尺名稱裡換成不斷行空白（U+00A0，畫面上看起來一樣），所以量尺名稱
+# 最後一個空白一定是領域與世代的分界（領域名稱可以有空白）。世代名稱沒有空白時（例如 KIT 的
+# M03）量尺名稱和以前一樣，之前的固定檔照樣用
+KITSUI_NBSP <- "\u00a0"
+scale_key <- function(domain, cohort) {
+  paste(domain, gsub(" ", KITSUI_NBSP, cohort, fixed = TRUE))
+}
 scale_domain <- function(scale) sub(" [^ ]+$", "", scale)
-scale_cohort <- function(scale) sub("^.* ", "", scale)
+scale_cohort <- function(scale) gsub(KITSUI_NBSP, " ", sub("^.* ", "", scale), fixed = TRUE)
+# 用 ", " 接起來的量尺名稱（外部連結的 from_scale）拆回來。領域名稱有 ", " 時，照固定檔裡有的
+# 量尺（題庫與 VERSION 的 Scales）接回去
+kitsui_split_scales <- function(x, fixed = NULL) {
+  parts <- strsplit(x, ", ", fixed = TRUE)[[1]]
+  known <- unique(c(fixed$bank$scale, fixed$version$scales))
+  if (length(known) == 0 || all(parts %in% known)) return(parts)
+  out <- character()
+  now <- NULL
+  for (p in parts) {
+    now <- if (is.null(now)) p else paste(now, p, sep = ", ")
+    if (now %in% known) {
+      out <- c(out, now)
+      now <- NULL
+    }
+  }
+  c(out, now)
+}
+# 給 R 程式與 csv 用的量尺名稱：不斷行空白換回一般的空白（和 paste(domain, cohort) 一樣）
+scale_label <- function(scale) gsub(KITSUI_NBSP, " ", scale, fixed = TRUE)
 
 #' 量尺清單：領域 x 世代，各有幾列次、幾題、哪些波次（參照世代在前）
 #' @param ref 參照世代；預設照資料的世代（kitsui_ref_default()）
@@ -95,7 +160,7 @@ kitsui_scales <- function(df, ref = kitsui_ref_default(df$cohort)) {
       n_visits = dplyr::n_distinct(.data$visit_id), n_items = dplyr::n_distinct(.data$item_id),
       waves = paste(sort(unique(.data$wave_m)), collapse = ", "), .by = c("domain", "cohort")
     ) |>
-    dplyr::mutate(scale = paste(.data$domain, .data$cohort), .before = 1) |>
+    dplyr::mutate(scale = scale_key(.data$domain, .data$cohort), .before = 1) |>
     dplyr::arrange(.data$cohort != ref, .data$scale)
 }
 
@@ -104,7 +169,7 @@ kitsui_scales <- function(df, ref = kitsui_ref_default(df$cohort)) {
 #' @param scale 資料的量尺（領域 × 世代）；借用另一世代題庫時可以有兩個世代，例如 c("lan M03", "lan M36")
 #' @noRd
 kitsui_resp <- function(df, scale) {
-  part <- dplyr::filter(df, paste(.data$domain, .data$cohort) %in% scale)
+  part <- dplyr::filter(df, scale_key(.data$domain, .data$cohort) %in% scale)
   if (length(scale) > 1) kitsui_check_ids(part)
   kits::kits_resp(part)
 }
@@ -184,23 +249,30 @@ kitsui_parse_picks <- function(picks, choices) {
 #' 這一回合的資料：照勾選的世代 × 波次篩選、檢查欄位與作答（幾百萬列也只要幾秒）
 #'
 #' 名稱與固定檔不在這裡檢查：改名稱或換固定檔時不用重跑。
-#' 全部組合都勾時不複製資料。
+#' 全部組合都勾、沒有 wave_m 空白的列、沒有約定以外的欄時不複製資料。
 #' @param data 這個來源的全部資料（還沒選）
 #' @param picks 勾選的世代 × 波次（"M03 3"）；只寫月齡時是所有世代的這個月齡
 #' @param choices kitsui_pick_choices(data)；NULL 時在這裡算
-#' @return list(df, scales, persons, picks, problems, hint)：persons 是 kitsui_persons(df)；
-#'   picks 是勾到的 choices；problems 是紅色的中文訊息；hint 是還沒勾時的提示
+#' @param reference 參照世代：量尺表把它排在前面
+#' @return list(df, scales, persons, picks, problems, hint, notes, dropped)：persons 是
+#'   kitsui_persons(df)；picks 是勾到的 choices；problems 是紅色的中文訊息；hint 是還沒勾時的
+#'   提示；notes 是橘色的提醒（wave_m 空白的列、像遺漏碼的分數）；dropped 是拿掉的約定以外的欄
 #' @noRd
-kitsui_data_select <- function(data, picks, choices = NULL) {
+kitsui_data_select <- function(data, picks, choices = NULL, reference = KITSUI_REF_COHORT) {
   miss <- setdiff(KITSUI_REQUIRED, names(data))
   if (length(miss) > 0) {
     return(list(problems = paste0("資料缺少這些欄位：", paste(miss, collapse = "、"),
-                                  "。請加上後再上傳。")))
+                                  "。請加上後再上傳。", kitsui_missing_hint(names(data)))))
   }
+  # 約定以外的欄拿掉：kits_resp() 要一個列次裡每一欄都一樣，多的欄會讓每個量尺都停下來
+  dropped <- setdiff(names(data), KITSUI_COLUMNS$column)
+  if (length(dropped) > 0) data <- data[intersect(names(data), KITSUI_COLUMNS$column)]
   choices <- choices %||% kitsui_pick_choices(data)
   sel <- kitsui_parse_picks(picks, choices)
   if (nrow(sel) == 0) return(list(problems = character(), hint = "請勾這一回合的世代與波次。"))
-  df <- if (nrow(sel) == nrow(choices)) data else {
+  # wave_m 空白的列不知道是哪一個波次：勾選框沒有它們，全部都勾時也不放進來
+  no_wave <- sum(is.na(data$wave_m))
+  df <- if (nrow(sel) == nrow(choices) && no_wave == 0) data else {
     dplyr::semi_join(data, sel[c("cohort", "wave_m")], by = c("cohort", "wave_m"))
   }
   problems <- tryCatch({
@@ -209,8 +281,68 @@ kitsui_data_select <- function(data, picks, choices = NULL) {
   }, error = \(e) kit_error_text(e, "檢查資料"))
   if (length(problems) == 0) problems <- kitsui_quick_check(df)
   if (length(problems) > 0) return(list(problems = problems))
-  list(df = df, scales = kitsui_scales(df), persons = kitsui_persons(df), picks = sel,
-       problems = character())
+  notes <- c(
+    if (no_wave > 0) {
+      sprintf("wave_m 有 %s 列是空白：不知道是哪一個波次，這些列不放進這一回合。",
+              format(no_wave, big.mark = ","))
+    },
+    kitsui_note_codes(df)
+  )
+  scales <- dplyr::arrange(kitsui_scales(df), .data$cohort != reference, .data$scale)
+  list(df = df, scales = scales, persons = kitsui_persons(df), picks = sel,
+       problems = character(), notes = notes, dropped = dropped)
+}
+
+#' 前 n 個，用「、」接起來；還有更多時加「…」
+#' @noRd
+kitsui_first <- function(x, n = 10) {
+  paste0(paste(utils::head(x, n), collapse = "、"), if (length(x) > n) "…")
+}
+
+#' 缺欄位時多一句：看起來是分號或 Tab 分隔、欄名是大寫或前後有空白
+#' @param cols 檔案的欄名
+#' @return 一句中文；看不出原因時 ""
+#' @noRd
+kitsui_missing_hint <- function(cols) {
+  save_as <- "請另存成逗號分隔的 CSV（Excel 的「CSV UTF-8（逗號分隔）」）再上傳。"
+  if (length(cols) == 1 && grepl(";", cols)) {
+    return(paste0("看起來是用分號（;）分隔的檔案。", save_as))
+  }
+  if (length(cols) == 1 && grepl("\t", cols)) {
+    return(paste0("看起來是用 Tab 分隔的檔案。", save_as))
+  }
+  near <- cols[!cols %in% KITSUI_COLUMNS$column & tolower(trimws(cols)) %in% KITSUI_COLUMNS$column]
+  if (length(near) == 0) return("")
+  paste0("欄名要全部小寫、前後不能有空白：", kitsui_first(paste0("「", near, "」"), 4), " 要改成 ",
+         kitsui_first(tolower(trimws(near)), 4), "。")
+}
+
+#' 看起來是遺漏碼的分數：一題裡比其他分數大很多（差 50 以上）、而且是 90 以上的分數，
+#' 例如 0–3 分的題有 95–99，或有 7777、9999
+#'
+#' 只提醒（橘色），分數不改：kits 會把它們當成很高的分數，那一題會分數不連續，
+#' 量尺通常會停下來。遺漏碼要先在 kitJoin ② 轉成空白。
+#' @return 一句中文；沒有時長度 0
+#' @noRd
+kitsui_note_codes <- function(df) {
+  sc <- dplyr::distinct(df, .data$item_id, .data$item_score) |>
+    dplyr::filter(!is.na(.data$item_score))
+  hits <- purrr::map(split(sc$item_score, sc$item_id), \(x) {
+    x <- sort(x)
+    if (length(x) < 2) return(numeric())
+    jump <- which(diff(x) >= 50 & x[-1] >= 90)
+    if (length(jump) == 0) numeric() else x[x > x[jump[1]]]
+  }) |>
+    purrr::compact()
+  if (length(hits) == 0) return(character())
+  codes <- sort(unique(unlist(hits)))
+  each <- purrr::imap_chr(hits, \(x, id) paste0(id, "（", kitsui_first(format(x, trim = TRUE), 4), "）"))
+  paste0(
+    length(hits), " 題有看起來是遺漏碼的分數（比其他分數大很多）：",
+    kitsui_some(each, 3), "。這些值是：", kitsui_first(format(codes, trim = TRUE), 8), "。",
+    "kits 會把它們當成真的分數，這些題會分數不連續，量尺可能停下來。",
+    "請先在 kitJoin「② 遺漏值轉 NA」把遺漏碼改成空白，再上傳。"
+  )
 }
 
 #' 這一回合的資料與檢查（kitsui_data_select() 加上名稱與題庫的計畫）
@@ -231,19 +363,42 @@ kitsui_data_check <- function(data, waves, round_label, fixed) {
 
 # 提醒（橘色，不擋下一步） ----
 
-#' 勾到的波次之前的回合已經校準過（固定檔的 waves.csv 裡，同一個量尺的同一個月齡）
+#' 勾到的波次之前的回合已經校準過（固定檔的 waves.csv 裡，同一個量尺的同一個波次）
 #' @param plan kitsui_round_plan()
 #' @return 中文訊息；沒有時長度 0
 #' @noRd
 kitsui_note_waves <- function(plan, fixed) {
+  unit <- kitsui_wave_unit(fixed)
   done <- dplyr::filter(fixed$waves, !is.na(.data$wave_m))
   hit <- dplyr::inner_join(dplyr::distinct(plan, .data$data_scale, .data$wave_m), done,
                            by = c(data_scale = "scale", "wave_m"))
   if (nrow(hit) == 0) return(character())
   paste0("這些波次之前的回合已經校準過：",
-         paste(sprintf("%s 的 %s 個月（第 %s 回合）", hit$data_scale, format(hit$wave_m, trim = TRUE),
+         paste(sprintf("%s 的 %s（第 %s 回合）", hit$data_scale, kitsui_wave_text(hit$wave_m, unit),
                        hit$round), collapse = "、"),
          "。再校準一次，同一批孩子會有兩份分數。")
+}
+
+#' 要用題庫固定校準，但這一回合的題沒有一題在那個題庫裡（題號都不一樣）：② 一定停下來
+#' （kits："No item of the new data is in `ref`"），在 ① 就先說
+#' @param plan kitsui_round_plan()
+#' @return 中文訊息；沒有時長度 0
+#' @noRd
+kitsui_note_no_common <- function(df, plan, fixed) {
+  use <- dplyr::distinct(plan[plan$scale %in% fixed$bank$scale, ], .data$data_scale, .data$scale)
+  if (nrow(use) == 0) return(character())
+  have <- dplyr::distinct(df, .data$domain, .data$cohort, .data$item_id)
+  have$data_scale <- scale_key(have$domain, have$cohort)
+  bad <- purrr::map_lgl(seq_len(nrow(use)), \(i) {
+    items <- have$item_id[have$data_scale == use$data_scale[i]]
+    bank <- fixed$bank$item_id[fixed$bank$scale == use$scale[i]]
+    vers <- fixed$versions$current_id[fixed$versions$scale == use$scale[i]]
+    !any(items %in% c(bank, vers))
+  })
+  if (!any(bad)) return(character())
+  sprintf(paste0("%s：%s 的題庫裡沒有這一回合的任何一題（題號都不一樣），② 會停下來。",
+                 "請確認題號和之前的回合相同；或在 ② 把它選成「這一回合不做」。"),
+          use$data_scale[bad], use$scale[bad])
 }
 
 #' 固定檔不是這次連線最新的一回合（④ 交過更新的一回合時）
@@ -269,6 +424,14 @@ kitsui_note_sources <- function(files, fixed) {
   if (nrow(hit) == 0) return(character())
   hit <- dplyr::summarise(hit, round = paste(unique(.data$round), collapse = "、"), .by = "file")
   sprintf("%s：這個檔案在第 %s 回合用過。", hit$file, hit$round)
+}
+
+#' 約定以外的欄（kitsui_read_uploads()、kitsui_data_select() 拿掉的）
+#' @noRd
+kitsui_note_dropped <- function(dropped) {
+  if (length(dropped) == 0) return(character())
+  paste0("資料約定以外的欄不用，已經拿掉：", kitsui_first(dropped, 8), "。",
+         "kitsUI 只用「資料檔要有哪些欄位」表上的欄。")
 }
 
 #' 得分不完整的題（kitsui_category_problems()）：每題一句；太多時只列前 n 題
@@ -313,7 +476,8 @@ kitsui_quick_check <- function(df) {
 #' 資料約定的欄位照 KITSUI_TYPES 讀：編號是文字，月齡與分數是數字。
 #' @param files data.frame：name（檔名）、datapath（路徑），就是 shiny::fileInput() 的值
 #' @param progress NULL，或 function(i, n, name)：讀第 i 個（共 n 個）檔案之前呼叫
-#' @return list(data, files)：files 是 tibble（file、rows、md5）
+#' 約定以外的欄拿掉（kits_resp() 要一個列次裡每一欄都一樣），記在 dropped。
+#' @return list(data, files, dropped)：files 是 tibble（file、rows、md5）；dropped 是拿掉的欄
 #' @noRd
 kitsui_read_uploads <- function(files, progress = NULL) {
   if (is.null(files) || nrow(files) == 0) kit_abort("請選擇資料檔（CSV、CSV.GZ 或 SAV）。")
@@ -325,16 +489,22 @@ kitsui_read_uploads <- function(files, progress = NULL) {
     datas[[i]] <- kitsui_read_upload(files$datapath[i], files$name[i])
   }
   datas <- purrr::set_names(datas, files$name)
+  dropped <- unique(unlist(purrr::map(datas, \(d) attr(d, "dropped"))))
   kitsui_same_columns(datas)
   list(data = dplyr::bind_rows(unname(datas)),
        files = tibble::tibble(file = files$name, rows = unname(purrr::map_int(datas, nrow)),
-                              md5 = unname(tools::md5sum(files$datapath))))
+                              md5 = unname(tools::md5sum(files$datapath))),
+       dropped = as.character(dropped))
 }
 
 # 一個檔案：讀成數字的欄有讀不懂的值時停下來（不默默變成空白）。
 # 列數和 Excel 一樣算（第 1 列是欄名）；readr 的提醒由這裡的中文訊息取代
 kitsui_read_upload <- function(path, name) {
   r <- suppressWarnings(read_data_file(path, name, col_types = KITSUI_TYPES))
+  if (ncol(r$data) == 0 || nrow(r$data) == 0) {
+    kit_abort(name, if (ncol(r$data) == 0) " 是空的檔案" else " 只有欄名，沒有作答的列",
+              "。請確認匯出的檔案有資料再上傳。")
+  }
   if (r$n_problems > 0) {
     p <- r$problems[1, ]
     kit_abort(name, " 有 ", r$n_problems, " 個值讀不懂。",
@@ -342,10 +512,20 @@ kitsui_read_upload <- function(path, name) {
               "應該是", if (grepl("double|number", p$expected)) "數字" else p$expected, "。",
               "請修正後再上傳。")
   }
+  # 約定以外的欄拿掉（記在 attr(, "dropped")）；缺約定的欄時留著，① 才說得出缺什麼
+  data <- r$data
+  dropped <- setdiff(names(data), KITSUI_COLUMNS$column)
+  if (length(dropped) > 0 && all(KITSUI_REQUIRED %in% names(data))) {
+    data <- data[intersect(names(data), KITSUI_COLUMNS$column)]
+  } else {
+    dropped <- character()
+  }
   # SAV 的編號可能是數字：轉成文字，檔案之間才接得起來
-  text <- intersect(names(KITSUI_TYPES)[KITSUI_TYPES == "c"], names(r$data))
-  haven::zap_labels(r$data) |>
+  text <- intersect(names(KITSUI_TYPES)[KITSUI_TYPES == "c"], names(data))
+  out <- haven::zap_labels(data) |>
     dplyr::mutate(dplyr::across(dplyr::all_of(text), as.character))
+  attr(out, "dropped") <- dropped
+  out
 }
 
 # 每個檔案的欄位與第一個檔案相同；同一欄的型別也相同（全部空白的欄不算）。

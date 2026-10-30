@@ -216,8 +216,7 @@ test_that("固定校準：偏移表的 reason 是中文；固定的步驟寫「�
 
 test_that("停下來的量尺：偏移表不說「沒有題庫」", {
   sb <- sim_bank()
-  X2 <- kits::kits_sim(seq(-3, 3, length.out = 20), sb$betas, prefix = "k", seed = 7)
-  d <- items_data(sim_long(X2, 2), sb$r1$fixed, "2")
+  d <- items_data(sim_long(one_item_each(), 2), sb$r1$fixed, "2")
   shiny::testServer(mod_items_server, args = list(data = shiny::reactive(d), goto = \(tab) NULL), {
     session$setInputs(run = 1, scale = "sim M03")
     expect_false(session$getReturned()()$ok)
@@ -227,6 +226,40 @@ test_that("停下來的量尺：偏移表不說「沒有題庫」", {
     expect_match(output$status$html, "不能產生新的固定檔")
     expect_match(output$scale_info$html, "停下來")
     expect_null(output$next_step)
+  })
+})
+
+test_that("這一回合不做的量尺：選了再校準；停下來時按鈕改成不做它、再校準一次", {
+  sb <- sim_bank()
+  df <- dplyr::bind_rows(sim_long(one_item_each(), 2), kitsui_demo("M03", 3, "motor"))
+  d <- items_data(df, sb$r1$fixed, "2")
+  shiny::testServer(mod_items_server, args = list(data = shiny::reactive(d), goto = \(tab) NULL), {
+    expect_match(output$exclude_ui$html, "sim M03")
+    session$setInputs(run = 1)
+    expect_equal(session$getReturned()()$stopped, "sim M03")
+    expect_match(output$status$html, "這一回合不做 sim M03，再校準一次")
+    session$setInputs(skip_stopped = 1)
+    res <- session$getReturned()()
+    expect_true(res$ok)
+    expect_equal(res$excluded, "sim M03")
+    expect_match(output$status$html, "這一回合不做：")
+    expect_match(output$overview, "這一回合不做")
+    # 直接勾「這一回合不做」再校準
+    session$setInputs(exclude = "motor M03", run = 2)
+    expect_equal(session$getReturned()()$excluded, "motor M03")
+  })
+})
+
+test_that("不能判斷偏移的量尺：照常校準，偏移表與圖說明原因", {
+  sb <- sim_bank()
+  X2 <- kits::kits_sim(seq(-3, 3, length.out = 20), sb$betas, prefix = "k", seed = 7)
+  d <- items_data(sim_long(X2, 2), sb$r1$fixed, "2")
+  shiny::testServer(mod_items_server, args = list(data = shiny::reactive(d), goto = \(tab) NULL), {
+    session$setInputs(run = 1, scale = "sim M03")
+    expect_true(session$getReturned()()$ok)
+    expect_match(output$drift, "沒有偏移表：這一回合上下各有 30 人的步驟")
+    expect_match(output$scale_info$html, "不能判斷偏移、固定在題庫的值：12 題")
+    expect_match(output$fixed_status$html, "參數和題庫")
   })
 })
 

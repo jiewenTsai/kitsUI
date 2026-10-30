@@ -120,7 +120,7 @@ KITSUI_SCORE_COLUMNS <- c(
   visit_id = "列次的編號（一個孩子的一次施測）。",
   subj_id = "孩子的編號。",
   cohort = "孩子的世代（借用另一世代題庫時也不變）。",
-  wave_m = "波次（月齡）。",
+  wave_m = "波次（單位在 ① 選；KIT 是施測月齡）。",
   age_m = "施測時的實際月齡。",
   sex = "性別。",
   domain = "領域。",
@@ -242,7 +242,10 @@ kitsui_item_table <- function(round, df, fixed, scale, links = NULL, persons = N
   persons <- persons %||% kitsui_persons(df)
   steps <- steps %||% kitsui_steps_vec(fixed$pass_steps)
   step <- kitsui_item_step_arg(item, steps, fixed$versions)
-  ages <- kitsui_item_ages(round$data[[scale]], persons, kitsui_round_cohorts(round, scale))
+  # age50（通過年齡）只在波次的單位是月時算
+  ages <- if (kitsui_wave_unit(fixed) == "months") {
+    kitsui_item_ages(round$data[[scale]], persons, kitsui_round_cohorts(round, scale))
+  }
   tab <- kits::kits_item_table(item, data = ages, step = step)
   attr(tab, "thresholds") <- kitsui_item_thresholds(item, fixed, links, scale, step)
   tab
@@ -634,12 +637,13 @@ kitsui_fixed_readme <- function(fixed) {
     paste0("kits version: ", v$kits %||% "", "; kitsUI version: ", v$kitsUI %||% ""),
     "",
     "Files:",
-    paste0("VERSION: versions, date created, round names, reference cohort, scales,",
-           " the md5 of each round's data file, and the SHA-256 of the files in this zip."),
+    paste0("VERSION: versions, date created, round names, reference cohort, wave unit",
+           " (WaveUnit; months when missing), scales, the md5 of each round's data file,",
+           " and the SHA-256 of the files in this zip."),
     paste0("bank.csv: item bank. Beta and its SE for each step of each item in each scale,",
            " and the round that added it."),
     "versions.csv: item versions. Original and current item IDs of drifted items.",
-    "waves.csv: the waves (age in months) each item bank was calibrated on.",
+    "waves.csv: the waves (wave_m, in the wave unit of VERSION) each item bank was calibrated on.",
     "links.csv: link points and settings. The links can be rebuilt exactly from them.",
     "checks.csv: check log of each round (drift, new versions, flags, borrowed banks, etc.).",
     paste0("wave_summary.csv: per scale x cohort x wave, n and the P25, median and P75 of",

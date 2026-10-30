@@ -269,7 +269,7 @@ mod_score_server <- function(id, data, items, links, goto, next_round = NULL) {
       shiny::tags$p(class = "kit-hint", paste0("題目依 ", last, " 由小到大排列。"))
     })
     output$item_table_note <- shiny::renderUI({
-      item_table_note_ui(item_table(), fixed()$version$reference)
+      item_table_note_ui(item_table(), fixed()$version$reference, kitsui_wave_unit(fixed()))
     })
 
     # 檢查、R 程式 ----
@@ -397,7 +397,8 @@ score_fixed_ui <- function(round, button_id, next_id = NULL, label = NULL) {
         "這一回合有量尺停下來（", paste(round$stopped, collapse = "、"), "），不能下載新的固定檔。"
       ),
       shiny::tags$p(class = "text-danger",
-                    "請到「② 題目校準」看停下來的原因。", "處理後重跑這一回合。"),
+                    "請到「② 題目校準」看停下來的原因。", "處理後重跑這一回合，",
+                    "或在 ② 把它們改成「這一回合不做」再校準一次。"),
       shiny::tags$button(class = "btn btn-sm btn-outline-secondary", disabled = NA, text)
     ))
   }
@@ -414,7 +415,12 @@ score_fixed_ui <- function(round, button_id, next_id = NULL, label = NULL) {
     shiny::tags$ul(
       shiny::tags$li("新的固定檔", file, "存著題庫、題目版本與連結。"),
       shiny::tags$li("下一回合要上傳這個 zip，才能接著用同一個題庫與連結。"),
-      shiny::tags$li("在這次連線裡接著做，可以直接按「用這一回合的固定檔開始下一回合」，不用下載。")
+      shiny::tags$li("在這次連線裡接著做，可以直接按「用這一回合的固定檔開始下一回合」，不用下載。"),
+      if (length(round$excluded) > 0) {
+        shiny::tags$li(class = "kit-warn-text",
+                       "這一回合不做的量尺（", paste(scale_label(round$excluded), collapse = "、"),
+                       "）沒有校準，題庫不變；固定檔的 checks.csv 記為 excluded。")
+      }
     )
   )
 }
@@ -436,8 +442,9 @@ score_columns_ui <- function(scores, ref = NULL) {
 
 #' 題目表下面：拿掉了哪些沒有內容的欄
 #' @param ref 參照世代
+#' @param unit 波次的單位（kitsui_wave_unit()）
 #' @noRd
-item_table_note_ui <- function(tab, ref = KITSUI_REF_COHORT) {
+item_table_note_ui <- function(tab, ref = KITSUI_REF_COHORT, unit = "months") {
   drop <- attr(tab, "dropped")
   li <- \(col, ...) if (col %in% names(tab)) shiny::tags$li(shiny::tags$code(col), ...)
   shiny::tags$details(
@@ -458,6 +465,10 @@ item_table_note_ui <- function(tab, ref = KITSUI_REF_COHORT) {
          paste0("age50 要從這一回合的資料算：至少兩個波次、通過比例在波次之間跨過 50%，",
                 "而且落在資料的月齡範圍內；",
                 "只有一個波次，或每一波都已經超過（或都還沒到）50% 時是空的。")),
+      if (unit != "months") {
+        shiny::tags$li("age50 不算：波次（wave_m）的單位不是月（在 ① 第一回合選的），",
+                       "kitsUI 只在單位是月時算通過年齡。")
+      },
       if (length(drop) > 0) {
         shiny::tags$li(paste0("每一題都沒有內容的欄不列出：", paste(drop, collapse = "、"), "。"),
                        if ("DIF" %in% drop) "DIF（性別的差異試題功能）要另外做 kits_dif()，kitsUI 沒有做。",

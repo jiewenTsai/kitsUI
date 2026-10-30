@@ -20,7 +20,7 @@ mod_items_ui <- function(id) {
     mod_guide(
       goal = "估計每一題的難度（校準）。有固定檔時，先檢查舊題有沒有偏移。",
       steps = c(
-        "看「用哪一個題庫」：預設照月齡的規則，需要時可以改。",
+        "看「用哪一個題庫」：預設照月齡的規則（波次的單位是月時），需要時可以改。",
         "按「開始校準」。",
         "選一個量尺，看它是自由校準還是固定校準。",
         "看「固定了哪些題」：固定的題要和題庫完全相同。",
@@ -36,10 +36,13 @@ mod_items_ui <- function(id) {
     shiny::tags$details(
       shiny::tags$summary("進階設定（flag 的條件）"),
       shiny::numericInput(ns("flag_share"), "偏移題超過已判斷題的比例", 0.2, 0, 1, 0.05),
-      shiny::numericInput(ns("flag_fixed"), "可固定的題少於幾題", 5, 1, 50, 1),
+      shiny::numericInput(ns("flag_fixed"), "可固定的題少於幾題（空白：依量尺的題數）", NA, 1, 50,
+                          1),
       shiny::tags$small(
         class = "kit-hint",
         "偏移題太多，或可固定的題太少，這個量尺會被 flag。",
+        "「可固定的題少於幾題」空白時，每個量尺用 5 與題數的一半（無條件進位）中小的那個：",
+        "10 題以上是 5 題；4 題的量尺是 2 題、5 題的量尺是 3 題。",
         ITEMS_FLAG_NOTE,
         "只有 kits 出錯、沒有可固定的題，或沒有題可以估計時，量尺才會停下來。"
       )
@@ -48,8 +51,15 @@ mod_items_ui <- function(id) {
     shiny::tags$p(class = "kit-hint",
                   "預設照月齡的規則。",
                   "自己的題庫沒有校準過這個月齡、另一個世代的有時，借用另一世代題庫。",
+                  "波次的單位不是月時不借，用自己的題庫。",
                   "要改的話，在 bank 欄選別的題庫，再按「開始校準」。"),
     shiny::uiOutput(ns("banks")),
+    shiny::h4("這一回合不做的量尺（選用）"),
+    shiny::tags$p(class = "kit-hint",
+                  "有量尺停下來、或這一回合不想做某個量尺時，在這裡選它，再按「開始校準」。",
+                  "選了的量尺不校準，題庫、連結都不動，固定檔的 checks.csv 會記一列 excluded；",
+                  "其他量尺照常做，也可以產生固定檔。之後的回合可以再做它。"),
+    shiny::uiOutput(ns("exclude_ui")),
     shiny::actionButton(ns("run"), "開始校準", class = "btn-primary"),
     shiny::uiOutput(ns("status")),
     shiny::tableOutput(ns("overview")),
@@ -113,7 +123,16 @@ mod_items_server <- function(id, data, goto) {
       stats::setNames(pick[keep], b$data_scale[keep])
     })
 
-    shiny::observeEvent(input$run, {
+    # 這一回合不做的量尺：資料的量尺（領域 × 世代）；資料換了時還在的留著
+    output$exclude_ui <- shiny::renderUI({
+      d <- data()
+      if (is.null(d$scales)) return(NULL)
+      sc <- d$scales$scale
+      shiny::checkboxGroupInput(ns("exclude"), NULL, stats::setNames(sc, scale_label(sc)),
+                                intersect(shiny::isolate(input$exclude), sc), inline = TRUE)
+    })
+
+    run_round <- function(exclude) {
       d <- data()
       if (is.null(d)) {
         say("danger", "【沒有完成】", "資料還不能用。請回到 ① 資料，看紅色的訊息。")
@@ -124,8 +143,8 @@ mod_items_server <- function(id, data, goto) {
         tryCatch(
           suppressMessages(kitsui_round(
             d$df, d$fixed, d$round_label, flag_share = input$flag_share %||% 0.2,
-            flag_fixed = input$flag_fixed %||% 5, files = d$files, progress = items_progress,
-            bank_choice = choice
+            flag_fixed = items_flag_fixed(input$flag_fixed), files = d$files,
+            progress = items_progress, bank_choice = choice, exclude = exclude
           )),
           error = \(e) e
         )
@@ -138,6 +157,15 @@ mod_items_server <- function(id, data, goto) {
       note(NULL)
       used(d)
       round(res)
+    }
+    shiny::observeEvent(input$run, run_round(input$exclude))
+    # 停下來的量尺改成「這一回合不做」，再校準一次
+    shiny::observeEvent(input$skip_stopped, {
+      res <- round()
+      shiny::req(res, length(res$stopped) > 0)
+      skip <- union(input$exclude, items_stopped_data(res))
+      shiny::updateCheckboxGroupInput(session, "exclude", selected = skip)
+      run_round(skip)
     })
 
     output$status <- shiny::renderUI({
@@ -146,7 +174,7 @@ mod_items_server <- function(id, data, goto) {
       if (is.null(res)) {
         return(shiny::tags$p(class = "kit-hint", "還沒有校準。按「開始校準」。"))
       }
-      items_status(res)
+      items_status(res, ns("skip_stopped"))
     })
     output$overview <- kit_table({
       res <- round()
@@ -260,7 +288,12 @@ mod_items_server <- function(id, data, goto) {
       shiny::validate(shiny::need(x$item, "這個量尺停下來了，沒有校準結果可以畫。"))
       type <- input$plot_type %||% "category"
       if (type == "drift") {
-        shiny::validate(shiny::need(x$drift, "這個量尺沒有題庫，是自由校準，沒有偏移把關圖。"))
+        unjudged <- any(x$log$check == "drift not judged, kept fixed")
+        shiny::validate(shiny::need(x$drift, if (unjudged) {
+          "這一回合的資料不能判斷偏移，題庫的題都固定在題庫的值，沒有偏移把關圖。"
+        } else {
+          "這個量尺沒有題庫，是自由校準，沒有偏移把關圖。"
+        }))
       }
       p <- shiny::withProgress(message = "畫圖中…", value = 0.5, tryCatch(switch(
         type,
@@ -309,7 +342,7 @@ mod_items_server <- function(id, data, goto) {
       code <- kitsui_code_round(
         x$scale, d$round_label, fixed = d$fixed, fixed_file = d$fixed_file %||% "fixed_set.zip",
         data_file = d$data_file, waves = d$waves, flag_share = input$flag_share %||% 0.2,
-        flag_fixed = input$flag_fixed %||% 5, plan = plan, picks = d$picks
+        flag_fixed = round()$flag_fixed[x$scale] %|NA|% 5, plan = plan, picks = d$picks
       ) |>
         kitsui_code_drift_plot()
       info <- if (!is.null(x$item)) {
@@ -402,31 +435,71 @@ items_progress <- function(i, n, scale) {
   shiny::incProgress(1 / n, detail = sprintf("校準第 %d 個量尺（共 %d 個）：%s", i, n, scale))
 }
 
-#' 一回合的整體狀態：全部完成（綠），或有量尺停下來（紅，不能產生新的固定檔）；
+#' 一回合的整體狀態：全部完成（綠），或有量尺停下來（紅，不能產生新的固定檔，給一個
+#' 「這一回合不做停下來的量尺，再校準一次」的按鈕）；有不做的量尺時一句話；
 #' 有分數類別問題的題時說怎麼處理；有 flag 的量尺時另一個橘底的框
+#' @param skip_id 「不做停下來的量尺」按鈕的 id（含 namespace）；NULL 時不給按鈕
 #' @noRd
-items_status <- function(res) {
+items_status <- function(res, skip_id = NULL) {
   n_ok <- length(res$items)
-  extra <- shiny::tagList(items_category_note(res$log), items_flag_box(res$log))
+  extra <- shiny::tagList(items_excluded_note(res$excluded), items_category_note(res$log),
+                          items_flag_box(res$log))
   if (isTRUE(res$ok)) {
     done <- if (n_ok == 1) " 這個量尺校準好了。" else sprintf(" %d 個量尺都校準好了。", n_ok)
     return(shiny::tagList(ui_alert("success", "【完成】", done), extra))
   }
   why <- dplyr::filter(res$log, .data$check %in% c("stop", "error"))
+  skip <- items_stopped_data(res)
   shiny::tagList(
     ui_alert(
       "danger", "【有量尺停下來】",
-      " 這一回合不能產生新的固定檔。",
-      "請看下面的原因，處理後重跑這一回合。",
+      " 這一回合還不能產生新的固定檔。",
+      "請看下面的原因，處理後重跑這一回合；",
+      "或把停下來的量尺改成「這一回合不做」，其他量尺就可以產生固定檔。",
       shiny::tags$ul(lapply(seq_len(nrow(why)), \(i) {
         kind <- if (why$check[i] == "error") "kits 出錯" else "停下來"
-        shiny::tags$li(shiny::tags$strong(why$scale[i]), "（", kind, "）：", why$detail[i])
+        shiny::tags$li(shiny::tags$strong(why$scale[i]), "（", kind, "）：",
+                       kitsui_error_ui(why$detail[i]))
       })),
-      if (n_ok > 0) shiny::tags$p(sprintf("其他 %d 個量尺有校準結果，可以先看。", n_ok))
+      if (n_ok > 0) shiny::tags$p(sprintf("其他 %d 個量尺有校準結果，可以先看。", n_ok)),
+      if (!is.null(skip_id) && length(skip) > 0) {
+        shiny::actionButton(skip_id, paste0("這一回合不做 ", paste(scale_label(skip), collapse = "、"),
+                                            "，再校準一次"),
+                            class = "btn-sm btn-outline-danger")
+      }
     ),
     extra
   )
 }
+
+#' 停下來的量尺用到的資料量尺（借題庫時是借的那個世代的資料量尺）
+#' @noRd
+items_stopped_data <- function(res) {
+  plan <- res$plan
+  if (is.null(plan)) return(res$stopped)
+  unique(plan$data_scale[plan$scale %in% res$stopped])
+}
+
+#' 這一回合不做的量尺：一句話（沒有時 NULL）
+#' @noRd
+items_excluded_note <- function(excluded) {
+  if (length(excluded) == 0) return(NULL)
+  ui_callout(
+    shiny::tags$strong("這一回合不做："), paste(scale_label(excluded), collapse = "、"), "。",
+    "這些量尺沒有校準，題庫、連結都不動；固定檔的 checks.csv 記為 excluded。",
+    warning = TRUE
+  )
+}
+
+#' ② 的「可固定的題少於幾題」：空白（NA）或不是正數時依量尺題數（kitsui_flag_fixed()）
+#' @noRd
+items_flag_fixed <- function(x) {
+  if (length(x) != 1 || is.na(x) || x < 1) NA else x
+}
+
+#' NA 或長度 0 時用 y
+#' @noRd
+`%|NA|%` <- function(x, y) if (length(x) == 0 || is.na(x[1])) y else unname(x[1])
 
 #' 分數類別有問題的題：一句話說怎麼處理（沒有時 NULL）
 #' @noRd
@@ -462,7 +535,7 @@ items_flag_box <- function(log) {
 #' @noRd
 items_overview <- function(res) {
   plan <- res$plan
-  purrr::map(unique(plan$scale), \(s) {
+  out <- purrr::map(unique(plan$scale), \(s) {
     p <- plan[plan$scale == s, ]
     log <- res$log[res$log$scale == s, ]
     pick <- \(check) paste(log$detail[log$check == check], collapse = "；")
@@ -473,6 +546,9 @@ items_overview <- function(res) {
     )
   }) |>
     purrr::list_rbind()
+  if (length(res$excluded) == 0) return(out)
+  dplyr::bind_rows(out, tibble::tibble(scale = res$excluded, data = res$excluded,
+                                       calibration = "這一回合不做", flag = ""))
 }
 
 #' 選題庫的表：資料量尺、波次、題庫（選單）、原因（跟著選單變，why_i）；欄名是英文
@@ -520,6 +596,7 @@ items_scale_info <- function(x) {
         count("估不出來、固定在題庫的值", "no CML estimate, kept fixed"),
         count("分數類別有問題、固定在題庫的值", "category problem, kept fixed"),
         count("分數類別有問題、這一回合不放進來", "category problem, left out"),
+        count("不能判斷偏移、固定在題庫的值", "drift not judged, kept fixed"),
         shiny::tags$li(sprintf("併分數（新步驟有缺口）：%d 題", n("capped")))
       )
     ),
@@ -533,12 +610,12 @@ items_scale_info <- function(x) {
   )
 }
 
-# 這一回合的紀錄表：加上 status（flag 是 warn；stop、error 是 error；其他 ok）
+# 這一回合的紀錄表：加上 status（flag、excluded 是 warn；stop、error 是 error；其他 ok）
 # 畫面只放中文的 detail（detail_en 是寫進固定檔的英文）
 items_log_table <- function(log) {
   log$detail_en <- NULL
   status <- dplyr::case_when(
-    log$check == "flag" ~ "warn",
+    log$check %in% c("flag", "excluded") ~ "warn",
     log$check %in% c("stop", "error") ~ "error",
     .default = "ok"
   )
@@ -576,8 +653,11 @@ ITEMS_REASON_ZH <- c(
 #' @noRd
 items_drift_rows <- function(x) {
   if (is.null(x$drift)) {
+    unjudged <- x$log$detail[x$log$check == "drift not judged, kept fixed"]
     note <- if (isTRUE(x$stopped)) {
       "這個量尺停下來了，沒有偏移表。原因見上面的紅字與這一回合的紀錄。"
+    } else if (length(unjudged) > 0) {
+      paste0("沒有偏移表：", unjudged[1], "。每一題的狀態見上面「固定了哪些題」。")
     } else {
       "沒有題庫：自由校準，不用檢查偏移。"
     }

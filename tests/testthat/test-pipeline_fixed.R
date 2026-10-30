@@ -10,15 +10,15 @@ test_that("有題庫、版本、連結、檢查的固定檔寫出再讀回相同
   zip_path <- withr::local_tempfile(fileext = ".zip")
   kitsui_write_fixed(lk$fixed, zip_path)
   back <- kitsui_read_fixed(zip_path)
-  expect_identical(back, lk$fixed)
+  expect_roundtrip(back, lk$fixed)
   expect_setequal(utils::unzip(zip_path, list = TRUE)$Name,
                   c("README.txt", "VERSION", "bank.csv", "versions.csv", "links.csv",
                     "checks.csv", "waves.csv", "wave_summary.csv", "pass_steps.csv"))
   links <- kitsui_links(back)
-  expect_identical(coef(links[["lan M36"]]), coef(lk$internal))
-  expect_identical(coef(links$D), coef(lk$D))
-  expect_identical(links$D$intercept_error, lk$D$intercept_error)
-  expect_identical(links[["lan M36"]]$slope_error, lk$internal$slope_error)
+  expect_roundtrip(coef(links[["lan M36"]]), coef(lk$internal))
+  expect_roundtrip(coef(links$D), coef(lk$D))
+  expect_roundtrip(links$D$intercept_error, lk$D$intercept_error)
+  expect_roundtrip(links[["lan M36"]]$slope_error, lk$internal$slope_error)
 })
 
 test_that("zip 缺檔時以中文說明", {
@@ -46,7 +46,7 @@ test_that("舊的固定檔：沒有 waves.csv、versions.csv 沒有 cohort 欄�
   zip::zip(old_zip, list.files(dir, full.names = TRUE), mode = "cherry-pick")
   old <- kitsui_read_fixed(old_zip)
   expect_identical(old$versions, fixed$versions)
-  expect_identical(old$bank, fixed$bank)
+  expect_roundtrip(old$bank, fixed$bank)
   expect_equal(old$waves$scale, "lan M03")
   expect_true(is.na(old$waves$wave_m))
   # kitsUI 0.3.8 以前沒有的表：空表，欄位齊全

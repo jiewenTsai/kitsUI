@@ -4,7 +4,10 @@
 #' 字串轉成 R 的寫法："a" 或 c("a", "b")
 #' @noRd
 kitsui_r <- function(x) {
-  q <- if (is.character(x)) paste0('"', x, '"') else format(x, trim = TRUE)
+  # 量尺名稱裡的不斷行空白（世代名稱有空白時）寫成 \u00a0，複製貼上也不會變
+  q <- if (is.character(x)) paste0('"', gsub(KITSUI_NBSP, "\\u00a0", x, fixed = TRUE), '"') else {
+    format(x, trim = TRUE)
+  }
   if (length(q) == 1) q else paste0("c(", paste(q, collapse = ", "), ")")
 }
 
@@ -61,7 +64,8 @@ kitsui_code_data <- function(scale, data_file = NULL, waves = NULL, picks = NULL
   paste(c(
     "library(kits)", "library(dplyr)", kitsui_code_read(data_file, waves, picks),
     "count(responses, domain, cohort)",
-    sprintf("resp <- kits_resp(filter(responses, paste(domain, cohort) == %s))", kitsui_r(scale)),
+    sprintf("resp <- kits_resp(filter(responses, paste(domain, cohort) == %s))",
+            kitsui_r(scale_label(scale))),
     plot, "kits_check(resp = resp)"
   ), collapse = "\n")
 }
@@ -129,9 +133,9 @@ kitsui_code_pick <- function(scale, plan = NULL) {
   split <- any(plan$data_scale %in% part$data_scale & plan$scale != scale)
   if (is.null(plan) || (!any(part$borrowed) && !split)) {
     return(sprintf("resp <- kits_resp(filter(responses, paste(domain, cohort) == %s))",
-                   kitsui_r(scale)))
+                   kitsui_r(scale_label(scale))))
   }
-  keys <- paste(part$data_scale, part$wave_m)
+  keys <- paste(scale_label(part$data_scale), part$wave_m)
   c(sprintf("# 用 %s 的題庫校準的資料（借用另一世代題庫時人的 cohort 欄不變）", scale),
     sprintf("keys <- %s", kitsui_r(keys)),
     "resp <- kits_resp(filter(responses, paste(domain, cohort, wave_m) %in% keys))")
@@ -159,7 +163,7 @@ kitsui_code_link <- function(fixed, name, fixed_file = "fixed_set.zip") {
     sprintf("  kits_link_screen(cut = %s, spread = %s, unit = %s,", r$cut, kitsui_r(r$spread),
             kitsui_r(r$unit)),
     sprintf("                   from_scale = %s, to_scale = %s) |>",
-            kitsui_r(strsplit(r$from_scale, ", ")[[1]]), kitsui_r(r$to_scale)),
+            kitsui_r(kitsui_split_scales(r$from_scale, fixed)), kitsui_r(r$to_scale)),
     if (r$n_boot > 0) {
       c("  kits_link_line() |>",
         sprintf("  kits_link_error(n_boot = %d, seed = %d)", r$n_boot, r$seed))

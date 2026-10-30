@@ -20,10 +20,10 @@ test_that("每一回合把各量尺 × 世代 × 波次的摘要寫進固定檔�
                   c("lan M36 M36 36", "lan M36 M36 48", "motor M03 M03 3"))
   # 只有摘要：沒有個人資料的欄
   expect_false(any(c("visit_id", "subj_id", "theta") %in% names(ws8)))
-  # 寫出再讀回完全相同
+  # 寫出再讀回相同（數字差在 1e-12 以內；見 expect_roundtrip()）
   zip_path <- withr::local_tempfile(fileext = ".zip")
   kitsui_write_fixed(round8()$round$fixed, zip_path)
-  expect_identical(kitsui_read_fixed(zip_path)$wave_summary, ws8)
+  expect_roundtrip(kitsui_read_fixed(zip_path)$wave_summary, ws8)
 })
 
 test_that("同一個波次再校準時兩列都留，畫圖用最新的回合", {

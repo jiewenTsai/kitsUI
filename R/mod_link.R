@@ -18,12 +18,12 @@ mod_link_ui <- function(id) {
     shiny::uiOutput(ns("d_head")),
     shiny::uiOutput(ns("d_status")),
     shiny::uiOutput(ns("d_result")),
-    shiny::h4("3. 兩個世代的垂直連結：連結前後"),
+    shiny::h4("3. 各世代的垂直連結：連結前後"),
     shiny::tags$small(
       class = "kit-hint",
       "三個分頁：未連結、內部連結後、外部連結後。",
       "每個波次畫中位數，線段是 P25 到 P75（kits_vertical()）。",
-      "連結後，同一個月齡兩個世代的點靠在一起，表示連結合理。",
+      "連結後，同一個月齡（波次）各世代的點靠在一起，表示連結合理。",
       "之前回合的點來自固定檔裡的各波次摘要，照現在的連結換算。",
       "所以這一回合只有一個世代時，也看得到連結得怎樣。"
     ),
@@ -383,6 +383,7 @@ link_source_ui <- function(round, ns) {
   ui_callout(
     "這一回合有量尺停下來（", paste(round$stopped, collapse = "、"), "）。",
     "連結仍可以先看，但這一回合不會產生新的固定檔。",
+    "可以在 ② 把它們改成「這一回合不做」再校準一次。",
     warning = TRUE
   )
 }
@@ -533,7 +534,7 @@ link_anchor_ui <- function(anchors, table_id, ref = KITSUI_REF_COHORT) {
 #' @noRd
 vertical_pick_ui <- function(ns, domains, pick, why = NULL) {
   if (length(domains) == 0) {
-    return(ui_callout(why %||% "這一回合每個領域只有一個世代，所以沒有兩個世代的垂直連結。"))
+    return(ui_callout(why %||% "這一回合每個領域只有一個世代，所以沒有世代之間的垂直連結。"))
   }
   if (!isTRUE(pick %in% domains)) pick <- domains[1]
   shiny::tagList(
@@ -571,6 +572,7 @@ vertical_tab_ui <- function(ns, stage, v) {
 #' @noRd
 vertical_caption <- function(stage, v) {
   scales <- v$scales %||% v$from
+  unit <- v$wave_unit %||% "months"
   text <- switch(
     stage,
     none = paste0("未連結：各世代在自己校準的量尺上（", paste(scales, collapse = "、"),
@@ -580,13 +582,15 @@ vertical_caption <- function(stage, v) {
                            "不和自己量尺的波次連在一起。")
                   }),
     internal = paste0("內部連結後：", paste(setdiff(scales, v$scale), collapse = "、"), " 換到 ",
-                      v$scale, " 的量尺，同一個月齡",
+                      v$scale, " 的量尺，同一個", kitsui_wave_word(unit),
                       if (length(scales) > 2) "各世代" else "兩個世代", "的點應該靠在一起。"),
     external = "外部連結後：各世代都換到 D，相對位置和內部連結後相同。"
   )
   if (!any(v$table$source == "earlier")) return(text)
   rounds <- unique(v$table$round[v$table$source == "earlier"])
-  where <- if (kitsui_vertical_actual(v$table)) {
+  where <- if (unit != "months") {
+    paste0("x 軸是波次（單位：", kitsui_wave_word(unit), "）。")
+  } else if (kitsui_vertical_actual(v$table)) {
     "x 軸是實際月齡：點畫在各波次實際月齡的中位數。"
   } else {
     age <- as.numeric(v$table$age_med %||% NA_real_)

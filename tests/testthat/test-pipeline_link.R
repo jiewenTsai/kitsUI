@@ -143,7 +143,7 @@ test_that("外部連結凍結後，新的 M03 領域沿用同一條外部連結�
   # 寫出再讀回：延伸後的外部連結；③ 的表標出哪一回合延伸
   zip_path <- withr::local_tempfile(fileext = ".zip")
   kitsui_write_fixed(r9$fixed, zip_path)
-  expect_identical(kitsui_read_fixed(zip_path)$links, r9$fixed$links)
+  expect_roundtrip(kitsui_read_fixed(zip_path)$links, r9$fixed$links)
   cov <- kitsui_d_coverage(r9$fixed, kitsui_anchor_counts(r9$fixed))
   expect_equal(cov$external_link[cov$scale == "soc M03"], "第 r9 回合延伸（同一條線）")
   expect_equal(cov$external_link[cov$scale == "lan M03"], "建立外部連結時（第 r8 回合）")

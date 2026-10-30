@@ -84,7 +84,8 @@ kitsui_write_fixed <- function(fixed, zip_path) {
   stopped <- attr(fixed, "stopped")
   if (length(stopped) > 0) {
     kit_abort("這一回合有量尺停下來（", paste(stopped, collapse = "、"), "），不產生新的固定檔。",
-              "請看檢查表的原因，處理後重跑這一回合。")
+              "請看檢查表的原因，處理後重跑這一回合；",
+              "或在 ② 把它們選成「這一回合不做」再校準一次，其他量尺就可以產生固定檔。")
   }
   dir <- file.path(tempfile("fixed"), "fixed_set")
   dir.create(dir, recursive = TRUE)
@@ -102,11 +103,12 @@ kitsui_write_fixed <- function(fixed, zip_path) {
   }
   # VERSION 先寫一次（沒有 Checksums），讀回來算它的 SHA-256；再加上每個 csv 的 SHA-256
   version <- file.path(dir, "VERSION")
-  write.dcf(kitsui_dcf(fixed), version, keep.white = KITSUI_DCF_WHITE)
+  dcf <- kitsui_dcf(fixed)
+  white <- kitsui_dcf_white(dcf[, "Scales"])
+  write.dcf(dcf, version, keep.white = white)
   sums <- c(VERSION = kitsui_version_sha256(kitsui_read_dcf(version)),
             stats::setNames(kitsui_sha256(file.path(dir, csvs)), csvs))
-  write.dcf(cbind(kitsui_dcf(fixed), Checksums = kitsui_checksums_text(sums)), version,
-            keep.white = KITSUI_DCF_WHITE)
+  write.dcf(cbind(dcf, Checksums = kitsui_checksums_text(sums)), version, keep.white = white)
   zip::zip(zip_path, list.files(dir, full.names = TRUE), mode = "cherry-pick")
   invisible(zip_path)
 }
@@ -248,8 +250,10 @@ kitsui_check_sums <- function(dir, read, ignored = character()) {
 # VERSION 的欄位裡保留空白與換行的（一行一個檔案）
 KITSUI_DCF_WHITE <- c("Sources", "Checksums")
 
+# Scales 一行一個（領域名稱有逗號）時，Scales 也要保留換行
 kitsui_read_dcf <- function(file) {
-  read.dcf(file, keep.white = KITSUI_DCF_WHITE)[1, ]
+  lined <- any(grepl("^Scales:[[:space:]]*$", readLines(file, warn = FALSE)))
+  read.dcf(file, keep.white = c(KITSUI_DCF_WHITE, if (lined) "Scales"))[1, ]
 }
 
 #' 檔案的 SHA-256：R 4.5 起 tools::sha256sum()；之前用 digest（plotly 會裝）
@@ -298,7 +302,8 @@ kitsui_read_csv <- function(file, cols) {
     tibble::as_tibble()
 }
 
-# VERSION 的欄位；Sources 一行一個檔案：「波次 md5 檔名」
+# VERSION 的欄位；Sources 一行一個檔案：「波次 md5 檔名」。Scales 平常用 ", " 接起來；
+# 有量尺名稱含 ", "（領域名稱有逗號）時改成一行一個，讀回來才拆得對
 kitsui_dcf <- function(fixed) {
   v <- fixed$version
   src <- with(fixed$sources, paste(round, md5, file))
@@ -308,20 +313,41 @@ kitsui_dcf <- function(fixed) {
   cbind(
     Kits = v$kits, KitsUI = v$kitsUI, Created = v$created,
     Rounds = paste(v$rounds, collapse = ", "), Reference = v$reference,
-    Scales = paste(v$scales, collapse = ", "), Waves = paste(waves, collapse = "; "),
+    # 波次的單位（months、years、waves；第一回合在 ① 選）。沒有設定時不寫，讀回來當成月
+    WaveUnit = v$wave_unit,
+    Scales = if (any(grepl(", ", v$scales, fixed = TRUE))) {
+      paste(c("", v$scales), collapse = "\n")
+    } else {
+      paste(v$scales, collapse = ", ")
+    },
+    Waves = paste(waves, collapse = "; "),
     Sources = paste(c("", src), collapse = "\n")
   )
 }
 
+# Scales 一行一個時，和 Sources 一樣保留換行（平常的 ", " 讓 write.dcf() 自己折行）
+kitsui_dcf_white <- function(scales) {
+  c(KITSUI_DCF_WHITE, if (startsWith(scales, "\n")) "Scales")
+}
+
 kitsui_from_dcf <- function(dcf) {
   split <- \(x) if (is.na(x) || x == "") character() else strsplit(x, ", ")[[1]]
+  # 一行一個時，write.dcf() 在每一行前面加了一個空白
+  lines <- \(x) if (grepl("\n", x, fixed = TRUE)) {
+    sub("^ ", "", setdiff(strsplit(x, "\n")[[1]], ""))
+  } else {
+    split(x)
+  }
   src <- setdiff(trimws(strsplit(dcf[["Sources"]], "\n")[[1]]), "")
   pick <- \(i) sub("^(\\S+) (\\S+) (.*)$", i, src)
   version <- list(
     kits = dcf[["Kits"]], kitsUI = dcf[["KitsUI"]], created = dcf[["Created"]],
     rounds = split(dcf[["Rounds"]]), reference = dcf[["Reference"]],
-    scales = split(dcf[["Scales"]])
+    scales = lines(dcf[["Scales"]])
   )
+  if ("WaveUnit" %in% names(dcf) && !is.na(dcf[["WaveUnit"]])) {
+    version$wave_unit <- dcf[["WaveUnit"]]
+  }
   sources <- tibble::tibble(round = pick("\\1"), file = pick("\\3"), md5 = pick("\\2"))
   list(version = version, sources = sources)
 }
