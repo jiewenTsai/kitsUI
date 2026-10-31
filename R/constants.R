@@ -7,8 +7,12 @@ KIT_PREVIEW_ROWS <- 10L
 # 單檔上傳上限（MB）
 KIT_UPLOAD_MB <- 200
 
-# kitJoin 雲端版：寬格式或欄位不合時，到它的「⑥ 轉成 kits 作答檔」轉好再上傳
+# kitJoin 雲端版：寬格式或欄位不合時，到它的「kits 作答檔」轉好再上傳（本機版不連，見
+# ui_kitjoin_button()）
 KITJOIN_URL <- "https://jiewentsai-kitjoin.share.connect.posit.cloud/"
+# kitJoin 的分頁名稱（kitJoin 的分頁沒有編號）：kitsUI 提到它們時用一樣的名字
+KITJOIN_KITS_TAB <- "kits 作答檔"
+KITJOIN_MISSING_TAB <- "遺漏值處理"
 
 # 通知訊息顯示秒數
 KIT_NOTIFY_SECONDS <- 6

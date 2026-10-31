@@ -230,9 +230,15 @@ test_that("狀態框只有四種標籤；停下來的框可以放怎麼辦與按
   expect_match(row, 'class="kit-details"')
   expect_match(row, "<summary>題目參數</summary>")
   expect_match(row, "<summary>用 R 怎麼做</summary>")
-  expect_match(row, "navigator.clipboard")
-  expect_match(row, "以下程式碼依你目前的設定產生，是簡化的示範。")
+  expect_match(row, 'id="code_ui"')
   expect_false(grepl("open", row))
+  # 打開後的排法和 kitJoin 一樣：版本名稱（粗體）與「複製」同一行（.kit-code-head），下面是程式碼框
+  block <- as.character(ui_code_block("code"))
+  expect_match(block, "以下程式碼依你目前的設定產生，是簡化的示範。")
+  expect_match(block, '<div class="kit-code-head">\\s*<strong>kits 版</strong>\\s*<button')
+  expect_match(block, "navigator.clipboard")
+  expect_match(block, "nextElementSibling")
+  expect_false(grepl("kit-code-copy", block))
   expect_match(as.character(ui_advanced("x")), "<summary>進階設定</summary>")
   expect_match(as.character(ui_next_step("好了", "go", "下一步：連結")), "下一步：連結 →")
 })
@@ -256,4 +262,55 @@ test_that("摘要表用中文欄名；kits 的表不換", {
                    beta = 1)
   expect_named(kitsui_screen_names(df),
                c("量尺", "列次數", "題數", "波次", "校準方式", "beta"))
+})
+
+test_that("用 R 怎麼做：有程式碼時是版本名稱、複製與程式碼框；沒有時只有一行字", {
+  shiny::testServer(function(input, output, session) {
+    code <- shiny::reactive({
+      shiny::req(input$ok)
+      "library(kits)"
+    })
+    output$code <- shiny::renderText(code())
+    output$code_ui <- render_code_panel(session, "code", code)
+  }, {
+    expect_match(output$code_ui$html, "先選資料，這裡才會有程式碼。")
+    expect_false(grepl("複製", output$code_ui$html))
+    session$setInputs(ok = TRUE)
+    expect_match(output$code_ui$html, "kit-code-head")
+    expect_match(output$code_ui$html, "複製")
+    expect_equal(output$code, "library(kits)")
+  })
+})
+
+test_that("狀態框最多 3 點，其他收在「還有 N 點」；R 的原文收起來", {
+  html <- as.character(ui_status("warn", "好了。", points = paste0("第 ", 1:5, " 點")))
+  expect_match(html, "第 3 點")
+  expect_match(html, '<details class="kit-status-notes">\\s*<summary>還有 2 點</summary>')
+  first <- sub("<details.*$", "", html)
+  expect_false(grepl("第 4 點", first))
+  expect_false(grepl("還有", as.character(ui_status("done", "好了。", points = c("a", "b", "c")))))
+  raw <- as.character(ui_raw_text("missing value where TRUE/FALSE needed", "R 的原文"))
+  expect_match(raw, "<summary>R 的原文</summary>")
+  expect_null(ui_raw_text(""))
+})
+
+test_that("本機版不連到雲端的 kitJoin：一行說明；雲端版是連結加一句說明", {
+  local <- as.character(ui_kitjoin_button(cloud = FALSE))
+  expect_false(grepl(KITJOIN_URL, local, fixed = TRUE))
+  expect_match(local, "kitJoin::run_kitjoin()", fixed = TRUE)
+  expect_match(local, "資料不會離開這台電腦")
+  cloud <- as.character(ui_kitjoin_button(cloud = TRUE))
+  expect_match(cloud, KITJOIN_URL, fixed = TRUE)
+  expect_match(cloud, "雲端版 kitJoin")
+  hint <- as.character(ui_kitjoin_hint(cloud = FALSE))
+  expect_match(hint, "「kits 作答檔」")
+  expect_false(grepl("⑥", hint))
+})
+
+test_that("表格的計數欄加千分位，波次等數字不加", {
+  df <- data.frame(scale = "a", wave_m = 2009, n = 12345, mean = 1.5)
+  out <- kit_count_marks(whole_as_integer(df))
+  expect_equal(as.vector(out$n), "12,345")
+  expect_equal(out$wave_m, 2009L)
+  expect_equal(kit_table_align(out), "lrrr")
 })

@@ -16,6 +16,12 @@ kit_abort <- function(...) {
 #' @noRd
 `%||%` <- function(x, y) if (is.null(x)) y else x
 
+#' 整數加千分位：3418 → "3,418"（KIT 設計語言 5：四位數以上加千分位；和 kitJoin 相同）
+#' @noRd
+kit_num <- function(x) {
+  formatC(as.numeric(x), format = "d", big.mark = ",")
+}
+
 #' 每列的 ID 合成一個比對用字串；任一 ID 欄缺漏的列回傳 NA
 #' @noRd
 key_strings <- function(df, by_vars) {

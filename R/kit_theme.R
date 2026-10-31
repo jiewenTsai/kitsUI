@@ -402,6 +402,16 @@ kit_css <- function() {
     .kit-callout a {
       color: %1$s;
     }
+    /* 「使用手冊」不是第 ⑤ 步：虛線、沒有陰影，推到分頁列的最右邊 */
+    #tabs a[data-value='manual'],
+    #tabs a[data-value='manual']:hover {
+      border-style: dashed;
+      box-shadow: none;
+      transform: none;
+    }
+    #tabs > li:last-child { margin-left: auto; }
+    /* 本機版：連到 kitJoin 的地方改成一行說明（不連到雲端版） */
+    .kit-kitjoin-local code { font-size: 0.85rem; }
     /* 連到 kitJoin 等外部網站的按鈕：維持按鈕的顏色，不加底線、不轉大寫 */
     a.btn.kit-ext-btn,
     a.btn.kit-ext-btn:hover {

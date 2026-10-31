@@ -76,9 +76,41 @@ ui_status <- function(kind, line, ..., points = NULL) {
   shiny::tags$div(
     class = paste("alert kit-status", st$class), role = "alert",
     shiny::tags$div(class = "kit-status-line", shiny::tags$strong(st$label), " ", line),
-    if (length(points) > 0) shiny::tags$ul(lapply(points, shiny::tags$li)),
+    ui_status_points(points),
     ...
   )
+}
+
+# 狀態框第一層最多幾點（KIT 設計語言 3.6）；其他收在「還有 N 點」
+KIT_STATUS_MAX_POINTS <- 3
+
+#' 狀態框的重點：前 3 點直接看得到，其他收在「還有 N 點」（.kit-status-notes）
+#' @param points 字串或 tag 的 list；長度 0 時 NULL
+#' @noRd
+ui_status_points <- function(points, max = KIT_STATUS_MAX_POINTS) {
+  if (length(points) == 0) return(NULL)
+  if (!is.list(points)) points <- as.list(points)
+  shown <- utils::head(points, max)
+  rest <- points[-seq_len(length(shown))]
+  shiny::tagList(
+    shiny::tags$ul(lapply(shown, shiny::tags$li)),
+    if (length(rest) > 0) {
+      shiny::tags$details(
+        class = "kit-status-notes",
+        shiny::tags$summary(paste0("還有 ", kit_num(length(rest)), " 點")),
+        shiny::tags$ul(lapply(rest, shiny::tags$li))
+      )
+    }
+  )
+}
+
+#' R 或 kits 的原文：收在「kits 的原文」裡（KIT 設計語言 3.18），第一層不放英文
+#' @param raw 原文（英文）；長度 0 或 "" 時 NULL
+#' @noRd
+ui_raw_text <- function(raw, title = "kits 的原文") {
+  if (length(raw) == 0 || !nzchar(raw[1])) return(NULL)
+  shiny::tags$details(class = "kit-kits-says kit-status-raw", shiny::tags$summary(title),
+                      shiny::tags$code(raw[1]))
 }
 
 # 按鈕的寫法（KIT 設計語言 3.4）：主要按鈕一頁一個；次要按鈕白底、小一號；
@@ -158,23 +190,44 @@ kitsui_settings_text <- function(d) {
   )
 }
 
-#' 開啟 kitJoin 雲端版的按鈕（新分頁）
+#' 到 kitJoin：依本機版、雲端版給不同的東西（和 kitJoin 的 kit_kitsui_link() 同一個寫法）
+#'
+#' - 雲端版（kit_is_cloud()）：開新分頁連到 KITJOIN_URL，後面一行小字說明開的是雲端版。
+#' - 本機版：不放連結（連結會把人帶到雲端版，資料就上傳到雲端了），
+#'   改成一行說明：在 R 執行 kitJoin::run_kitjoin()。
+#' @param label 連結（按鈕）的字
+#' @param class 雲端版按鈕的 class（KIT_BTN）
+#' @param cloud 是不是雲端版（預設 kit_is_cloud()；測試用）
 #' @noRd
-ui_kitjoin_button <- function(label = "開啟 kitJoin", class = KIT_BTN[["secondary"]]) {
-  shiny::tags$a(
-    href = KITJOIN_URL, target = "_blank", rel = "noopener noreferrer",
-    class = paste("btn kit-ext-btn", class), shiny::icon("arrow-up-right-from-square"), label
+ui_kitjoin_button <- function(label = "開啟 kitJoin", class = KIT_BTN[["secondary"]],
+                              cloud = kit_is_cloud()) {
+  if (!isTRUE(cloud)) {
+    return(shiny::tags$span(
+      class = "kit-hint kit-kitjoin-local",
+      "本機版：在 R 執行 ", shiny::tags$code("kitJoin::run_kitjoin()"),
+      " 開啟 kitJoin，資料不會離開這台電腦。"
+    ))
+  }
+  shiny::tags$span(
+    class = "kit-kitjoin-link",
+    shiny::tags$a(
+      href = KITJOIN_URL, target = "_blank", rel = "noopener noreferrer",
+      class = paste("btn kit-ext-btn", class), shiny::icon("arrow-up-right-from-square"), label
+    ),
+    " ",
+    shiny::tags$small(class = "kit-hint", "（開啟網路上的雲端版 kitJoin）")
   )
 }
 
-#' 資料不合格式時的一句話：到 kitJoin ⑥ 轉好再上傳
+#' 資料不合格式時的一句話：到 kitJoin 的「kits 作答檔」轉好再上傳
 #' @noRd
-ui_kitjoin_hint <- function(class = KIT_BTN[["secondary"]], hint_class = "kit-hint") {
+ui_kitjoin_hint <- function(class = KIT_BTN[["secondary"]], hint_class = "kit-hint",
+                            cloud = kit_is_cloud()) {
   shiny::tags$p(
     class = hint_class,
     "資料是寬格式（一題一欄）、欄名不一樣，或分數不是從 0 開始？",
-    "可以先到 kitJoin 的「⑥ 轉成 kits 作答檔」轉好，再回來上傳。",
-    ui_kitjoin_button(class = class)
+    paste0("可以先到 kitJoin 的「", KITJOIN_KITS_TAB, "」轉好，再回來上傳。"),
+    ui_kitjoin_button(class = class, cloud = cloud)
   )
 }
 
@@ -193,12 +246,13 @@ kitsui_error_ui <- function(detail) {
 
 #' 下一步：頁面最下面，一句小字與一個切換分頁的按鈕（和主要按鈕同一種樣式，靠右）
 #' @param label 「下一步：題目校準」；後面自動加「 →」
+#' @param kind 按鈕的種類（KIT_BTN）：預設是主要按鈕；這一頁另有主角時（④ 的下載）用次要按鈕
 #' @noRd
-ui_next_step <- function(text, button_id, label) {
+ui_next_step <- function(text, button_id, label, kind = "primary") {
   shiny::tags$div(
     class = "kit-next",
     shiny::tags$p(class = "kit-hint", text),
-    ui_button(button_id, paste0(label, " →"), "primary")
+    ui_button(button_id, paste0(label, " →"), kind)
   )
 }
 
@@ -214,8 +268,42 @@ ui_check_panel <- function(id, title = "kits 的檢查") {
 kit_table <- function(expr, digits = 2) {
   q <- substitute(expr)
   env <- parent.frame()
-  shiny::renderTable(whole_as_integer(eval(q, env)), digits = digits, striped = TRUE,
-                     spacing = "s", na = "")
+  # 人數、列次數這類計數欄加千分位（變成文字），對齊照原本的數字靠右
+  last <- NULL
+  shiny::renderTable({
+    tab <- kit_count_marks(whole_as_integer(eval(q, env)))
+    last <<- tab
+    tab
+  }, digits = digits, striped = TRUE, spacing = "s", na = "",
+  align = \() kit_table_align(last))
+}
+
+# 計數的欄（人數、列次數、題數…）：畫面上加千分位（KIT 設計語言 5）。只換這些欄：
+# 波次（2009 年）、編號這類數字不加
+KIT_COUNT_COLS <- c("n", "n_visits", "n_items", "rows", "wave_n", "n_1", "n_2", "drift_n",
+                    "fixed_n", "steps", "steps_judged", "n_anchors", "人數", "列次數", "題數",
+                    "列數", "步驟數", "偏移（題）", "固定（題）")
+
+#' 計數的欄（KIT_COUNT_COLS）是整數時，換成加千分位的文字
+#' @noRd
+kit_count_marks <- function(df) {
+  if (!is.data.frame(df)) return(df)
+  for (col in intersect(names(df), KIT_COUNT_COLS)) {
+    x <- df[[col]]
+    if (is.numeric(x) && all(is.na(x) | x == round(x))) {
+      df[[col]] <- ifelse(is.na(x), NA_character_, kit_num(x))
+      attr(df[[col]], "kit_count") <- TRUE
+    }
+  }
+  df
+}
+
+#' 表格每一欄的對齊：數字與計數欄靠右，其他靠左（renderTable(align = )，第一個字是列名）
+#' @noRd
+kit_table_align <- function(df) {
+  if (!is.data.frame(df) || ncol(df) == 0) return(NULL)
+  right <- vapply(df, \(x) is.numeric(x) || isTRUE(attr(x, "kit_count")), logical(1))
+  paste(ifelse(right, "r", "l"), collapse = "")
 }
 
 #' 數值都是整數的欄改成 integer，表格上就不會顯示 3.00
@@ -243,26 +331,56 @@ checks_or_ok <- function(tab) {
   data.frame(result = "kits_check()：全部通過，沒有提醒。")
 }
 
-#' R 程式：一排細節裡的一個收合區塊（ui_detail()）；裡面一句說明、右上角「複製」、一個程式碼框
+#' R 程式：一排細節裡的一個收合區塊（ui_detail()），排法和 kitJoin 的 kit_code_panel() 相同
+#'
+#' 裡面是 server 端畫的 uiOutput（id 後面加 _ui，render_code_panel()）：有程式碼時是一句說明、
+#' 版本名稱（粗體）與「複製」同一行（.kit-code-head），下面是程式碼框；沒有時只有一行字。
+#' @param id 程式碼（renderText）的 id（含 namespace）
+#' @noRd
+ui_code_panel <- function(id, title = "用 R 怎麼做") {
+  ui_detail(title, shiny::uiOutput(paste0(id, "_ui")))
+}
+
+# 程式碼的版本名稱（kitJoin 是「tidyverse 版」「base R 版」；kitsUI 只有一個版本）
+KIT_CODE_LABEL <- "kits 版"
+# 還沒有程式碼時的一行字
+KIT_CODE_EMPTY <- "先選資料，這裡才會有程式碼。"
+
+#' 有程式碼時的內容：一句說明、版本名稱與「複製」（同一行）、程式碼框
 #'
 #' 「複製」用 navigator.clipboard 複製下面的程式碼，按了顯示「已複製」1.5 秒（和 kitJoin 相同）。
 #' @noRd
-ui_code_panel <- function(id, title = "用 R 怎麼做") {
+ui_code_block <- function(id, label = KIT_CODE_LABEL) {
   copy <- paste0(
     "var b=this;navigator.clipboard.writeText(",
     "b.parentElement.nextElementSibling.innerText).then(function(){",
     "b.textContent='已複製';setTimeout(function(){b.textContent='複製';},1500);});"
   )
-  ui_detail(
-    title,
+  shiny::tagList(
     shiny::tags$p(class = "kit-hint", "以下程式碼依你目前的設定產生，是簡化的示範。"),
     shiny::tags$div(
-      class = "kit-code-copy",
+      class = "kit-code-head",
+      shiny::tags$strong(label),
       shiny::tags$button(type = "button", class = paste("btn", KIT_BTN[["secondary"]]),
                          onclick = copy, "複製")
     ),
     shiny::verbatimTextOutput(id)
   )
+}
+
+#' 放在 ui_code_panel() 的位置：output[[paste0(id, "_ui")]] <- render_code_panel(session, id, code)
+#'
+#' 打開「用 R 怎麼做」時才算（收起來時不畫）。code() 停下來（req）或出錯時只有一行 empty。
+#' @param code 傳回程式碼（字串）的函式或 reactive
+#' @noRd
+render_code_panel <- function(session, id, code, empty = KIT_CODE_EMPTY) {
+  shiny::renderUI({
+    have <- tryCatch({
+      x <- code()
+      length(x) > 0 && any(nzchar(x))
+    }, error = \(e) FALSE)
+    if (have) ui_code_block(session$ns(id)) else shiny::tags$p(class = "kit-hint mb-0", empty)
+  })
 }
 
 #' 下載鈕的位置：一個 uiOutput（id 後面加 _ui）
@@ -286,9 +404,9 @@ KIT_DL_CLASS <- KIT_BTN[["secondary"]]
 #' @param table_fun 傳回要下載的表的函式（或 reactive）
 #' @param name 檔名（不含副檔名）：字串，或傳回它的函式
 #' @noRd
-download_csv_ui <- function(session, id, label, table_fun, name) {
+download_csv_ui <- function(session, id, label, table_fun, name, class = KIT_DL_CLASS) {
   write <- \(file) readr::write_excel_csv(csv_or_note(table_fun), file)
-  download_button_ui(session, id, label, name, "csv", write)
+  download_button_ui(session, id, label, name, "csv", write, class = class)
 }
 
 #' 下載鈕：plotly 圖存成單一 html（要 pandoc）
@@ -306,8 +424,8 @@ download_plot_ui <- function(session, id, label, plot_fun, name) {
 
 #' 放在 ui_download(ns(id)) 的位置：output[[paste0(id, "_ui")]] <- render_download_csv(...)
 #' @noRd
-render_download_csv <- function(session, id, label, table_fun, name) {
-  shiny::renderUI(download_csv_ui(session, id, label, table_fun, name))
+render_download_csv <- function(session, id, label, table_fun, name, class = KIT_DL_CLASS) {
+  shiny::renderUI(download_csv_ui(session, id, label, table_fun, name, class = class))
 }
 
 #' 圖的版本（同上）

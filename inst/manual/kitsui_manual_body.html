@@ -62,7 +62,7 @@
 <section id="man-data">
   <h2>資料格式</h2>
   <p>資料是<strong>長格式</strong>：一列是一個孩子在一個波次的一題作答。可以一次上傳好幾個檔，只要欄位一樣。檔案支援 CSV、壓縮過的 CSV.GZ 和 SPSS 的 SAV。單一檔案上限 200 MB；大的 CSV 請先壓成 .csv.gz。</p>
-  <p>資料是寬格式（一題一欄）、欄名不一樣，或分數不是從 0 開始時，先到 <a href="https://jiewentsai-kitjoin.share.connect.posit.cloud/" target="_blank" rel="noopener noreferrer">kitJoin</a> 的「⑥ 轉成 kits 作答檔」轉好再上傳。① 資料頁的上傳說明和紅字裡也有「開啟 kitJoin」按鈕。</p>
+  <p>資料是寬格式（一題一欄）、欄名不一樣，或分數不是從 0 開始時，先到 kitJoin 的「kits 作答檔」轉好再上傳。本機版：在 R 執行 <code>kitJoin::run_kitjoin()</code> 開啟 kitJoin，資料不會離開這台電腦。雲端版：① 資料頁的上傳說明和紅字裡有「開啟 kitJoin」按鈕，開的是<a href="https://jiewentsai-kitjoin.share.connect.posit.cloud/" target="_blank" rel="noopener noreferrer">雲端版 kitJoin</a>。</p>
   <div class="km-table-wrap">
   <table>
     <thead><tr><th>欄位</th><th>必填</th><th>意思</th></tr></thead>
@@ -120,7 +120,7 @@
     <li>藍框寫「資料沒問題」時，按<strong>下一步：題目校準</strong>。</li>
   </ol>
   <figure class="km-shot"><img src="kitsui-manual/img/t1_data_pick.webp" alt="① 資料頁：左邊勾了 M03 3–48 和 M36 36–72，右邊的量尺表列出四個量尺，下方是「下一步：題目校準」按鈕"><figcaption>左邊選資料和波次，右邊確認量尺。紅字是錯誤，要先修資料；橘字是提醒，看過就可以往下做。</figcaption></figure>
-  <p>上傳的檔案讀不進來時，紅字旁邊有<strong>開啟 kitJoin</strong>按鈕。在 kitJoin 把檔案轉成 kits 作答檔，再回來上傳。</p>
+  <p>上傳的檔案讀不進來時，紅字旁邊有到 kitJoin 的說明（雲端版是<strong>開啟 kitJoin</strong>按鈕；本機版是一行「在 R 執行 kitJoin::run_kitjoin()」）。在 kitJoin 的「kits 作答檔」把檔案轉好，再回來上傳。</p>
   <p>同一頁往下有<strong>作答設計</strong>圖：每一格是一個波次、一題的通過比例，空白表示那一波沒有施測。可以用它確認題目和波次有沒有放錯。</p>
   <p>通過比例是「得分達到<a href="#man-t1-steps">通過步驟</a>以上」的比例。預設每題的通過步驟是 1，也就是得 1 分以上。固定檔裡有別的設定時，圖會照它算，圖的上方也會寫出來。</p>
   <figure class="km-shot km-narrow"><img src="kitsui-manual/img/t1_data_design.webp" alt="作答設計熱圖：橫軸是題號，縱軸是波次，顏色是通過比例"><figcaption>作答設計（lan M03）。上方的選單可以換量尺；圖可以下載成 HTML。</figcaption></figure>
