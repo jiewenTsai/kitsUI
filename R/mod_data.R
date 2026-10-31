@@ -315,7 +315,21 @@ mod_data_server <- function(id, goto, handover = NULL) {
 
     # 預設的名稱 R1、R2…：只跟著固定檔變。名稱欄空白時用預設；打字時停手 0.5 秒才檢查
     default_label <- shiny::reactive(kitsui_default_label(fixed()$version$rounds))
-    shiny::observe(shiny::updateTextInput(session, "round_label", value = default_label()))
+    # 名稱欄只在空白、或還是之前放上去的預設名稱時，才換成新的預設；使用者自己打的名稱不動
+    # （fixed() 也跟著波次的單位、參照世代變，換它們不能把名稱改回 R1）。固定檔本身換了
+    # （上傳、清掉、④ 交過來）就是新的一回合，名稱一律換成新的預設
+    shown_defaults <- character()
+    put_label <- function(force = FALSE) {
+      new <- default_label()
+      now <- trimws(shiny::isolate(input$round_label) %||% "")
+      if (force || !nzchar(now) || now %in% shown_defaults) {
+        if (!identical(now, new)) shiny::updateTextInput(session, "round_label", value = new)
+      }
+      shown_defaults <<- union(shown_defaults, new)
+    }
+    shiny::observeEvent(default_label(), put_label())
+    shiny::observeEvent(fixed_rv(), put_label(force = TRUE), ignoreInit = TRUE,
+                        ignoreNULL = FALSE)
     label_in <- shiny::reactive(input$round_label %||% "")
     label_delay <- getOption("kitsui.label_delay", KIT_LABEL_DELAY_MS)
     if (label_delay > 0) label_in <- shiny::debounce(label_in, label_delay)

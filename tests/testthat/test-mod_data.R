@@ -477,3 +477,33 @@ test_that("波次的單位：第一回合在 ① 選，交給 ②；有之前回
   expect_match(data_unit_text("waves"), "不算 age50")
   expect_false(grepl("age50", data_unit_text("months")))
 })
+
+test_that("名稱：自己打的名稱，換波次的單位或參照世代不會被改回預設；換固定檔才換成新的預設", {
+  sent <- character()
+  testthat::local_mocked_bindings(
+    updateTextInput = function(session, inputId, label = NULL, value = NULL, placeholder = NULL) {
+      if (identical(inputId, "round_label")) sent <<- c(sent, value)
+    },
+    .package = "shiny"
+  )
+  zip <- withr::local_tempfile(fileext = ".zip")
+  first <- suppressMessages(kitsui_round(kitsui_demo("M03", 3, "lan"), kitsui_fixed_empty(), "R1"))
+  kitsui_write_fixed(first$fixed, zip)
+  shiny::testServer(mod_data_server, args = list(goto = \(tab) NULL), {
+    session$setInputs(source = "demo", domains = c("lan", "motor"), round_label = "")
+    # 空白：放上預設 R1
+    expect_equal(sent, "R1")
+    session$setInputs(round_label = "Pilot")
+    n <- length(sent)
+    session$setInputs(wave_unit = "years")
+    session$setInputs(cohorts = c("M03", "M36"), reference = "M36")
+    expect_length(sent, n)
+    # 還是之前的預設（R1）或空白時，照常跟著換
+    session$setInputs(round_label = "R1", fixed_file = upload_input(zip, "fixed_set.zip"))
+    expect_equal(sent[length(sent)], "R2")
+    # 固定檔換了：自己打的名稱也換成新的預設
+    session$setInputs(round_label = "Pilot")
+    session$setInputs(fixed_clear = 1)
+    expect_equal(sent[length(sent)], "R1")
+  })
+})
