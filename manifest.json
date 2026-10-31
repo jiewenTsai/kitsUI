@@ -1456,6 +1456,44 @@
         "RemoteSha": "2.0.0"
       }
     },
+    "kitDesign": {
+      "Source": "github",
+      "Repository": null,
+      "description": {
+        "Package": "kitDesign",
+        "Title": "Shared 'Shiny' User Interface Components for KIT Research Tools",
+        "Version": "0.4.0",
+        "Date": "2026-10-31",
+        "Authors@R": "person(\"Jie-Wen\", \"Tsai\", email = \"tsai.jiewen@gmail.com\", role = c(\"aut\", \"cre\"))",
+        "Description": "The shared user interface layer of the KIT research tools built\n    with 'shiny': a 'bslib' theme based on Bootswatch Brite, the KIT style\n    sheets and logos, a page wrapper with the KIT header, and documented\n    components (page guide, buttons, download buttons, callouts, cloud-version\n    banner and footer, status boxes, details rows, code panels, step cards,\n    checklists, step tabs, diagrams, tables and a 'plotly' chart style),\n    a skeleton for tabs with one run button (page order and status flow),\n    plus a few server-side helpers (run gate, scroll to result, tab states,\n    notifications, number formatting, user-facing errors), value objects\n    for status boxes, checklists and code, 'shiny' modules for the stateful\n    pieces (step cards, step tabs, run gate, code panel) and a scaffold for\n    new apps. Load it with one call to kit_page() and build the page from\n    kit_*() components. The logo and the colour palette come from a brand\n    object (kit_brand()), so projects other than KIT can use their own.",
+        "License": "MIT + file LICENSE",
+        "URL": "https://github.com/jiewenTsai/kitDesign,\nhttps://jiewentsai.github.io/kitDesign/",
+        "BugReports": "https://github.com/jiewenTsai/kitDesign/issues",
+        "Encoding": "UTF-8",
+        "Depends": "R (>= 4.1.0)",
+        "Imports": "bslib (>= 0.11.0), grDevices, htmltools, shiny, utils",
+        "Suggests": "htmlwidgets, knitr, pkgload, plotly, rmarkdown, testthat (>=\n3.0.0)",
+        "VignetteBuilder": "knitr",
+        "Config/testthat/edition": "3",
+        "Roxygen": "list(markdown = TRUE)",
+        "RoxygenNote": "8.0.0",
+        "RemoteType": "github",
+        "RemoteHost": "api.github.com",
+        "RemoteRepo": "kitDesign",
+        "RemoteUsername": "jiewenTsai",
+        "RemoteRef": "v0.4.0",
+        "RemoteSha": "8b7527a0073deb2ff0ebfb5e1a90abb70b4195ff",
+        "GithubRepo": "kitDesign",
+        "GithubUsername": "jiewenTsai",
+        "GithubRef": "v0.4.0",
+        "GithubSHA1": "8b7527a0073deb2ff0ebfb5e1a90abb70b4195ff",
+        "NeedsCompilation": "no",
+        "Packaged": "2026-10-31 11:52:12 UTC; jiewentsai",
+        "Author": "Jie-Wen Tsai [aut, cre]",
+        "Maintainer": "Jie-Wen Tsai <tsai.jiewen@gmail.com>",
+        "Built": "R 4.5.3; ; 2026-10-31 11:52:12 UTC; unix"
+      }
+    },
     "kits": {
       "Source": "github",
       "Repository": null,
@@ -2923,22 +2961,7 @@
       "checksum": "226d7cbec671c2e297aebc835d03041f"
     },
     "DESCRIPTION": {
-      "checksum": "3b933e16ffeb1da749ff0d2eef2ba9aa"
-    },
-    "inst/logo/kit-logo-128.png": {
-      "checksum": "58d92ac12f7f0951fbd7cdc947a5dbf5"
-    },
-    "inst/logo/kit-logo-192.png": {
-      "checksum": "17d310a853e895b423e8cfd6fcbf9ab5"
-    },
-    "inst/logo/kit-mark-256.png": {
-      "checksum": "6df62c78c3387f4ad2628ffb3d328d8b"
-    },
-    "inst/logo/kit-mark-64.png": {
-      "checksum": "563ae6ca3e8f8fa64e78b43f0ec3b73c"
-    },
-    "inst/logo/kit-mark-96.png": {
-      "checksum": "c875b46e31e97fd8032d1550f7bcaa80"
+      "checksum": "d138e682a392259937063a1f998c01c5"
     },
     "inst/manual/img/t1_data_design.webp": {
       "checksum": "f7e066d8adce96794925cfd46818bdfb"
@@ -3013,100 +3036,88 @@
       "checksum": "ac41d85580ed9876758df23bb4f7c290"
     },
     "NAMESPACE": {
-      "checksum": "317ae8dff22b06e5d19fde44a9aaf7a7"
+      "checksum": "c5cfd36d75fc8e0fa559bb0c54745623"
     },
     "R/app.R": {
-      "checksum": "ecbf86dd230eece8bcba0e1429e1b160"
+      "checksum": "663fd2bbb2cf30c1a980f14090b82d28"
     },
     "R/cloud.R": {
-      "checksum": "089fbb01441aba32929888d59ee03953"
-    },
-    "R/code_wrap.R": {
-      "checksum": "5b20765175280b34d4705f438dadf1a6"
+      "checksum": "3fe9acbb69a89773cb79bc26a8b76e86"
     },
     "R/constants.R": {
       "checksum": "1a29a136cc9c8941f6e98ab7685b88ac"
     },
-    "R/download.R": {
-      "checksum": "ac0de98d9cf1ba05b4dbfe9281732361"
-    },
     "R/io_data.R": {
-      "checksum": "8dca0e59b393ee277bd9dd755ee5d27b"
-    },
-    "R/kit_brite.R": {
-      "checksum": "254d6e88875cf34cff690c596fd74dfa"
+      "checksum": "6e44f69927754698632e247196010008"
     },
     "R/kit_chart.R": {
-      "checksum": "982555abe923bff0cf1db2e69418a718"
+      "checksum": "3c5524bca67aed55cf32517294ca4a63"
     },
     "R/kit_tabs.R": {
-      "checksum": "2cd48b5548c2276d1fdc1e8d5e86251f"
-    },
-    "R/kit_theme.R": {
-      "checksum": "7e9ed1d47a44c497d31cdd881b0cd938"
+      "checksum": "55e351ff2de19ec5523ce5072dc31fac"
     },
     "R/kitsUI-package.R": {
       "checksum": "4ffd9e6da95e61fd880674093b54b9d5"
     },
     "R/manual.R": {
-      "checksum": "627f45f35432a5b08d03863fc0a41cea"
+      "checksum": "c6458200bd49dbdb77a9a508d96d43b9"
     },
     "R/mod_data.R": {
-      "checksum": "046a94710d0b27ee466bd429a5bb6558"
+      "checksum": "9e84e26f2f809c1e0c7b6a58ac9499d9"
     },
     "R/mod_items.R": {
-      "checksum": "875b588f768b4f29480bc57a7efc0f62"
+      "checksum": "f46864ec757e2867f5766cfbcb222e9f"
     },
     "R/mod_link.R": {
-      "checksum": "540d63ef2ad27948798c1d992fd681ae"
+      "checksum": "6f22c58f229a50c450c48d7aea219c6f"
     },
     "R/mod_score.R": {
-      "checksum": "3de5e5d199fcb585a9763c9b8c299532"
+      "checksum": "b4b9c3cb0544d98188a37eee70d6bafa"
     },
     "R/pipeline_bank.R": {
-      "checksum": "3c92ff6d2a9521a4fceaa4cf5b9de824"
+      "checksum": "a476725785fc0cae0ce8e68474a93a6f"
     },
     "R/pipeline_categories.R": {
       "checksum": "312d5c2fdb07f547005e2c3d05d7a621"
     },
     "R/pipeline_code.R": {
-      "checksum": "2e21f111214980911f9706db4984f834"
+      "checksum": "909cea8d316c8f9da82f3e51c3c4974f"
     },
     "R/pipeline_data.R": {
-      "checksum": "c1cea280b9d45bd4200177a1f07f164b"
+      "checksum": "8568197cbb6d009ffe7936205d703d60"
     },
     "R/pipeline_fixed.R": {
-      "checksum": "ae1ebd9859c708c3747bc0c45ebe8516"
+      "checksum": "d38d51034ce85672029ed3e818110c79"
     },
     "R/pipeline_link.R": {
-      "checksum": "af21dde767b1bee341ec0e57c145aef1"
+      "checksum": "91ddcc186d741b681e2c524a3769621d"
     },
     "R/pipeline_memo.R": {
-      "checksum": "461107a371f52d0ed8feb09e956aad42"
+      "checksum": "4b66cac55a4117e58ca4330d72f61ec1"
     },
     "R/pipeline_round.R": {
-      "checksum": "88ba57b97db1f8d76e01452d91db92cd"
+      "checksum": "c65e1b43cd50ba29f5dfc3890cced2bc"
     },
     "R/pipeline_score.R": {
-      "checksum": "395ac98530ecc9a2885230faf081fbbe"
+      "checksum": "13a123f0bab9d861ac8c7fe4a7a7e0cd"
     },
     "R/pipeline_status.R": {
       "checksum": "65e585a9809d33b5e1476e2fdc285150"
     },
     "R/pipeline_vertical.R": {
-      "checksum": "035f13ca4fcd29c49e668444ef7203f0"
+      "checksum": "4717fe1087e6e14c8fe22280d74988a6"
     },
     "R/run_kitsui.R": {
-      "checksum": "e1f8faea2e445c16d8acd95fc65fa320"
+      "checksum": "042202265b7587f0d71a802e31b693d8"
     },
     "R/ui_common.R": {
-      "checksum": "b7016d19d61131ec1f13d310af2a0e5b"
+      "checksum": "befdc3359bf632724bc9c3c848642322"
     },
     "R/utils.R": {
-      "checksum": "b36ff990a22fdc077d080901cb4f64f6"
+      "checksum": "256b7a09ec9f5eb16e8485875481d25b"
     },
     "README.md": {
-      "checksum": "430a805a3f7dfd936163307e4ffbec6f"
+      "checksum": "884087eb90c449e16fe9b5c0e29383d9"
     }
   },
   "users": null
