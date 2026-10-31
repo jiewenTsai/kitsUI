@@ -161,7 +161,10 @@ test_that("flag 的量尺（可固定的題少於 5 題）：照做，② 用橘
     html <- output$attention$html
     expect_match(html, "kit-warn-text")
     expect_match(html, "sim M03（flag）")
-    expect_match(html, "kit-callout-warning")
+    # 要注意收在細節列的「要注意」裡（不是另一個黃框）
+    expect_match(html, "kit-attention")
+    expect_false(grepl("kit-callout-warning", html))
+    expect_match(output$result$html, "<summary>要注意</summary>")
     expect_match(html, "被 flag 的量尺照樣往下做；請看偏移的題，必要時在下一回合處理。")
     expect_match(output$scale_info$html, "flag：")
     expect_match(output$log, "warn")
@@ -250,8 +253,12 @@ test_that("這一回合不做的量尺：選了再校準；停下來時按鈕改
     session$setInputs(run = 1)
     expect_equal(session$getReturned()()$stopped, "sim M03")
     expect_match(output$status$html, "【停下來】")
-    expect_match(output$status$html, "這一回合不做 sim M03，再校準一次（題庫與連結不會改變）")
-    expect_match(output$status$html, "btn-danger")
+    # 先說原因與怎麼辦；「這一回合不做」是次要的選擇（白底的次要按鈕，不是唯一的路）
+    expect_match(output$status$html, "人太少、資訊不足：sim M03")
+    expect_match(output$status$html, "這一回合不做 sim M03，再校準一次")
+    expect_match(output$status$html, "btn-sm btn-outline-secondary")
+    expect_false(grepl("btn-danger", output$status$html))
+    expect_match(output$status$html, "也可以這一回合先不做停下來的量尺")
     expect_match(output$status$html, "怎麼辦：")
     expect_match(output$status$html, "按「這一回合不做」跳過這個量尺；題庫與連結不會改變。")
     session$setInputs(skip_stopped = 1)
@@ -418,7 +425,9 @@ test_that("固定了哪些題：狀態、核對、全部固定的題、csv；偏
     p <- plot_obj()
     expect_s3_class(p, "plotly")
     names <- purrr::map_chr(p$x$data, \(tr) as.character(tr$name)[1])
-    expect_true("Drifted -> new version" %in% names)
+    # 圖例換成中文（kitsui_drift_plot() 本身是英文，畫面上用 kit_chart_zh()）
+    expect_true("偏移，換成新版本" %in% names)
+    expect_equal(p$x$layout$title$text, "固定之前的偏移把關（試算）")
     expect_match(output$plot_help$html, "落在帶子裡的步驟")
     expect_equal(download_name(plot_name), "item_lan_M03_drift")
     expect_match(output$code, "drift <- kits_drift\\(.*\\)\nplot\\(drift\\)")
@@ -528,5 +537,37 @@ test_that("整個 app：校準以後改了設定，② 的 ✓ 拿掉、③ ④ 
     expect_match(output$`items-status`$html, "【要重新執行】")
     session$setInputs(`items-flag_share` = 0.2)
     expect_equal(st()[["items"]], "done")
+  })
+})
+
+test_that("② 先結果：狀態框下面先是圖（預設第一個校準好的量尺），每個量尺的表收在細節；不做的量尺在進階設定", {
+  sb <- sim_bank()
+  df <- dplyr::bind_rows(sim_long(one_item_each(), 2), kitsui_demo("M03", 3, "motor"))
+  d <- items_data(df, sb$r1$fixed, "2")
+  ui <- as.character(mod_items_ui("items"))
+  # 「這一回合不做」的勾選框在進階設定裡（收起來）
+  adv <- regmatches(ui, regexpr('<details class="kit-advanced">.*?</details>', ui))
+  expect_match(adv, "items-exclude_ui")
+  expect_match(adv, "這一回合不做的量尺")
+  shiny::testServer(mod_items_server, args = list(data = shiny::reactive(d), goto = \(tab) NULL), {
+    session$setInputs(run = 1)
+    res <- session$getReturned()()
+    expect_equal(res$stopped, "sim M03")
+    html <- output$result$html
+    # 停下來的 sim M03 沒有圖：預設選第一個校準好的量尺
+    expect_match(html, '<option value="motor M03" selected>motor M03</option>')
+    # 順序：看一個量尺（圖）→ 細節列（每個量尺、題目參數…）
+    expect_lt(regexpr("看一個量尺", html), regexpr("每個量尺（2 個）", html))
+    expect_match(html, "<summary>每個量尺（2 個）</summary>")
+    expect_lt(regexpr("items-plot", html), regexpr("<summary>題目參數</summary>", html))
+    # 按「這一回合不做 …，再校準一次」：收起來的勾選框也跟著勾（M3 的過期判斷照常）
+    session$setInputs(skip_stopped = 1)
+    expect_equal(session$getReturned()()$excluded, "sim M03")
+    expect_match(output$exclude_line$html, "這一回合不做：sim M03")
+    session$setInputs(exclude = "sim M03")
+    expect_false(stale())
+    session$setInputs(exclude = character())
+    expect_true(stale())
+    expect_match(output$status$html, "【要重新執行】")
   })
 })
