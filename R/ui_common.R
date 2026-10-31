@@ -47,15 +47,15 @@ kitsui_settings_text <- function(d) {
 
 #' 到 kitJoin：依本機版、雲端版給不同的東西（和 kitJoin 的 kit_kitsui_link() 同一個寫法）
 #'
-#' - 雲端版（kit_is_cloud()）：開新分頁連到 KITJOIN_URL，後面一行小字說明開的是雲端版。
+#' - 雲端版（kitDesign::kit_is_cloud()）：開新分頁連到 KITJOIN_URL，後面一行小字說明開的是雲端版。
 #' - 本機版：不放連結（連結會把人帶到雲端版，資料就上傳到雲端了），
 #'   改成一行說明：在 R 執行 kitJoin::run_kitjoin()。
 #' @param label 連結（按鈕）的字
 #' @param class 雲端版按鈕的 class（kitDesign::kit_btn_class()）
-#' @param cloud 是不是雲端版（預設 kit_is_cloud()；測試用）
+#' @param cloud 是不是雲端版（預設 kitDesign::kit_is_cloud()；測試用）
 #' @noRd
 ui_kitjoin_button <- function(label = "開啟 kitJoin", class = kitDesign::kit_btn_class(),
-                              cloud = kit_is_cloud()) {
+                              cloud = kitDesign::kit_is_cloud()) {
   if (!isTRUE(cloud)) {
     return(shiny::tags$span(
       class = "kit-hint kit-kitjoin-local",
@@ -77,7 +77,7 @@ ui_kitjoin_button <- function(label = "開啟 kitJoin", class = kitDesign::kit_b
 #' 資料不合格式時的一句話：到 kitJoin 的「kits 作答檔」轉好再上傳
 #' @noRd
 ui_kitjoin_hint <- function(class = kitDesign::kit_btn_class(), hint_class = "kit-hint",
-                            cloud = kit_is_cloud()) {
+                            cloud = kitDesign::kit_is_cloud()) {
   shiny::tags$p(
     class = hint_class,
     "資料是寬格式（一題一欄）、欄名不一樣，或分數不是從 0 開始？",
@@ -176,7 +176,7 @@ checks_or_ok <- function(tab) {
 
 #' 下載鈕的位置：一個 uiOutput（id 後面加 _ui）
 #'
-#' 按鈕在 server 端用 render_download_csv()、render_download_plot() 畫（R/download.R 的
+#' 按鈕在 server 端用 render_download_csv()、render_download_plot() 畫（kitDesign 的
 #' kit_download_button()：網址最後一段、檔名標頭、download 屬性都是同一個檔名）。
 #' @param id 按鈕的 id（含 namespace）
 #' @noRd
@@ -232,7 +232,7 @@ download_button_ui <- function(session, id, label, name, ext, content,
                                class = kitDesign::kit_btn_class()) {
   base <- tryCatch(download_name(name), error = \(e) character())
   if (length(base) != 1 || !nzchar(base)) return(NULL)
-  kit_download_button(session, id, label, paste0(base, ".", ext), content, class = class)
+  kitDesign::kit_download_button(session, id, label, paste0(base, ".", ext), content, class = class)
 }
 
 #' 不能下載時：不能按的鈕與一句說明（例如找不到 pandoc）

@@ -364,7 +364,7 @@ mod_score_server <- function(id, data, items, links, goto, next_round = NULL) {
       next_round(fixed_out(), label())
     })
     # 檔名跟著這一回合的名稱；按下載時才寫出當下的固定檔
-    output$fixed_dl_ui <- shiny::renderUI(kit_download_button(
+    output$fixed_dl_ui <- shiny::renderUI(kitDesign::kit_download_button(
       session, "fixed_dl", SCORE_FIXED_LABEL, kitsui_fixed_name(label()),
       function(file) {
         # 有量尺停下來時不寫出（kitsui_write_fixed() 也會擋）

@@ -24,8 +24,9 @@ kitsUI 是 [kits](https://github.com/jiewenTsai/kits) 的 Shiny 介面。
 
 ## 0.5.0 的新功能
 
-這一版的畫面改用 KIT 共用的介面套件 [kitDesign](https://github.com/jiewenTsai/kitDesign)（0.2.0 以上）：
-主題、樣式、頁首、步驟分頁、說明框、狀態框、按鈕、提示框、細節列、「用 R 怎麼做」都由 kitDesign 提供，
+這一版的畫面改用 KIT 共用的介面套件 [kitDesign](https://github.com/jiewenTsai/kitDesign)（0.4.0 以上）：
+主題、樣式、頁首、步驟分頁、說明框、狀態框、按鈕、下載按鈕、提示框、雲端版的使用須知、細節列、
+「用 R 怎麼做」都由 kitDesign 提供，
 kitsUI 只留自己的規則（分頁什麼時候打 ✓、圖的類別色）與 kits 的計算。校準、連結、分數和 0.4.0 完全相同。
 
 - 圖套上 KIT 的樣子（`kitDesign::kit_plotly_style()`）：圓體字、細的格線、白底、靠左的粗體標題、

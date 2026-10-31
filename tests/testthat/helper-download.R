@@ -1,22 +1,15 @@
-# 下載按鈕（R/download.R）測試共用的小工具（和 kitJoin 的一樣）
+# 下載按鈕（kitDesign::kit_download_button()）測試共用的小工具
 
-# 按下載：呼叫 kit_download_button() 註冊的回應函式
-# （testServer 的假 session 不會真的註冊，註冊的東西存在 userData）
+# 按下載：kitDesign::kit_test_download()（testServer 的假 session 不會真的註冊，kitDesign 存在 userData）
 # id：模組裡用不含 namespace 的 id；kit_server 層用完整 id（如 "score-fixed_dl"）
-kit_test_download <- function(session, id) {
-  store <- session$userData$kit_downloads
-  dl <- store[[id]] %||% store[[session$ns(id)]]
-  if (is.null(dl)) stop("沒有註冊這個下載鈕：", id)
-  dl$filter(dl$data, list())
-}
+kit_test_download <- function(session, id) kitDesign::kit_test_download(session, id)
 
 # 下載回來的檔案路徑
 kit_test_download_file <- function(session, id) kit_test_download(session, id)$content$file
 
-# 下載的檔名（註冊時的檔名，也就是網址最後一段、標頭與 download 屬性用的名字）
+# 下載的檔名（註冊時的檔名，也就是網址最後一段、標頭與 download 屬性用的名字；不寫檔）
 kit_test_download_name <- function(session, id) {
-  store <- session$userData$kit_downloads
-  (store[[id]] %||% store[[session$ns(id)]])$data$filename
+  kitDesign::kit_test_download(session, id, write = FALSE)$filename
 }
 
 # HTML 裡某個 id 的 <a> 的屬性值

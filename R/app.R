@@ -12,6 +12,11 @@ kit_app <- function() {
   shiny::shinyApp(ui = kit_ui, server = kit_server)
 }
 
+# 下載的 log 與 ASCII 備用檔名用的 app 名稱（kitDesign::kit_download_button()）
+.onLoad <- function(libname, pkgname) {
+  if (is.null(getOption("kitDesign.app"))) options(kitDesign.app = "kitsUI")
+}
+
 #' 啟動前的 Shiny 設定（上傳上限）；找 pandoc（圖檔下載要用）
 #' @noRd
 kit_set_options <- function() {
@@ -45,7 +50,7 @@ kit_ui <- function(request) {
     version = ver$version, date = ver$date,
     meta_extra = paste("kits", utils::packageVersion("kits")),
     shiny::tags$head(shiny::tags$style(KITSUI_CSS)),
-    if (kit_is_cloud()) kitsui_cloud_banner(),
+    if (kitDesign::kit_is_cloud()) kitsui_cloud_banner(),
     if (!kit_pandoc_ok()) kit_pandoc_notice(),
     # 「使用手冊」不是流程的一步：放最右邊、虛線框
     kitDesign::kit_flow_tabs(
@@ -56,7 +61,7 @@ kit_ui <- function(request) {
       shiny::tabPanel("④ 受試者評分", value = "score", mod_score_ui("score")),
       shiny::tabPanel("使用手冊", value = "manual", kit_manual_ui())
     ),
-    if (kit_is_cloud()) kit_cloud_footer()
+    if (kitDesign::kit_is_cloud()) kitsui_cloud_footer()
   )
 }
 
