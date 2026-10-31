@@ -68,6 +68,9 @@ test_that("找不到 pandoc：頁面最上方說明；下載圖檔時停下來�
   expect_error(plot_save(p, file, pandoc_ok = FALSE), "找不到 pandoc", class = "kit_user_error")
   expect_error(plot_save(\() shiny::req(NULL), file, pandoc_ok = TRUE), "還沒有內容",
                class = "kit_user_error")
+  # validate() 停下來：說的是它的原因
+  expect_error(plot_save(\() shiny::validate("沒有題庫，沒有偏移把關圖。"), file, pandoc_ok = TRUE),
+               "^沒有題庫，沒有偏移把關圖。$", class = "kit_user_error")
   # 畫按鈕時還找得到 pandoc、按下載時找不到：回 500，畫面上有通知
   pandoc <- TRUE
   mock_app_fn("kit_pandoc_ok", \() pandoc)
@@ -90,6 +93,32 @@ test_that("找不到 pandoc：頁面最上方說明；下載圖檔時停下來�
     expect_match(html, "disabled")
     expect_no_match(html, "href")
     expect_null(session$userData$kit_downloads)
+  })
+})
+
+test_that("圖畫不出來時不畫下載鈕，畫得出來時出現；按下載失敗只通知一次，說的是原因", {
+  p <- plotly::plot_ly(x = 1:3, y = 1:3, type = "scatter", mode = "markers")
+  mock_app_fn("kit_pandoc_ok", \() TRUE)
+  shiny::testServer(\(input, output, session) {
+    plot_fun <- shiny::reactive({
+      shiny::validate(shiny::need(isTRUE(input$ok), "這個量尺沒有題庫，沒有偏移把關圖。"))
+      p
+    })
+    output$dl_ui <- render_download_plot(session, "dl", "下載圖（HTML）", plot_fun, "plot")
+  }, {
+    expect_null(output$dl_ui)
+    session$setInputs(ok = TRUE)
+    expect_match(output$dl_ui$html, "plot.html")
+    session$setInputs(ok = FALSE)
+    expect_null(output$dl_ui)
+    # 畫面還沒更新、按了舊的鈕：kitDesign 的下載通知一次（plot_save() 自己不通知）
+    notes <- character()
+    testthat::local_mocked_bindings(
+      showNotification = \(ui, ...) notes <<- c(notes, as.character(ui)), .package = "shiny"
+    )
+    expect_message(res <- kit_test_download(session, "dl"), "沒有題庫")
+    expect_equal(res$status, 500)
+    expect_equal(notes, "下載失敗：這個量尺沒有題庫，沒有偏移把關圖。")
   })
 })
 

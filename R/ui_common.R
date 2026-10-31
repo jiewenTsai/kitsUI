@@ -201,11 +201,15 @@ download_csv_ui <- function(session, id, label, table_fun, name,
 #' 下載鈕：plotly 圖存成單一 html（要 pandoc）
 #'
 #' 找不到 pandoc 時，按鈕換成不能按的鈕與一句說明。
-#' 圖還沒有內容或存不了時，畫面上跳出紅色的通知（plot_save()）。
+#' 圖畫不出來時（req()、validate() 停下來或出錯）先不畫按鈕；在 renderUI() 裡讀圖，
+#' 圖畫得出來時按鈕自己出現。按下載時還是存不了：kitDesign 的下載跳出一次紅色通知（plot_save()）。
 #' @inheritParams download_csv_ui
 #' @param plot_fun 傳回 plotly 圖的函式（或 reactive）
 #' @noRd
 download_plot_ui <- function(session, id, label, plot_fun, name) {
+  if (is.function(plot_fun) && inherits(tryCatch(plot_fun(), error = \(e) e), "error")) {
+    return(NULL)
+  }
   if (!kit_pandoc_ok()) return(ui_download_off(label, KIT_PANDOC_MISSING))
   write <- \(file) plot_save(plot_fun, file)
   download_button_ui(session, id, label, name, "html", write)
@@ -246,22 +250,21 @@ ui_download_off <- function(label, why) {
   )
 }
 
-#' 存一張圖（kits::kits_save_plot()）；不行時通知使用者，再停下來
+#' 存一張圖（kits::kits_save_plot()）；不行時用 kit_abort() 停下來
+#'
+#' 通知由 kitDesign 的下載跳（一次）；圖畫不出來時說的是 validate() 的原因。
 #' @param p plotly 圖，或傳回它的函式
 #' @param pandoc_ok 找得到 pandoc 嗎
 #' @noRd
 plot_save <- function(p, file, pandoc_ok = kit_pandoc_ok()) {
-  notify <- \(text) {
-    if (!is.null(shiny::getDefaultReactiveDomain())) {
-      shiny::showNotification(text, type = "error", duration = KIT_NOTIFY_ERROR_SECONDS)
-    }
-    kitDesign::kit_abort(text)
+  if (!pandoc_ok) kitDesign::kit_abort(KIT_PANDOC_MISSING)
+  if (is.function(p)) p <- tryCatch(p(), error = \(e) e)
+  if (inherits(p, "error") || is.null(p)) {
+    why <- if (inherits(p, "error")) trimws(conditionMessage(p)) else ""
+    kitDesign::kit_abort(if (nzchar(why)) why else "這張圖還沒有內容。請先完成這一頁的步驟。")
   }
-  if (!pandoc_ok) notify(KIT_PANDOC_MISSING)
-  if (is.function(p)) p <- tryCatch(p(), error = \(e) NULL)
-  if (is.null(p)) notify("這張圖還沒有內容。請先完成這一頁的步驟。")
   out <- tryCatch(kits::kits_save_plot(p, file), error = \(e) e)
-  if (inherits(out, "error")) notify(kit_error_text(out, "存圖檔（HTML）"))
+  if (inherits(out, "error")) kitDesign::kit_abort(kit_error_text(out, "存圖檔（HTML）"))
   invisible(file)
 }
 

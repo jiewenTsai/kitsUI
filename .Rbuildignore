@@ -7,6 +7,7 @@
 ^\.claude$
 ^\.Rhistory$
 ^app\.R$
+^R/_disable_autoload\.R$
 ^scripts$
 ^manifest\.json$
 ^\.rscignore$

@@ -1,3 +1,15 @@
+# kitsUI 0.7.1
+
+## Fixes
+
+* ② 偏移把關圖: for a scale with no bank (round 1, free calibration) the plot area explains why there is
+  no drift plot, but the download button was still there; clicking it failed with two red
+  notifications saying the plot had no content. Plot download buttons now appear only when their plot
+  can be drawn, and a failed plot download shows one notification with the real reason.
+* The cloud version and run.bat sourced `R/` twice at start-up (shiny loaded it before `app.R` could
+  turn that off) and warned that the folder looks like an R package. `R/_disable_autoload.R` now turns
+  shiny's autoload off; start-up is a little faster and the warning is gone.
+
 # kitsUI 0.7.0
 
 ## Changes you can see

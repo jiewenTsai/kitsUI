@@ -2955,13 +2955,13 @@
       "checksum": "ab29909152db0bbb48563f3595e1487e"
     },
     ".Rbuildignore": {
-      "checksum": "0f9b535befee6df7af621a4776069a7a"
+      "checksum": "3f10f8431df6cf59184e3ae998081450"
     },
     "app.R": {
-      "checksum": "226d7cbec671c2e297aebc835d03041f"
+      "checksum": "a88997c1027ddd8ceaa5e0b0204884b6"
     },
     "DESCRIPTION": {
-      "checksum": "4e53af1edba25c8030483aa6a321b095"
+      "checksum": "82f238db49d84b109c858559742182d2"
     },
     "inst/manual/img/t1_data_design.webp": {
       "checksum": "f7e066d8adce96794925cfd46818bdfb"
@@ -3038,6 +3038,9 @@
     "NAMESPACE": {
       "checksum": "c5cfd36d75fc8e0fa559bb0c54745623"
     },
+    "R/_disable_autoload.R": {
+      "checksum": "b91376190cebf9415e20074975167885"
+    },
     "R/app.R": {
       "checksum": "6c13f9ba9406f26d310acca3c5303523"
     },
@@ -3045,7 +3048,7 @@
       "checksum": "3fe9acbb69a89773cb79bc26a8b76e86"
     },
     "R/constants.R": {
-      "checksum": "1a29a136cc9c8941f6e98ab7685b88ac"
+      "checksum": "73547755ddeda775518d88da396ade77"
     },
     "R/io_data.R": {
       "checksum": "6e44f69927754698632e247196010008"
@@ -3111,7 +3114,7 @@
       "checksum": "042202265b7587f0d71a802e31b693d8"
     },
     "R/ui_common.R": {
-      "checksum": "befdc3359bf632724bc9c3c848642322"
+      "checksum": "3fab6d5419dc946fc83f38209febd5f2"
     },
     "R/utils.R": {
       "checksum": "256b7a09ec9f5eb16e8485875481d25b"

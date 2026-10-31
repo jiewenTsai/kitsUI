@@ -16,7 +16,6 @@ KITJOIN_MISSING_TAB <- "遺漏值處理"
 
 # 通知訊息顯示秒數
 KIT_NOTIFY_SECONDS <- 6
-KIT_NOTIFY_ERROR_SECONDS <- 10
 
 # 找不到 pandoc 時（圖檔要用 pandoc 存成單一 html）
 KIT_PANDOC_MISSING <- "找不到 pandoc：圖檔（HTML）不能下載。請安裝 RStudio 或 Quarto。"

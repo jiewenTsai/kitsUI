@@ -442,7 +442,11 @@ test_that("自由校準：沒有固定的題，偏移把關圖是一句說明", 
     expect_match(output$fixed_status$html, "沒有題庫，這個量尺是自由校準，沒有固定的題")
     expect_match(output$fixed_status$html, "看全部自由校準的題（6 題）")
     expect_error(plot_obj(), "沒有偏移把關圖")
+    # 圖畫不出來：沒有下載鈕（不是按了才 500）；換一種圖就出現
+    expect_null(output$dl_plot_ui)
     expect_false(grepl("plot\\(drift\\)", code_of(output$code)))
+    session$setInputs(plot_type = "category")
+    expect_false(is.null(output$dl_plot_ui))
   })
 })
 
