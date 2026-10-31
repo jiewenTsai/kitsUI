@@ -152,6 +152,7 @@ mod_items_server <- function(id, data, goto) {
       if (is.null(d)) {
         note(kitDesign::kit_status_ui(kitDesign::kit_status("stop", "資料還不能用，沒有校準。"),
                        shiny::tags$p("怎麼辦：回到「① 資料」，看【停下來】的原因，處理好再回來。")))
+        kitsui_after_run("stop", "資料還不能用，沒有校準。")
         return()
       }
       # 這一次用的設定：存進結果（res$args），程式碼與「設定改了」的比較都用它
@@ -173,6 +174,7 @@ mod_items_server <- function(id, data, goto) {
                        shiny::tags$p(kitsui_error_ui(kit_error_text(res, "校準"))),
                        shiny::tags$p("怎麼辦：看上面的原因；資料有問題時回到「① 資料」處理，",
                                      "或勾「這一回合不做」出問題的量尺，再按「開始校準」。")))
+        kitsui_after_run("stop", "校準停下來了，沒有結果。")
         return()
       }
       note(NULL)
@@ -181,6 +183,11 @@ mod_items_server <- function(id, data, goto) {
       round(res)
       seen <- kitsui_no_info_stopped(res)
       if (length(seen) > 0) no_info(c(seen, no_info()[setdiff(names(no_info()), names(seen))]))
+      if (isTRUE(res$ok)) {
+        kitsui_after_run("done", "題目校準完成。")
+      } else {
+        kitsui_after_run("stop", "有量尺校準停下來了，原因在狀態框。")
+      }
     }
     shiny::observeEvent(input$run, run_round(input$exclude))
     # 現在勾的「這一回合不做」：跟著勾選框；按「這一回合不做 …，再校準一次」時先記下要勾的

@@ -321,3 +321,10 @@ kitsui_screen_names <- function(df) {
   names(df)[match(hit, names(df))] <- KITSUI_SCREEN_NAMES[hit]
   df
 }
+
+#' 按了主要按鈕之後：跳一個短通知、捲到狀態框（設計語言的「狀態流」，和 kitJoin 一樣）
+#' @noRd
+kitsui_after_run <- function(state, message) {
+  kitDesign::kit_notify(kitDesign::kit_status(state, message))
+  kitDesign::kit_scroll_to("status")
+}

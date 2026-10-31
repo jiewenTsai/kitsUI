@@ -142,10 +142,12 @@ mod_score_server <- function(id, data, items, links, goto, next_round = NULL) {
       if (is.null(round)) {
         status(kitDesign::kit_status_ui(kitDesign::kit_status("stop", "還沒有這一回合的題目校準，沒有計算分數。"),
                          shiny::tags$p("怎麼辦：先到「② 題目校準」按「開始校準」。")))
+        kitsui_after_run("stop", "還沒有這一回合的題目校準，沒有計算分數。")
         return()
       }
       if (nothing()) {
         status(score_nothing_status(round, ns))
+        kitsui_after_run("stop", "沒有可以評分的量尺，所以沒有分數。")
         return()
       }
       out <- shiny::withProgress(message = "正在計算分數…", value = 0, {
@@ -160,15 +162,18 @@ mod_score_server <- function(id, data, items, links, goto, next_round = NULL) {
         status(kitDesign::kit_status_ui(kitDesign::kit_status("stop", "分數沒有算出來。"),
                          shiny::tags$p(kitsui_error_ui(kit_error_text(out, "計算分數"))),
                          shiny::tags$p("怎麼辦：看上面的原因；必要時回到「② 題目校準」重跑這一回合。")))
+        kitsui_after_run("stop", "分數沒有算出來。")
         return()
       }
       # 一列都沒有：不是【完成】，也不給空的下載
       if (NROW(out$scores) == 0) {
         status(score_nothing_status(round, ns))
+        kitsui_after_run("stop", "沒有可以評分的量尺，所以沒有分數。")
         return()
       }
       result(c(out, list(links_rows = fixed()$links)))
       status(score_status(out, round))
+      kitsui_after_run("done", "分數算好了。")
     })
     output$status <- shiny::renderUI(status())
 

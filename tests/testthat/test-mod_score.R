@@ -571,3 +571,28 @@ test_that("沒有可以評分的量尺（② 全部停下來）：【停下來�
   expect_match(html, "【停下來】")
   expect_false(grepl("0 列", html))
 })
+
+test_that("② 校準、④ 評分按下去之後：跳通知、捲到狀態框（和 kitJoin 一樣的狀態流）", {
+  calls <- list()
+  local_mocked_bindings(kitsui_after_run = function(state, message) {
+    calls[[length(calls) + 1]] <<- list(state = state, message = message)
+  })
+  df <- kitsui_demo("M03", 3, "lan")
+  d <- list(df = df, fixed = kitsui_fixed_empty(), round_label = "3", files = NULL, source = "demo",
+            data_file = NULL, fixed_file = NULL, waves = sort(unique(df$wave_m)),
+            scales = kitsui_scales(df), plan = kitsui_round_plan(df, kitsui_fixed_empty()))
+  shiny::testServer(mod_items_server, args = list(data = shiny::reactive(d), goto = \(tab) NULL), {
+    session$setInputs(run = 1)
+  })
+  expect_equal(calls[[1]], list(state = "done", message = "題目校準完成。"))
+  r8 <- round8()
+  lk <- linked()
+  shiny::testServer(mod_score_server, args = score_args(r8$round, r8$df, lk$fixed), {
+    session$setInputs(run = 1)
+  })
+  expect_equal(calls[[2]], list(state = "done", message = "分數算好了。"))
+  shiny::testServer(mod_score_server, args = score_args(NULL, r8$df, lk$fixed), {
+    session$setInputs(run = 1)
+  })
+  expect_equal(calls[[3]]$state, "stop")
+})

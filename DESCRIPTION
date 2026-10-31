@@ -29,7 +29,7 @@ Imports:
     zip
 Remotes:
     jiewenTsai/kits,
-    jiewenTsai/kitDesign
+    jiewenTsai/kitDesign@v0.4.0
 Suggests:
     callr,
     rmarkdown,
