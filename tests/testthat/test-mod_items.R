@@ -435,3 +435,98 @@ test_that("自由校準：沒有固定的題，偏移把關圖是一句說明", 
     expect_false(grepl("plot\\(drift\\)", output$code))
   })
 })
+
+test_that("校準以後改了設定：結果留著、標【要重新執行】，③ ④ 拿到 NULL；改回去就恢復；程式碼用跑的設定", {
+  first <- suppressMessages(kitsui_round(kitsui_demo("M03", 3, "lan"), kitsui_fixed_empty(), "3"))
+  d <- items_data(kitsui_demo("M03", 6, "lan"), first$fixed, "6")
+  shiny::testServer(mod_items_server, args = list(data = shiny::reactive(d), goto = \(tab) NULL), {
+    # 交給 ③ ④ 的結果每變一次（通知一次）就數一次
+    notified <- 0
+    shiny::observe({
+      session$getReturned()()
+      notified <<- notified + 1
+    })
+    session$setInputs(run = 1, scale = "lan M03", flag_share = 0.2, flag_fixed = NA)
+    res <- session$getReturned()()
+    expect_true(res$ok)
+    expect_equal(res$args, list(flag_share = 0.2, flag_fixed = NA, bank_choice = NULL,
+                                exclude = character()))
+    expect_match(output$code, "max(1, 0.2 * judged)", fixed = TRUE)
+    expect_match(output$next_step$html, "go_link")
+    expect_gt(notified, 0)
+    # 改 flag 的比例：結果還在畫面上，但狀態框說要重新校準；程式碼還是跑的時候的 0.2
+    session$setInputs(flag_share = 0.3)
+    expect_null(session$getReturned()())
+    expect_match(output$status$html, "【要重新執行】")
+    expect_match(output$status$html, "設定改了，請再按一次「開始校準」。")
+    expect_match(output$status$html, "偏移題超過已判斷題的比例：0.2 → 0.3")
+    expect_match(output$status$html, "上一次的設定")
+    expect_match(output$overview, "lan M03")
+    expect_false(is.null(output$result))
+    expect_match(output$code, "max(1, 0.2 * judged)", fixed = TRUE)
+    expect_null(output$next_step)
+    # 改回去：不用重跑，結果照舊交出去
+    session$setInputs(flag_share = 0.2)
+    expect_identical(session$getReturned()(), res)
+    expect_match(output$status$html, "【完成")
+    # 沒有改設定的重算（例如展開進階設定、題庫的選單畫出來）不會再通知 ③ ④
+    n <- notified
+    session$setInputs(flag_fixed = NA)
+    expect_equal(notified, n)
+    # 可固定的題數、這一回合不做：一樣算改了
+    session$setInputs(flag_fixed = 3)
+    expect_null(session$getReturned()())
+    expect_match(output$status$html, "可固定的題少於幾題：空白（依量尺的題數） → 3")
+    session$setInputs(flag_fixed = NA, exclude = "lan M03")
+    expect_match(output$status$html, "這一回合不做的量尺：沒有 → lan M03")
+    # 重新校準：用新的設定，程式碼也跟著
+    session$setInputs(exclude = NULL, flag_share = 0.3, run = 2)
+    res <- session$getReturned()()
+    expect_equal(res$args$flag_share, 0.3)
+    expect_match(output$code, "max(1, 0.3 * judged)", fixed = TRUE)
+    expect_false(grepl("要重新執行", output$status$html))
+  })
+})
+
+test_that("校準以後改了題庫的選擇：算改了設定", {
+  bc <- borrow_chain()
+  d <- items_data(bc$df2, bc$fixed, "2")
+  shiny::testServer(mod_items_server, args = list(data = shiny::reactive(d), goto = \(tab) NULL), {
+    session$setInputs(run = 1)
+    expect_false(is.null(session$getReturned()()))
+    # 選單畫出來、值是規則選的：沒有改
+    session$setInputs(bank_1 = "motor M36")
+    expect_false(is.null(session$getReturned()()))
+    session$setInputs(bank_1 = "motor M03")
+    expect_null(session$getReturned()())
+    expect_match(output$status$html, "用哪一個題庫：照規則 → motor M03 用 motor M03")
+  })
+})
+
+test_that("items_args()、items_args_changes()：寫法一樣才比較；沒改時是空的", {
+  a <- items_args(0.2, NA, NULL, NULL)
+  expect_equal(a, list(flag_share = 0.2, flag_fixed = NA, bank_choice = NULL,
+                       exclude = character()))
+  expect_identical(items_args(NULL, 0, NULL, character()), a)
+  expect_identical(items_args(0.2, NA, c(b = "y", a = "x"), c("s2", "s1")),
+                   items_args(0.2, NA, c(a = "x", b = "y"), c("s1", "s2")))
+  expect_length(items_args_changes(a, a), 0)
+  expect_equal(items_args_changes(a, items_args(0.2, NA, c(s = "t"), "u")),
+               c("用哪一個題庫：照規則 → s 用 t", "這一回合不做的量尺：沒有 → u"))
+})
+
+test_that("整個 app：校準以後改了設定，② 的 ✓ 拿掉、③ ④ 不能做；改回去又恢復", {
+  shiny::testServer(kit_app(), {
+    session$setInputs(`data-source` = "demo", `data-cohorts` = "M03", `data-domains` = "lan",
+                      `data-waves` = "3", `data-round_label` = "")
+    session$setInputs(`items-run` = 1)
+    st <- \() stats::setNames(tab_states()$state, tab_states()$tab)
+    expect_equal(st()[c("items", "link", "score")], c(items = "done", link = "done", score = "ready"))
+    session$setInputs(`items-flag_share` = 0.5)
+    expect_equal(st()[c("items", "link", "score")],
+                 c(items = "ready", link = "locked", score = "locked"))
+    expect_match(output$`items-status`$html, "【要重新執行】")
+    session$setInputs(`items-flag_share` = 0.2)
+    expect_equal(st()[["items"]], "done")
+  })
+})

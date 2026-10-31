@@ -88,15 +88,22 @@ mod_score_server <- function(id, data, items, links, goto, next_round = NULL) {
     output$flags <- shiny::renderUI(score_flags_ui(kitsui_round_flags(items())))
     shiny::observeEvent(input$go_items, goto("items"))
 
-    # 題目校準變了：舊的分數不算數，要重算
+    # 題目校準變了：舊的分數不算數，要重算。② 沒有結果了（資料或設定改了、還沒重新校準）
+    # 也一樣，舊的分數不留在畫面上
+    waiting_items <- FALSE
     shiny::observeEvent(items(), {
       own(NULL)
-      if (!is.null(result())) {
+      if (!is.null(result()) || waiting_items) {
         result(NULL)
-        status(ui_status("stale", "題目校準有變動，分數要重新計算。",
-                         shiny::tags$p("請按「計算這一回合的分數」。")))
+        waiting_items <<- is.null(items())
+        todo <- if (waiting_items) {
+          "請先到「② 題目校準」再按一次「開始校準」，再回來按「計算這一回合的分數」。"
+        } else {
+          "請按「計算這一回合的分數」。"
+        }
+        status(ui_status("stale", "題目校準有變動，分數要重新計算。", shiny::tags$p(todo)))
       }
-    }, ignoreInit = TRUE)
+    }, ignoreInit = TRUE, ignoreNULL = FALSE)
     # 只有連結變了：分數不重算，只用新的連結重新換算（幾乎不花時間）
     shiny::observeEvent(fixed(), {
       if (is.null(result()) || is.null(own())) return()

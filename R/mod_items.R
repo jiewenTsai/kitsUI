@@ -69,7 +69,8 @@ mod_items_ui <- function(id) {
 
 #' @param data mod_data_server() 回傳的 reactive
 #' @param goto function(tab) 切換分頁
-#' @return reactive：kitsui_round() 的結果；還沒校準時是 NULL
+#' @return reactive：kitsui_round() 的結果（$args 是這一次用的設定）；還沒校準、或校準以後
+#'   改了設定還沒重新校準時是 NULL
 #' @noRd
 mod_items_server <- function(id, data, goto) {
   shiny::moduleServer(id, function(input, output, session) {
@@ -142,13 +143,14 @@ mod_items_server <- function(id, data, goto) {
                        shiny::tags$p("怎麼辦：回到「① 資料」，看【停下來】的原因，處理好再回來。")))
         return()
       }
-      choice <- bank_choice()
+      # 這一次用的設定：存進結果（res$args），程式碼與「設定改了」的比較都用它
+      args <- items_args(input$flag_share, input$flag_fixed, bank_choice(), exclude)
       res <- shiny::withProgress(message = "題目校準中…", value = 0, {
         tryCatch(
           suppressMessages(kitsui_round(
-            d$df, d$fixed, d$round_label, flag_share = input$flag_share %||% 0.2,
-            flag_fixed = items_flag_fixed(input$flag_fixed), files = d$files,
-            progress = items_progress, bank_choice = choice, exclude = exclude,
+            d$df, d$fixed, d$round_label, flag_share = args$flag_share,
+            flag_fixed = args$flag_fixed, files = d$files,
+            progress = items_progress, bank_choice = args$bank_choice, exclude = exclude,
             exclude_info = no_info()
           )),
           error = \(e) e
@@ -164,19 +166,39 @@ mod_items_server <- function(id, data, goto) {
       }
       note(NULL)
       used(d)
+      res$args <- args
       round(res)
       seen <- kitsui_no_info_stopped(res)
       if (length(seen) > 0) no_info(c(seen, no_info()[setdiff(names(no_info()), names(seen))]))
     }
     shiny::observeEvent(input$run, run_round(input$exclude))
+    # 現在勾的「這一回合不做」：跟著勾選框；按「這一回合不做 …，再校準一次」時先記下要勾的
+    # （勾選框要等瀏覽器回報才會變，這段時間不算設定改了）
+    exclude_now <- shiny::reactiveVal(NULL)
+    shiny::observeEvent(input$exclude, exclude_now(input$exclude), ignoreNULL = FALSE,
+                        priority = 10)
     # 停下來的量尺改成「這一回合不做」，再校準一次
     shiny::observeEvent(input$skip_stopped, {
       res <- round()
       shiny::req(res, length(res$stopped) > 0)
       skip <- union(input$exclude, items_stopped_data(res))
       shiny::updateCheckboxGroupInput(session, "exclude", selected = skip)
+      exclude_now(skip)
       run_round(skip)
     })
+
+    # 校準以後改了設定（flag 的條件、題庫、這一回合不做）：結果留著給使用者看，但標成
+    # 【要重新執行】；③、④ 拿到 NULL（和資料改了一樣，要重新校準才能往下做）
+    changed <- shiny::reactive({
+      res <- round()
+      if (is.null(res$args)) return(character())
+      now <- items_args(input$flag_share, input$flag_fixed, bank_choice(), exclude_now())
+      items_args_changes(res$args, now)
+    })
+    stale <- shiny::reactive(length(changed()) > 0)
+    # 交給 ③、④ 的結果：reactiveVal 值一樣時不通知，展開進階設定等不會讓 ③、④ 重來
+    current <- shiny::reactiveVal(NULL)
+    shiny::observe(current(if (stale()) NULL else round()))
 
     # 設定摘要：這一回合的世代、波次、參照世代、固定檔（按下去以前就看得到）
     output$settings <- shiny::renderUI(ui_settings_line(kitsui_settings_text(data())))
@@ -186,6 +208,7 @@ mod_items_server <- function(id, data, goto) {
       if (is.null(res)) {
         return(shiny::tags$p(class = "kit-hint", "還沒有校準。按「開始校準」。"))
       }
+      if (stale()) return(items_stale_status(changed()))
       items_status(res, ns("skip_stopped"), checks_all())
     })
 
@@ -358,7 +381,7 @@ mod_items_server <- function(id, data, goto) {
       plan <- round()$plan
       code <- kitsui_code_round(
         x$scale, d$round_label, fixed = d$fixed, fixed_file = d$fixed_file %||% "fixed_set.zip",
-        data_file = d$data_file, waves = d$waves, flag_share = input$flag_share %||% 0.2,
+        data_file = d$data_file, waves = d$waves, flag_share = round()$args$flag_share,
         flag_fixed = round()$flag_fixed[x$scale] %|NA|% 5, plan = plan, picks = d$picks
       ) |>
         kitsui_code_drift_plot()
@@ -374,14 +397,14 @@ mod_items_server <- function(id, data, goto) {
 
     output$next_step <- shiny::renderUI({
       res <- round()
-      if (!isTRUE(res$ok)) return(NULL)
+      if (!isTRUE(res$ok) || stale()) return(NULL)
       done <- if (length(res$items) == 1) "這個量尺校準好了。" else "每個量尺都校準好了。"
       ui_next_step(paste0(done, "下一步是把各世代的分數連到同一把尺上。"), ns("go_link"),
                    "下一步：連結")
     })
     shiny::observeEvent(input$go_link, goto("link"))
 
-    round
+    current
   })
 }
 
@@ -610,6 +633,50 @@ items_excluded_note <- function(excluded, log = NULL) {
 #' @noRd
 items_flag_fixed <- function(x) {
   if (length(x) != 1 || is.na(x) || x < 1) NA else x
+}
+
+#' 一次校準用的設定（存在 kitsui_round() 結果的 $args）
+#'
+#' 和畫面上的輸入比較時要一樣的寫法：題庫依量尺排好，「這一回合不做」排序、沒有時是
+#' character()。
+#' @param flag_share,flag_fixed 輸入框的值（flag_fixed 空白時是 NA）
+#' @param bank_choice 和規則不同的題庫（具名字元向量）或 NULL
+#' @param exclude 這一回合不做的量尺
+#' @noRd
+items_args <- function(flag_share, flag_fixed, bank_choice, exclude) {
+  bank <- if (length(bank_choice) > 0) bank_choice[order(names(bank_choice))]
+  list(flag_share = flag_share %||% 0.2, flag_fixed = items_flag_fixed(flag_fixed),
+       bank_choice = bank, exclude = sort(as.character(exclude %||% character())))
+}
+
+#' 上次校準以後改了哪些設定：每項一句（沒改時是 character()）
+#' @param old,now items_args()
+#' @noRd
+items_args_changes <- function(old, now) {
+  show <- \(x, none) if (length(x) == 0 || all(is.na(x))) none else paste(x, collapse = "、")
+  bank <- \(x) if (length(x) == 0) "照規則" else paste0(names(x), " 用 ", x, collapse = "、")
+  out <- c(
+    flag_share = paste0("偏移題超過已判斷題的比例：", show(old$flag_share, "空白"), " → ",
+                        show(now$flag_share, "空白")),
+    flag_fixed = paste0("可固定的題少於幾題：", show(old$flag_fixed, "空白（依量尺的題數）"),
+                        " → ", show(now$flag_fixed, "空白（依量尺的題數）")),
+    bank_choice = paste0("用哪一個題庫：", bank(old$bank_choice), " → ", bank(now$bank_choice)),
+    exclude = paste0("這一回合不做的量尺：", show(old$exclude, "沒有"), " → ",
+                     show(now$exclude, "沒有"))
+  )
+  same <- vapply(names(out), \(k) identical(old[[k]], now[[k]]), logical(1))
+  unname(out[!same])
+}
+
+#' 改了設定、還沒重新校準時的狀態框：下面的結果是舊設定算的
+#' @param changes items_args_changes()
+#' @noRd
+items_stale_status <- function(changes) {
+  ui_status(
+    "stale", "設定改了，請再按一次「開始校準」。", points = changes,
+    shiny::tags$p(paste0("下面的結果還是用上一次的設定算的。重新校準以前，",
+                         "「③ 連結」和「④ 受試者評分」不會用它。"))
+  )
 }
 
 #' NA 或長度 0 時用 y

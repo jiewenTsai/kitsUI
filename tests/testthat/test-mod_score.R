@@ -483,3 +483,24 @@ test_that("題目表的欄位說明：age50 什麼時候是空的", {
   expect_match(html, "至少兩個波次、通過比例在波次之間跨過 50%")
   expect_match(html, "只有一個波次，或每一波都已經超過（或都還沒到）50% 時是空的。")
 })
+
+test_that("② 沒有結果了（設定或資料改了、還沒重新校準）：舊的分數不留在畫面上，說要重新計算", {
+  r8 <- round8()
+  lk <- linked()
+  it <- shiny::reactiveVal(r8$round)
+  args <- score_args(r8$round, r8$df, lk$fixed)
+  args$items <- it
+  shiny::testServer(mod_score_server, args = args, {
+    session$setInputs(run = 1)
+    expect_false(is.null(session$returned()))
+    it(NULL)
+    session$flushReact()
+    expect_null(session$returned())
+    expect_match(output$status$html, "【要重新執行】")
+    expect_match(output$status$html, "再按一次「開始校準」")
+    it(r8$round)
+    session$flushReact()
+    expect_null(session$returned())
+    expect_match(output$status$html, "請按「計算這一回合的分數」。")
+  })
+})
