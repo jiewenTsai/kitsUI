@@ -65,7 +65,7 @@ test_that("不是 zip 的檔案：說「這不是固定檔（zip）」；zip 少
 })
 
 test_that("固定檔的 VERSION：kitsUI 的版本讀 DESCRIPTION（不是 dev）；第一回合的 Sources 寫進去", {
-  desc <- kitsui_description()
+  desc <- kitDesign::kit_app_description("kitsUI")
   expect_false(is.na(desc$version))
   expect_equal(kitsui_version(), desc$version)
   expect_equal(kitsui_fixed_empty()$version$kitsUI, desc$version)

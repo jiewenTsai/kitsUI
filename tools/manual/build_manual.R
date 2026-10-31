@@ -69,14 +69,13 @@ kit_design_css <- paste(vapply(
                               warn = FALSE), collapse = "\n"),
   character(1)
 ), collapse = "\n")
-# 頁首：kitDesign 的頁首；標誌換成 data URI（獨立網頁沒有 kitDesign 的標誌檔）
-ver <- kitsui_description()
+# 頁首：kitDesign 的頁首；標誌寫進頁面（獨立網頁沒有 kitDesign 的標誌檔）
+ver <- kitDesign::kit_app_description("kitsUI")
 header <- as.character(kitDesign::kit_header(
   "KIT 量尺建構工具", "臺灣幼兒發展調查資料庫", tagline = "使用手冊",
   version = ver$version, date = ver$date,
-  meta_extra = paste("kits", utils::packageVersion("kits"))
+  meta_extra = paste("kits", utils::packageVersion("kits")), logo = "inline"
 ))
-header <- gsub("kitDesign-logo-[^\"/]*/kit-logo\\.svg", kitDesign::kit_logo_uri(192, "logo"), header)
 standalone_css <- paste(
   "body { padding: 1rem 1.5rem 2rem; }",
   ".kit-manual .km-standalone { display: inline; }",

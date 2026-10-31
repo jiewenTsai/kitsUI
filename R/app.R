@@ -38,7 +38,7 @@ kit_open_browser <- function(url) {
 #' @noRd
 kit_ui <- function(request) {
   # 主題、樣式、頁首：kitDesign；版本行是 kitsUI 的版本、日期與 kits 的版本
-  ver <- kitsui_description()
+  ver <- kitDesign::kit_app_description("kitsUI")
   kitDesign::kit_page(
     "KIT 量尺建構工具", "臺灣幼兒發展調查資料庫",
     tagline = "量尺：校準、連結、計分",
@@ -62,23 +62,6 @@ kit_ui <- function(request) {
 
 # kitsUI 自己的幾條樣式（其他都在 kitDesign）：本機版到 kitJoin 的一行說明裡的程式碼
 KITSUI_CSS <- ".kit-kitjoin-local code { font-size: 0.85rem; }"
-
-#' kitsUI 的版本與日期（頁首、固定檔的 VERSION）
-#'
-#' 套件載入時讀套件的 DESCRIPTION；從資料夾跑（雲端版 app.R、本機 run.bat）時讀資料夾裡的
-#' DESCRIPTION，不讀這台電腦另外裝的 kitsUI（版本可能不同）。
-#' @noRd
-kitsui_description <- function() {
-  if ("kitsUI" %in% loadedNamespaces()) return(kitDesign::kit_app_description("kitsUI"))
-  # 測試時工作目錄在 tests/testthat，往上找
-  paths <- c("DESCRIPTION", file.path("..", "DESCRIPTION"), file.path("..", "..", "DESCRIPTION"))
-  for (path in paths[file.exists(paths)]) {
-    if (identical(unname(read.dcf(path, fields = "Package")[1, 1]), "kitsUI")) {
-      return(kitDesign::kit_app_description(path = path))
-    }
-  }
-  list(version = NA_character_, date = NA_character_)
-}
 
 #' 伺服器邏輯：各分頁模組之間只透過 reactive 傳資料
 #' @noRd

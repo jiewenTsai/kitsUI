@@ -68,10 +68,10 @@ kitsui_ref_pick <- function(pick, cohorts) {
   kitsui_ref_default(cohorts)
 }
 
-#' kitsUI 的版本：和頁首一樣讀 DESCRIPTION（kitsui_description()）；找不到時 "dev"
+#' kitsUI 的版本：和頁首一樣讀 DESCRIPTION（kitDesign::kit_app_description("kitsUI")）；找不到時 "dev"
 #' @noRd
 kitsui_version <- function() {
-  v <- kitsui_description()$version
+  v <- kitDesign::kit_app_description("kitsUI")$version
   if (is.null(v) || is.na(v)) "dev" else as.character(v)
 }
 
