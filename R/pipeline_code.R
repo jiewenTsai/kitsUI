@@ -162,8 +162,9 @@ kitsui_code_link <- function(fixed, name, fixed_file = "fixed_set.zip") {
     sprintf("%s <- points[%s] |>", kitsui_link_var(name), kitsui_r(cols)),
     sprintf("  kits_link_screen(cut = %s, spread = %s, unit = %s,", r$cut, kitsui_r(r$spread),
             kitsui_r(r$unit)),
-    sprintf("                   from_scale = %s, to_scale = %s) |>",
-            kitsui_r(kitsui_split_scales(r$from_scale, fixed)), kitsui_r(r$to_scale)),
+    # from_scale、to_scale 各一行：「用 R 怎麼做」每行最多 70 欄
+    sprintf("                   from_scale = %s,", kitsui_r(kitsui_split_scales(r$from_scale, fixed))),
+    sprintf("                   to_scale = %s) |>", kitsui_r(r$to_scale)),
     if (r$n_boot > 0) {
       c("  kits_link_line() |>",
         sprintf("  kits_link_error(n_boot = %d, seed = %d)", r$n_boot, r$seed))

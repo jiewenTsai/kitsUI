@@ -7,21 +7,6 @@ test_that("檢查表沒有提醒時一列「全部通過」；沒有可檢查的
   expect_identical(checks_or_ok(tab), tab)
 })
 
-test_that("說明框、提示框、下一步", {
-  g <- as.character(mod_guide("目的", c("一", "二"), "結果", note = "補充"))
-  expect_match(g, "kit-guide-note")
-  expect_match(g, "<li>二</li>")
-  expect_false(grepl("kit-guide-note", as.character(mod_guide("目的", "一", "結果"))))
-  # 預設收起：只看到「這一頁做什麼」一句，步驟在收起來的內容裡
-  expect_match(g, '^<details class="kit-guide kit-guide-page">')
-  expect_false(grepl("<details[^>]*open", g))
-  expect_match(g, "<summary>\\s*<strong>這一頁做什麼：</strong>\\s*目的")
-  expect_match(g, 'class="kit-guide-body"')
-  expect_match(as.character(ui_callout("x", warning = TRUE)), "kit-callout kit-callout-warn")
-  expect_match(as.character(ui_status("stop", "x")), "alert-danger")
-  expect_match(as.character(ui_next_step("好了", "go", "下一步")), "id=\"go\"")
-})
-
 test_that("下載：檔名可以是函式；表還沒有內容時寫一列說明", {
   expect_equal(download_name("item_lan M03_category"), "item_lan_M03_category")
   expect_equal(download_name(\() "raw table"), "raw_table")
@@ -42,52 +27,16 @@ test_that("表格：整數欄不顯示小數，其他欄小數點 2 位", {
   }, expect_match(output$t, "-1.23"))
 })
 
-test_that("橘色提醒的清單：沒有項目時不顯示", {
-  expect_null(ui_warn_list("請注意", character()))
-  html <- as.character(ui_warn_list("請注意", c("一", "二"), shiny::tags$p("補充")))
-  expect_match(html, "kit-callout-warn")
-  expect_match(html, "<li>二</li>")
-  expect_match(html, "補充")
-})
-
-# WCAG 的對比：相對亮度的比
-contrast <- function(fg, bg) {
-  lum <- function(hex) {
-    x <- grDevices::col2rgb(hex)[, 1] / 255
-    x <- ifelse(x <= 0.03928, x / 12.92, ((x + 0.055) / 1.055)^2.4)
-    sum(c(0.2126, 0.7152, 0.0722) * x)
-  }
-  l <- sort(c(lum(fg), lum(bg)), decreasing = TRUE)
-  (l[1] + 0.05) / (l[2] + 0.05)
-}
-
-# CSS 裡一個選擇器的區塊（selector 後面接 " {"）裡，一個屬性的顏色或值
-css_prop <- function(css, selector, prop) {
-  at <- regexpr(paste0(selector, " {"), css, fixed = TRUE)
-  block <- substr(css, at, at + regexpr("}", substr(css, at, nchar(css)), fixed = TRUE))
-  m <- regmatches(block, regexpr(paste0("(^|[ ;{\n])", prop, ": [^;]+"), block))
-  sub(".*: ", "", m)
-}
-
-test_that("對比 4.5:1 以上：雲端提醒、橘色提醒、頁尾；頁尾字 13px 以上", {
-  css <- as.character(kit_css())
-  banner <- css_prop(css, ".alert.kit-cloud-banner", "background")
-  expect_gte(contrast(css_prop(css, ".alert.kit-cloud-banner", "color"), banner), 4.5)
-  warn_bg <- css_prop(css, ".kit-callout-warning", "background")
-  expect_gte(contrast(css_prop(css, ".kit-callout-warning", "color"), warn_bg), 4.5)
-  expect_match(css, ".kit-callout-warn,\n    .kit-callout-warning {", fixed = TRUE)
-  warn_text <- css_prop(css, ".kit-warn-text", "color")
-  expect_gte(contrast(warn_text, "#ffffff"), 4.5)
-  expect_gte(contrast(warn_text, warn_bg), 4.5)
-  expect_equal(css_prop(css, ".kit-cloud-footer", "font-size"), "13px")
-  expect_gte(contrast(css_prop(css, ".kit-cloud-footer", "color"), kit_colors()$body_bg), 4.5)
-})
-
-test_that("雲端版的提醒用深色字；離開頁面前的提醒（beforeunload）在頁面裡", {
-  expect_match(as.character(kit_cloud_banner()), "kit-cloud-banner")
-  expect_match(as.character(kit_js()), "beforeunload")
-  expect_match(as.character(kit_js()), "kit_unload_guard")
-  expect_match(as.character(htmltools::renderTags(kit_ui(NULL))$head), "kit_unload_guard")
+test_that("頁面用 kitDesign：主題、樣式與小程式（離開前提醒、分頁狀態）、頁首的版本行；雲端版提醒", {
+  html <- htmltools::renderTags(kit_ui(NULL))
+  deps <- vapply(htmltools::resolveDependencies(html$dependencies), \(d) d$name, character(1))
+  expect_true("kitDesign" %in% deps)
+  ver <- kitsui_description()
+  expect_match(html$html, paste0("v", ver$version, " · ", ver$date, " · kits "), fixed = TRUE)
+  expect_match(html$html, 'data-kit-aside="manual"', fixed = TRUE)
+  expect_match(html$head, ".kit-kitjoin-local code", fixed = TRUE)
+  expect_match(as.character(kitsui_cloud_banner()), "kit-cloud-banner")
+  expect_match(as.character(kitsui_cloud_banner()), "#kit-cloud-terms")
 })
 
 test_that("找 pandoc：PATH、RSTUDIO_PANDOC、常見的資料夾；都沒有時 NULL", {
@@ -188,61 +137,6 @@ test_that("畫面用的欄名：beta -> difficulty、thr -> threshold、theta ->
                  "d_score", "d_score_se"))
 })
 
-test_that("圖的類別色：Okabe–Ito 依序取色；同一組同一個顏色，跳過的組不換", {
-  expect_equal(kit_chart_colors(2), c("#0072B2", "#E69F00"))
-  expect_length(kit_chart_colors(8), 8)
-  expect_equal(kit_chart_colors(7)[7], "#0072B2")
-  p <- plotly::plot_ly() |>
-    plotly::add_trace(x = 1:2, y = 1:2, type = "scatter", mode = "lines", name = "model",
-                      line = list(color = "#7F7F7F")) |>
-    plotly::add_trace(x = 1:2, y = 2:3, type = "scatter", mode = "lines+markers", name = "M03") |>
-    plotly::add_trace(x = 1:2, y = 3:4, type = "scatter", mode = "markers", name = "M36")
-  d <- kit_chart_categorical(p, skip = "model")$x$data
-  expect_equal(d[[1]]$line$color, "#7F7F7F")
-  expect_equal(d[[2]]$line$color, "#0072B2")
-  expect_equal(d[[2]]$marker$color, "#0072B2")
-  expect_equal(d[[3]]$marker$color, "#E69F00")
-  expect_equal(KITSUI_DRIFT_LOOKS$moved$col, kit_chart_role("moved"))
-  expect_true(KITSUI_DRIFT_LOOKS$fixed$col %in% kit_chart_colors())
-})
-
-test_that("狀態框只有四種標籤；停下來的框可以放怎麼辦與按鈕", {
-  html <- \(...) as.character(ui_status(...))
-  expect_match(html("done", "好了。"), "alert-success")
-  expect_match(html("done", "好了。"), "<strong>【完成】</strong>\\s*好了。")
-  expect_match(html("warn", "好了。", points = c("一", "二")), "【完成，但請注意】")
-  expect_match(html("warn", "好了。", points = c("一", "二")), "<li>二</li>")
-  expect_match(html("warn", "好了。"), "alert-warning")
-  stop_box <- html("stop", "停了。", shiny::tags$p("怎麼辦：按這裡"), ui_button("skip", "這一回合不做",
-                                                                             "danger"))
-  expect_match(stop_box, "【停下來】")
-  expect_match(stop_box, "alert-danger")
-  expect_match(stop_box, "btn-danger")
-  expect_match(html("stale", "改了。"), "【要重新執行】")
-  expect_error(ui_status("oops", "x"))
-  expect_setequal(purrr::map_chr(KIT_STATUS, "label"),
-                  c("【完成】", "【完成，但請注意】", "【停下來】", "【要重新執行】"))
-  # 按鈕的寫法：主要、次要、危險
-  expect_match(as.character(ui_button("a", "開始", "primary")), "btn-primary")
-  expect_match(as.character(ui_button("a", "全選")), "btn-sm btn-outline-secondary")
-  # 一排細節、進階設定、下一步
-  row <- as.character(ui_details_row(ui_detail("題目參數", "x"), ui_code_panel("code")))
-  expect_match(row, 'class="kit-details"')
-  expect_match(row, "<summary>題目參數</summary>")
-  expect_match(row, "<summary>用 R 怎麼做</summary>")
-  expect_match(row, 'id="code_ui"')
-  expect_false(grepl("open", row))
-  # 打開後的排法和 kitJoin 一樣：版本名稱（粗體）與「複製」同一行（.kit-code-head），下面是程式碼框
-  block <- as.character(ui_code_block("code"))
-  expect_match(block, "以下程式碼依你目前的設定產生，是簡化的示範。")
-  expect_match(block, '<div class="kit-code-head">\\s*<strong>kits 版</strong>\\s*<button')
-  expect_match(block, "navigator.clipboard")
-  expect_match(block, "nextElementSibling")
-  expect_false(grepl("kit-code-copy", block))
-  expect_match(as.character(ui_advanced("x")), "<summary>進階設定</summary>")
-  expect_match(as.character(ui_next_step("好了", "go", "下一步：連結")), "下一步：連結 →")
-})
-
 test_that("設定摘要：世代、波次帶單位、參照世代、固定檔", {
   picks <- data.frame(cohort = c("B82", "B85", "B85"), wave_m = c(2009, 2009, 2011))
   fx <- kitsui_fixed_empty("B85")
@@ -254,7 +148,7 @@ test_that("設定摘要：世代、波次帶單位、參照世代、固定檔", 
   d <- list(picks = picks, fixed = fx, round_label = "R2", fixed_file = "kitsui_fixed_R1.zip")
   expect_match(kitsui_settings_text(d), "固定檔：kitsui_fixed_R1.zip$")
   expect_equal(kitsui_settings_text(NULL), "")
-  expect_null(ui_settings_line(""))
+  expect_null(kitDesign::kit_settings_line(kitsui_settings_text(NULL), prefix = NULL))
 })
 
 test_that("摘要表用中文欄名；kits 的表不換", {
@@ -262,36 +156,6 @@ test_that("摘要表用中文欄名；kits 的表不換", {
                    beta = 1)
   expect_named(kitsui_screen_names(df),
                c("量尺", "列次數", "題數", "波次", "校準方式", "beta"))
-})
-
-test_that("用 R 怎麼做：有程式碼時是版本名稱、複製與程式碼框；沒有時只有一行字", {
-  shiny::testServer(function(input, output, session) {
-    code <- shiny::reactive({
-      shiny::req(input$ok)
-      "library(kits)"
-    })
-    output$code <- shiny::renderText(code())
-    output$code_ui <- render_code_panel(session, "code", code)
-  }, {
-    expect_match(output$code_ui$html, "先選資料，這裡才會有程式碼。")
-    expect_false(grepl("複製", output$code_ui$html))
-    session$setInputs(ok = TRUE)
-    expect_match(output$code_ui$html, "kit-code-head")
-    expect_match(output$code_ui$html, "複製")
-    expect_equal(output$code, "library(kits)")
-  })
-})
-
-test_that("狀態框最多 3 點，其他收在「還有 N 點」；R 的原文收起來", {
-  html <- as.character(ui_status("warn", "好了。", points = paste0("第 ", 1:5, " 點")))
-  expect_match(html, "第 3 點")
-  expect_match(html, '<details class="kit-status-notes">\\s*<summary>還有 2 點</summary>')
-  first <- sub("<details.*$", "", html)
-  expect_false(grepl("第 4 點", first))
-  expect_false(grepl("還有", as.character(ui_status("done", "好了。", points = c("a", "b", "c")))))
-  raw <- as.character(ui_raw_text("missing value where TRUE/FALSE needed", "R 的原文"))
-  expect_match(raw, "<summary>R 的原文</summary>")
-  expect_null(ui_raw_text(""))
 })
 
 test_that("本機版不連到雲端的 kitJoin：一行說明；雲端版是連結加一句說明", {

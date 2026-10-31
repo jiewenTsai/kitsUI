@@ -4,7 +4,7 @@
 mod_data_ui <- function(id) {
   ns <- shiny::NS(id)
   shiny::tagList(
-    mod_guide(
+    kitDesign::kit_tab_guide(
       goal = "選這一回合要校準的資料。第二回合起，再放上一回合下載的固定檔。",
       steps = c(
         "選資料來源：示範資料，或上傳自己的長格式資料（可以一次選好幾個檔案）。",
@@ -32,9 +32,9 @@ mod_data_ui <- function(id) {
                       shiny::textOutput(ns("scale_example"), inline = TRUE), "每個量尺分開校準。"),
         shiny::tags$div(class = "kit-table-scroll", shiny::tableOutput(ns("scales"))),
         shiny::uiOutput(ns("borrowed")),
-        ui_details_row(
-          ui_detail("固定檔的內容", shiny::uiOutput(ns("fixed_info"))),
-          ui_detail(
+        kitDesign::kit_details_row(
+          kitDesign::kit_detail("固定檔的內容", shiny::uiOutput(ns("fixed_info"))),
+          kitDesign::kit_detail(
             "作答設計",
             shiny::tags$p(class = "kit-hint",
                           "每格是一個波次、一題的通過比例（得分達到通過步驟以上；預設 1 分）。",
@@ -44,14 +44,14 @@ mod_data_ui <- function(id) {
             plotly::plotlyOutput(ns("design"), height = "420px"),
             shiny::uiOutput(ns("design_dl"))
           ),
-          ui_detail(
+          kitDesign::kit_detail(
             "預覽",
             shiny::textOutput(ns("preview_meta")),
             shiny::tags$div(class = "kit-table-scroll", shiny::tableOutput(ns("preview"))),
             shiny::tags$div(class = "kit-downloads", ui_download(ns("dl_data")))
           ),
           ui_check_panel(ns("check"), "kits 的檢查（作答設計選的量尺）"),
-          ui_code_panel(ns("code"))
+          kitDesign::kit_code_panel(ns("code"))
         ),
         shiny::uiOutput(ns("next_step"))
       )
@@ -96,8 +96,8 @@ data_choices_ui <- function(ns) {
     shiny::uiOutput(ns("pick_ui")),
     shiny::tags$div(
       class = "d-flex gap-2 mb-1",
-      ui_button(ns("waves_all"), "全選"),
-      ui_button(ns("waves_none"), "全不選")
+      kitDesign::kit_button(ns("waves_all"), "全選"),
+      kitDesign::kit_button(ns("waves_none"), "全不選")
     ),
     shiny::tags$small(class = "kit-hint", shiny::textOutput(ns("wave_hint"), inline = TRUE),
                       "可以一次勾好幾個。", "勾完停 1 秒才開始檢查。"),
@@ -112,7 +112,7 @@ data_choices_ui <- function(ns) {
       "固定檔是上一回合在 ④ 下載的 zip。",
       "有它，舊題的參數就固定不動。"
     ),
-    ui_advanced(
+    kitDesign::kit_advanced(
       shiny::textInput(ns("round_label"), "這一回合的名稱", ""),
       shiny::tags$small(
         class = "kit-hint",
@@ -188,12 +188,12 @@ mod_data_server <- function(id, goto, handover = NULL) {
       up <- upload()
       if (is.null(up$files)) return(NULL)
       # 匯入的結果是一個動作的結果：薄荷的【完成】（和 kitJoin 的上傳相同）
-      ui_status(
+      kitDesign::kit_status_ui(kitDesign::kit_status(
         "done",
-        sprintf("匯入完成：讀進 %s 個檔案，共 %s 列。", kit_num(nrow(up$files)),
-                kit_num(sum(up$files$rows))),
-        points = sprintf("%s（%s 列）", up$files$file, kit_num(up$files$rows))
-      )
+        sprintf("匯入完成：讀進 %s 個檔案，共 %s 列。", kitDesign::kit_num(nrow(up$files)),
+                kitDesign::kit_num(sum(up$files$rows))),
+        points = sprintf("%s（%s 列）", up$files$file, kitDesign::kit_num(up$files$rows))
+      ))
     })
     output$dl_example_ui <- render_download_csv(
       session, "dl_example", "下載欄位範例檔（CSV）", kitsui_example_data, "kitsui_example"
@@ -270,12 +270,14 @@ mod_data_server <- function(id, goto, handover = NULL) {
                "。")
       }
       force <- if (isTRUE(fixed_modified())) {
-        shiny::tags$p(ui_button(ns("fixed_force"), "仍然使用這個固定檔（我知道它被改過）", "danger"))
+        shiny::tags$p(kitDesign::kit_button(ns("fixed_force"), "仍然使用這個固定檔（我知道它被改過）", "danger"))
       }
-      ui_status("stop", "固定檔讀不進來。", shiny::tags$p(kitsui_error_ui(e)), shiny::tags$p(keep),
-                shiny::tags$p("怎麼辦：重新選上一回合在「④ 受試者評分」下載的 zip；",
-                              "第一回合不用固定檔。"),
-                force)
+      kitDesign::kit_status_ui(
+        kitDesign::kit_status("stop", "固定檔讀不進來。"),
+        shiny::tags$p(kitsui_error_ui(e)), shiny::tags$p(keep),
+        shiny::tags$p("怎麼辦：重新選上一回合在「④ 受試者評分」下載的 zip；", "第一回合不用固定檔。"),
+        force
+      )
     })
 
     # ④ 交過來的固定檔：不用上傳；世代與波次清空，等使用者勾新的
@@ -376,7 +378,7 @@ mod_data_server <- function(id, goto, handover = NULL) {
       if (length(p) == 0) return(NULL)
       # 上傳的檔案沒通過：提示可以到 kitJoin 轉
       to_kitjoin <- is_upload() && !is.null(input$file) && length(data_p) > 0
-      ui_status("stop", "資料還不能用。",
+      kitDesign::kit_status_ui(kitDesign::kit_status("stop", "資料還不能用。"),
                 shiny::tags$ul(lapply(p, \(x) shiny::tags$li(kitsui_error_ui(x)))),
                 shiny::tags$p("怎麼辦：照上面的原因改左邊的設定，或改好資料檔再上傳。"),
                 if (to_kitjoin) ui_kitjoin_hint(hint_class = "mb-0"))
@@ -384,8 +386,8 @@ mod_data_server <- function(id, goto, handover = NULL) {
     output$hint <- shiny::renderUI({
       h <- checked()$hint
       if (is.null(h)) return(NULL)
-      ui_callout(shiny::tags$strong(h), "左邊第 2 步，一個世代一列，數字是",
-                 data_wave_meaning(kitsui_wave_unit(fixed())), "。")
+      kitDesign::kit_callout(shiny::tags$strong(h), "左邊第 2 步，一個世代一列，數字是",
+                             data_wave_meaning(kitsui_wave_unit(fixed())), "。")
     })
 
     # 要注意（黃色的提醒）：波次已經校準過、固定檔不是最新的一回合、資料檔之前用過、
@@ -410,7 +412,10 @@ mod_data_server <- function(id, goto, handover = NULL) {
     # 資料可以用時，要注意的事都放進狀態框（一個黃框）；資料還不能用時才另外放黃框
     output$notes <- shiny::renderUI({
       if (!is.null(result())) return(NULL)
-      ui_warn_list("要注意", notes())
+      n <- notes()
+      if (length(n) == 0) return(NULL)
+      kitDesign::kit_callout(shiny::tags$strong("要注意"), shiny::tags$ul(lapply(n, shiny::tags$li)),
+                             warn = TRUE)
     })
     # 得分不完整的題（沒有 0 分、中間少了分數、只有一種分數）
     categories <- shiny::reactive({
@@ -441,10 +446,12 @@ mod_data_server <- function(id, goto, handover = NULL) {
       } else {
         "資料沒問題。下一步是校準。"
       }
-      ui_next_step(text, ns("go_items"), "下一步：題目校準")
+      kitDesign::kit_next_step(text, ns("go_items"), "下一步：題目校準")
     })
     # 設定摘要與狀態框：資料可以用時【完成】；有要注意的事時【完成，但請注意】
-    output$settings <- shiny::renderUI(ui_settings_line(kitsui_settings_text(result())))
+    output$settings <- shiny::renderUI(
+      kitDesign::kit_settings_line(kitsui_settings_text(result()), prefix = NULL)
+    )
     output$data_status <- shiny::renderUI({
       r <- result()
       if (is.null(r)) return(NULL)
@@ -498,7 +505,8 @@ mod_data_server <- function(id, goto, handover = NULL) {
       )))
       # 通過比例照固定檔的通過步驟（示範資料、沒有固定檔時每題都是 1）
       p <- plot(kitsui_resp_pass(r, kitsui_steps_vec(fixed()$pass_steps)))
-      kit_chart_zh(kitsui_wave_axis(p, kitsui_wave_unit(fixed())))
+      # 圖的字照 kits 的英文；最後套上 KIT 的樣子（kitDesign::kit_plotly_style()）
+      kitDesign::kit_plotly_style(kitsui_wave_axis(p, kitsui_wave_unit(fixed())))
     })
     output$design <- plotly::renderPlotly(design_plot())
     output$design_steps <- shiny::renderUI(data_steps_note(fixed()$pass_steps))
@@ -515,7 +523,7 @@ mod_data_server <- function(id, goto, handover = NULL) {
     output$preview_meta <- shiny::renderText({
       df <- checked()$df
       shiny::req(df)
-      sprintf("這一回合共 %s 列作答，以下前 %d 列。完整的請下載。", kit_num(nrow(df)),
+      sprintf("這一回合共 %s 列作答，以下前 %d 列。完整的請下載。", kitDesign::kit_num(nrow(df)),
               KIT_PREVIEW_ROWS)
     })
     output$preview <- kit_table({
@@ -548,8 +556,8 @@ mod_data_server <- function(id, goto, handover = NULL) {
       kitsui_code_data(s, upload_name, sort(unique(ck$picks$wave_m)), picks = ck$picks,
                        steps = steps)
     })
-    output$code <- shiny::renderText(kit_code_wrap(code_text()))
-    output$code_ui <- render_code_panel(session, "code", code_text)
+    # 用 R 怎麼做：打開時才算；每行最多 70 欄（kitDesign::kit_code()）
+    output$code <- kitDesign::kit_render_code_panel(\() list("kits 版" = code_text()))
 
     result
   })
@@ -572,9 +580,11 @@ data_status_ui <- function(r, notes = character(), categories = NULL, integrity 
   n_bad <- NROW(groups)
   line <- if (n_bad > 0) {
     sprintf("資料讀好了：%s 個量尺、%s 列作答；其中 %s 個量尺的題目沒有連在一起，② 校準時會停下來。",
-            kit_num(nrow(r$scales)), kit_num(nrow(r$df)), kit_num(n_bad))
+            kitDesign::kit_num(nrow(r$scales)), kitDesign::kit_num(nrow(r$df)),
+            kitDesign::kit_num(n_bad))
   } else {
-    sprintf("資料可以用：%s 個量尺、%s 列作答。", kit_num(nrow(r$scales)), kit_num(nrow(r$df)))
+    sprintf("資料可以用：%s 個量尺、%s 列作答。", kitDesign::kit_num(nrow(r$scales)),
+            kitDesign::kit_num(nrow(r$df)))
   }
   unit <- kitsui_wave_unit(r$fixed)
   cat_items <- kitsui_note_categories(categories, n = Inf)
@@ -586,12 +596,12 @@ data_status_ui <- function(r, notes = character(), categories = NULL, integrity 
     notes,
     if (length(cat_items) > 0) {
       c(sprintf("有 %s 題的得分不完整（沒有 0 分、中間少了分數，或只有一種分數），② 會照規則處理：",
-                kit_num(NROW(categories))), cat_items)
+                kitDesign::kit_num(NROW(categories))), cat_items)
     }
   )
-  if (length(points) == 0) return(ui_status("done", line))
-  ui_status(
-    "warn", line, points = points,
+  if (length(points) == 0) return(kitDesign::kit_status_ui(kitDesign::kit_status("done", line)))
+  kitDesign::kit_status_ui(kitDesign::kit_status(
+    "warn", line, points = points),
     if (n_bad > 0) {
       shiny::tags$p(
         class = "kit-status-action",
@@ -660,15 +670,19 @@ data_steps_note <- function(pass_steps) {
 #' @noRd
 data_category_note <- function(problems) {
   items <- kitsui_note_categories(problems)
-  ui_warn_list(
-    sprintf("有 %d 題的得分不完整（沒有 0 分、中間少了分數，或只有一種分數）", NROW(problems)),
-    items,
+  if (length(items) == 0) return(NULL)
+  kitDesign::kit_callout(
+    shiny::tags$strong(sprintf(
+      "有 %d 題的得分不完整（沒有 0 分、中間少了分數，或只有一種分數）", NROW(problems)
+    )),
+    shiny::tags$ul(lapply(items, shiny::tags$li)),
     shiny::tags$p("② 校準時，題庫裡有這一題，就固定在題庫的值。",
                   "題庫裡沒有這一題，這一回合先不估它。"),
     shiny::tags$p("作答的分數不會被改動。",
                   paste0("要平移或合併分數，可以在 kitJoin「", KITJOIN_KITS_TAB,
                          "」的題目設定改好再上傳。"),
-                  ui_kitjoin_button())
+                  ui_kitjoin_button()),
+    warn = TRUE
   )
 }
 
@@ -713,8 +727,8 @@ data_borrowed_note <- function(plan, fixed) {
       sprintf("分數經 %s 換算。", paste(c(scale, route), collapse = " → "))
     )
   })
-  ui_callout(shiny::tags$strong("借用另一世代題庫"), shiny::tags$ul(li),
-             shiny::tags$p("在 ② 題目校準可以改用別的題庫。"))
+  kitDesign::kit_callout(shiny::tags$strong("借用另一世代題庫"), shiny::tags$ul(li),
+                         shiny::tags$p("在 ② 題目校準可以改用別的題庫。"))
 }
 
 #' 參照世代：第一回合（沒有固定檔）選一個，寫進固定檔；有固定檔時只顯示固定檔裡的
@@ -795,14 +809,14 @@ data_fixed_summary <- function(fixed, name, integrity = NULL) {
 data_fixed_choice_ui <- function(ns, round) {
   if (!is.null(round)) {
     return(shiny::tagList(
-      ui_callout(shiny::tags$strong(paste0("上一回合的固定檔：來自這次連線的第 ", round, " 回合"))),
-      ui_button(ns("fixed_clear"), "改用上傳的固定檔，或不用")
+      kitDesign::kit_callout(shiny::tags$strong(paste0("上一回合的固定檔：來自這次連線的第 ", round, " 回合"))),
+      kitDesign::kit_button(ns("fixed_clear"), "改用上傳的固定檔，或不用")
     ))
   }
   shiny::tagList(
     shiny::fileInput(ns("fixed_file"), NULL, accept = ".zip", buttonLabel = "選擇 zip…",
                      placeholder = "沒有（第一回合）"),
-    ui_button(ns("fixed_clear"), "不用固定檔")
+    kitDesign::kit_button(ns("fixed_clear"), "不用固定檔")
   )
 }
 

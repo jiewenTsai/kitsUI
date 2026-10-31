@@ -83,7 +83,7 @@ test_that("分數表有 visit_id、subj_id、round、bank、ability、ability_se
     expect_match(output$subj_table_dl_ui$html, "下載對照表（CSV）")
 
     # R 程式：從新的固定檔（真的檔名）重建連結，對照表直接換算
-    code <- output$code
+    code <- code_of(output$code)
     expect_match(code, "kits_convert\\(scores, link_lan_M36, link_D\\)")
     expect_match(code, "kits_convert\\(raw_table, link_lan_M36, link_D\\)")
     expect_match(code, 'unzip\\("kitsui_fixed_r8.zip"')
@@ -216,7 +216,7 @@ test_that("連結的模組還沒有回傳時，用題目校準的固定檔（沒
     expect_true(all(c("ability", "ability_se") %in% names(s)))
     session$setInputs(subj_scale = "lan M36")
     # 沒有連結：R 程式不讀固定檔，也不出錯
-    expect_false(grepl("unzip", output$code))
+    expect_false(grepl("unzip", code_of(output$code)))
   })
 })
 
@@ -334,10 +334,10 @@ test_that("通過步驟：選兩題套用 2，題目表、R 程式、固定檔�
                  co$thr[co$item_id == "lanb08" & co$item_score == 2])
     expect_false(isTRUE(all.equal(item_obj()$D, before$D)))
     # R 程式
-    expect_match(output$code, "lanb08 = 2")
-    expect_match(output$code, "lanc02 = 2")
-    # 畫面上的程式碼每行最多 70 欄（kit_code_wrap()），逗號後面可能換行
-    expect_match(output$code, "kits_item_table\\(item, data = cbind\\(ages, X\\),\\s+step = steps\\)")
+    expect_match(code_of(output$code), "lanb08 = 2")
+    expect_match(code_of(output$code), "lanc02 = 2")
+    # 畫面上的程式碼每行最多 70 欄（kitDesign::kit_code()），逗號後面可能換行
+    expect_match(code_of(output$code), "kits_item_table\\(item, data = cbind\\(ages, X\\),\\s+step = steps\\)")
     # 新的固定檔與交給下一回合的固定檔
     back <- kitsui_read_fixed(kit_test_dl_file(output, session, "fixed_dl"))
     expect_equal(back$pass_steps$item_id, c("lanb08", "lanc02"))
@@ -405,7 +405,7 @@ test_that("通過步驟：每一列改回 1、全部改回 1；最後固定檔�
     expect_match(output$steps_table$html, "目前每一題都是 1。")
     expect_false("step" %in% names(item_table()))
     expect_equal(item_obj()$D, before$D)
-    expect_false(grepl("step = steps", output$code))
+    expect_false(grepl("step = steps", code_of(output$code)))
     expect_identical(fixed_out(), lk$fixed)
   })
 })

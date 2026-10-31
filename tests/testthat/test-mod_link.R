@@ -66,10 +66,10 @@ test_that("內部連結與外部連結各做一次，回傳加上連結的固定
     expect_match(output$d_checks, "link_D")
     expect_false(grepl("object 1", output$d_checks))
     expect_match(output$d_result$html, "外部連結的檢查")
-    expect_match(output$code, "kits_link_screen")
+    expect_match(code_of(output$code), "kits_link_screen")
     # R 程式讀真的固定檔檔名（這一回合做的連結在 ④ 下載的新固定檔）
-    expect_match(output$code, "kitsui_fixed_r8.zip")
-    expect_false(grepl("fixed_set.zip", output$code))
+    expect_match(code_of(output$code), "kitsui_fixed_r8.zip")
+    expect_false(grepl("fixed_set.zip", code_of(output$code)))
     expect_match(output$links_table, "這一回合")
     # kitsUI 整理的摘要表：中文欄名；連結的係數維持 intercept、slope
     expect_match(output$links_table, "> 回合 </th")
@@ -95,9 +95,9 @@ test_that("內部連結與外部連結各做一次，回傳加上連結的固定
     # 檢查只看這一回合兩個世代的比較：只有一個世代時不放進檢查
     expect_null(vertical_now())
     # R 程式：讀新固定檔的 wave_summary.csv，照連結換到 D
-    expect_match(output$code, 'unzip\\("kitsui_fixed_r8.zip"')
-    expect_match(output$code, "wave_summary.csv")
-    expect_match(output$code, "`lan M36` = list\\(link_lan_M36, link_D\\)")
+    expect_match(code_of(output$code), 'unzip\\("kitsui_fixed_r8.zip"')
+    expect_match(code_of(output$code), "wave_summary.csv")
+    expect_match(code_of(output$code), "`lan M36` = list\\(link_lan_M36, link_D\\)")
   })
 })
 
@@ -155,7 +155,7 @@ test_that("固定檔裡已有的連結：凍結、沿用，不給建立的按鈕
     expect_match(output$internal_status$html, "這一回合開始時的固定檔")
     expect_false(grepl("上傳", output$internal_status$html))
     # 之前的回合做的連結：R 程式讀上傳的固定檔
-    expect_match(output$code, 'unzip\\("kitsui_fixed_r7.zip"')
+    expect_match(code_of(output$code), 'unzip\\("kitsui_fixed_r7.zip"')
     expect_false(grepl("make_internal", output$internal_status$html))
     expect_equal(d_state()$state, "frozen")
     expect_identical(session$returned()$fixed, lk$fixed)
@@ -203,9 +203,9 @@ test_that("兩個世代都在這一回合時可以做獨立檢核；下載連結
     expect_match(body, "內部連結後：lan M36 換到 lan M03")
     expect_match(body, "還沒有外部連結")
     expect_true(file.exists(kit_test_dl_file(output, session, "vertical_internal_dl")))
-    expect_match(output$code, "v_none <- kits_vertical\\(raw\\)")
-    expect_match(output$code, "v_internal <- kits_vertical")
-    expect_false(grepl("v_external", output$code))
+    expect_match(code_of(output$code), "v_none <- kits_vertical\\(raw\\)")
+    expect_match(code_of(output$code), "v_internal <- kits_vertical")
+    expect_false(grepl("v_external", code_of(output$code)))
     expect_match(output$internal_result$html, "做獨立檢核")
     # 不是每次都要做：收在預設收起來的 details 裡
     expect_match(output$internal_result$html, "<details class=\"kit-detail\">", fixed = TRUE)

@@ -102,11 +102,11 @@ kitsui_demo <- function(cohorts = c("M03", "M36"), waves = NULL, domains = c("la
 kitsui_check_data <- function(df) {
   miss <- setdiff(c("domain", "cohort"), names(df))
   if (length(miss) > 0) {
-    kit_abort("資料缺少 ", paste(miss, collapse = "、"), " 欄位。請加上後再上傳。")
+    kitDesign::kit_abort("資料缺少 ", paste(miss, collapse = "、"), " 欄位。請加上後再上傳。")
   }
   blank <- \(x) anyNA(x) || any(!nzchar(trimws(x)))
   if (blank(df$domain) || blank(df$cohort)) {
-    kit_abort("domain 或 cohort 有空白。每一列都要填領域與世代。")
+    kitDesign::kit_abort("domain 或 cohort 有空白。每一列都要填領域與世代。")
   }
   invisible(df)
 }
@@ -206,8 +206,8 @@ kitsui_check_ids <- function(df) {
   ids <- dplyr::distinct(df, .data$visit_id, .data$cohort)
   dup <- ids$visit_id[duplicated(ids$visit_id)]
   if (length(dup) > 0) {
-    kit_abort("兩個世代有相同的 visit_id（例如 ", dup[1], "），不能放進同一個作答矩陣。",
-              "請讓每個列次的 visit_id 都不一樣，例如前面加上世代。")
+    kitDesign::kit_abort("兩個世代有相同的 visit_id（例如 ", dup[1], "），不能放進同一個作答矩陣。",
+                         "請讓每個列次的 visit_id 都不一樣，例如前面加上世代。")
   }
   invisible(df)
 }
@@ -497,7 +497,7 @@ kitsui_note_groups <- function(groups, unit = "months") {
                                    collapse = "、")
     })
     shown <- if (length(each) > 4) c(each[1:4], "…") else each
-    paste0(s, "：這個量尺的題目分成 ", kit_num(length(gs)), " 組（", paste(shown, collapse = "；"),
+    paste0(s, "：這個量尺的題目分成 ", kitDesign::kit_num(length(gs)), " 組（", paste(shown, collapse = "；"),
            "），各組之間沒有共同題，不能放在同一把尺上。")
   })
 }
@@ -581,7 +581,7 @@ kitsui_quick_check <- function(df) {
 #' @return list(data, files, dropped)：files 是 tibble（file、rows、md5）；dropped 是拿掉的欄
 #' @noRd
 kitsui_read_uploads <- function(files, progress = NULL) {
-  if (is.null(files) || nrow(files) == 0) kit_abort("請選擇資料檔（CSV、CSV.GZ 或 SAV）。")
+  if (is.null(files) || nrow(files) == 0) kitDesign::kit_abort("請選擇資料檔（CSV、CSV.GZ 或 SAV）。")
   n <- nrow(files)
   # 用 for：purrr 會把錯誤包起來，使用者就看不到原來的中文訊息
   datas <- vector("list", n)
@@ -603,15 +603,15 @@ kitsui_read_uploads <- function(files, progress = NULL) {
 kitsui_read_upload <- function(path, name) {
   r <- suppressWarnings(read_data_file(path, name, col_types = KITSUI_TYPES))
   if (ncol(r$data) == 0 || nrow(r$data) == 0) {
-    kit_abort(name, if (ncol(r$data) == 0) " 是空的檔案" else " 只有欄名，沒有作答的列",
-              "。請確認匯出的檔案有資料再上傳。")
+    kitDesign::kit_abort(name, if (ncol(r$data) == 0) " 是空的檔案" else " 只有欄名，沒有作答的列",
+                         "。請確認匯出的檔案有資料再上傳。")
   }
   if (r$n_problems > 0) {
     p <- r$problems[1, ]
-    kit_abort(name, " 有 ", r$n_problems, " 個值讀不懂。",
-              "例如第 ", p$row, " 列的 ", names(r$data)[p$col], " 是「", p$actual, "」，",
-              "應該是", if (grepl("double|number", p$expected)) "數字" else p$expected, "。",
-              "請修正後再上傳。")
+    kitDesign::kit_abort(name, " 有 ", r$n_problems, " 個值讀不懂。",
+                         "例如第 ", p$row, " 列的 ", names(r$data)[p$col], " 是「", p$actual, "」，",
+                         "應該是", if (grepl("double|number", p$expected)) "數字" else p$expected, "。",
+                         "請修正後再上傳。")
   }
   # 約定以外的欄拿掉（記在 attr(, "dropped")）；缺約定的欄時留著，① 才說得出缺什麼
   data <- r$data
@@ -640,18 +640,18 @@ kitsui_same_columns <- function(datas) {
     miss <- setdiff(names(ref), names(d))
     extra <- setdiff(names(d), names(ref))
     if (length(miss) + length(extra) > 0) {
-      kit_abort("檔案 ", name, " 的欄位和 ", first, " 不一樣。",
-                if (length(miss) > 0) paste0("少了：", paste(miss, collapse = "、"), "。"),
-                if (length(extra) > 0) paste0("多了：", paste(extra, collapse = "、"), "。"),
-                "每個檔案的欄位要一樣。")
+      kitDesign::kit_abort("檔案 ", name, " 的欄位和 ", first, " 不一樣。",
+                           if (length(miss) > 0) paste0("少了：", paste(miss, collapse = "、"), "。"),
+                           if (length(extra) > 0) paste0("多了：", paste(extra, collapse = "、"), "。"),
+                           "每個檔案的欄位要一樣。")
     }
     a <- purrr::map_chr(ref, kind)
     b <- purrr::map_chr(d[names(ref)], kind)
     bad <- which(a != b)
     if (length(bad) > 0) {
       col <- names(ref)[bad[1]]
-      kit_abort("檔案 ", name, " 的 ", col, " 欄是", b[[bad[1]]], "，", first, " 的是",
-                a[[bad[1]]], "。每個檔案同一欄的型別要一樣。")
+      kitDesign::kit_abort("檔案 ", name, " 的 ", col, " 欄是", b[[bad[1]]], "，", first, " 的是",
+                           a[[bad[1]]], "。每個檔案同一欄的型別要一樣。")
     }
   }
   invisible(datas)

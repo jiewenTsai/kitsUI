@@ -19,8 +19,8 @@ kitsui_link_internal <- function(fixed, domain, cohort = NULL, n_boot = 2000, se
       return(list(fixed = fixed, link = NULL, new = FALSE, message = text))
     }
     if (length(cohort) > 1) {
-      kit_abort(domain, " 有好幾個世代可以做內部連結（", paste(cohort, collapse = "、"), "），",
-                "請指定是哪一個世代。")
+      kitDesign::kit_abort(domain, " 有好幾個世代可以做內部連結（", paste(cohort, collapse = "、"), "），",
+                           "請指定是哪一個世代。")
     }
   }
   from <- scale_key(domain, cohort)
@@ -55,7 +55,7 @@ kitsui_bank_thr <- function(fixed, scale) {
   b <- fixed$bank |>
     dplyr::filter(.data$scale == !!scale) |>
     dplyr::arrange(.data$item_id, .data$item_score)
-  if (nrow(b) == 0) kit_abort("固定檔裡沒有 ", scale, " 的題目參數，請先做這個量尺的題目校準。")
+  if (nrow(b) == 0) kitDesign::kit_abort("固定檔裡沒有 ", scale, " 的題目參數，請先做這個量尺的題目校準。")
   coef <- data.frame(item_id = b$item_id, item_score = b$item_score, beta = b$beta, se = b$beta_se)
   thr <- kits::algo_thresholds(list(coef = coef, vcov = diag(b$beta_se^2, nrow(b))))
   structure(thr, scale = scale)
@@ -245,13 +245,14 @@ kitsui_internal_summary <- function(fixed, ov) {
   if (NROW(ov) == 0) return("")
   words <- c("已凍結", "可以建立", "還不能做（題庫缺一邊）")
   n <- purrr::map_int(words, \(w) sum(ov$state == w))
-  parts <- paste0(c("已凍結 ", "可以建立 ", "還不能做 "), kit_num(n), " 條")[n > 0]
+  parts <- paste0(c("已凍結 ", "可以建立 ", "還不能做 "), kitDesign::kit_num(n), " 條")[n > 0]
   miss <- ov[ov$state == words[3], ]
   why <- if (nrow(miss) > 0) {
     lack <- unique(setdiff(c(miss$from, miss$to), fixed$bank$scale))
     paste0("（題庫裡還沒有 ", kitsui_first(lack, 6), " 的題目參數，兩邊都校準過才能建立）")
   }
-  paste0("內部連結共 ", kit_num(nrow(ov)), " 條：", paste(parts, collapse = "、"), why %||% "", "。")
+  paste0("內部連結共 ", kitDesign::kit_num(nrow(ov)), " 條：", paste(parts, collapse = "、"),
+         why %||% "", "。")
 }
 
 #' 參照世代，與題庫裡（含這一回合的量尺）其他的世代

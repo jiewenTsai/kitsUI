@@ -4,7 +4,7 @@
 #'
 #' CSV 自動判斷編碼（UTF-8 → CP950/BIG5；兩種都不是時停下來）；SAV 保留變項與數值標籤。
 #' 壓縮過的 CSV（.csv.gz）由 readr 直接讀。
-#' 讀不了的檔案會以白話中文錯誤訊息 kit_abort()，由呼叫端顯示給使用者。
+#' 讀不了的檔案會以白話中文錯誤訊息 kitDesign::kit_abort()，由呼叫端顯示給使用者。
 #'
 #' @param path 檔案路徑
 #' @param name 原始檔名（用來判斷副檔名）
@@ -25,7 +25,7 @@ read_data_file <- function(path, name, col_types = NULL) {
     data <- tryCatch(
       haven::read_sav(path),
       error = function(e) {
-        kit_abort(
+        kitDesign::kit_abort(
           "無法讀取 ", name, "：檔案可能已損壞，或不是 SPSS 檔。",
           "請用 SPSS 開啟確認後重新存檔再上傳。"
         )
@@ -38,7 +38,7 @@ read_data_file <- function(path, name, col_types = NULL) {
       problems = NULL
     ))
   }
-  kit_abort(
+  kitDesign::kit_abort(
     "無法讀取 ", name, "：目前只支援 CSV、壓縮過的 CSV（.csv.gz）與 SPSS（.sav）檔。",
     if (ext %in% c("xlsx", "xls")) {
       "Excel 檔請先在 Excel 用「另存新檔 → CSV UTF-8（逗號分隔）」存成 CSV 再上傳。"
@@ -191,7 +191,7 @@ read_csv_auto <- function(path, col_types = NULL) {
     df <- tryCatch(try_enc("CP950"), error = function(e) NULL)
     if (!is.null(df) && is_valid_utf8_df(df)) return(csv_result(df, "BIG5"))
   }
-  kit_abort(
+  kitDesign::kit_abort(
     "無法讀取這個 CSV 檔：它的編碼不是 UTF-8，也不是繁體中文的 Big5（CP950），",
     "可能是 Latin-1、簡體中文（GBK）或日文（Shift-JIS）的檔案，或不是文字格式的 CSV。",
     "請用 Excel 開啟，另存為「CSV UTF-8（逗號分隔）」再上傳。"

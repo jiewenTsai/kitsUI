@@ -1,6 +1,7 @@
 # 步驟分頁的進度（KIT 設計語言 3.2、4.2）：這一回合做完的步驟打 ✓；還不能做的步驟灰色，
 # 滑過時說明原因（仍然可以按，進去會看到怎麼辦）。結果過期時（資料改了、重新校準）✓ 拿掉。
-# 狀態在伺服器算（kit_tab_states()），用 kit_tab_state 訊息送到瀏覽器（kit_tabs_js()）。
+# 規則是 kitsUI 自己的（kitsui_tab_states()）；送到瀏覽器交給 kitDesign 的
+# kit_tab_states() 與 kit_watch_tab_states()（kitsui_tab_send()）。
 
 # 步驟分頁（tabsetPanel 的 value）
 KIT_STEP_TABS <- c("data", "items", "link", "score")
@@ -18,7 +19,7 @@ KIT_STEP_TABS <- c("data", "items", "link", "score")
 #' @param score ④ 的結果（kitsui_score()）或 NULL
 #' @return data.frame：tab、state（"done"、"ready"、"locked"）、why（不能做的原因，其他是 ""）
 #' @noRd
-kit_tab_states <- function(data_ok, items = NULL, link_done = FALSE, score = NULL) {
+kitsui_tab_states <- function(data_ok, items = NULL, link_done = FALSE, score = NULL) {
   no_items <- is.null(items)
   items_done <- isTRUE(items$ok)
   # ② 的結果裡沒有一個量尺校準好（全部停下來）：④ 沒有東西可以評分
@@ -39,53 +40,15 @@ kit_tab_states <- function(data_ok, items = NULL, link_done = FALSE, score = NUL
              why = unname(why[KIT_STEP_TABS]))
 }
 
-#' 送給瀏覽器的訊息：每個分頁一個 list(tab, state, why)
+#' 送給瀏覽器的分頁狀態（kitDesign::kit_tab_states()）：做完 ✓、還不能做（滑過時是原因）
+#' @param states kitsui_tab_states()
 #' @noRd
-kit_tab_message <- function(states) {
-  lapply(seq_len(nrow(states)), \(i) as.list(states[i, ]))
-}
-
-#' 步驟分頁的進度與收合區塊（kit_tabs_js()）
-#'
-#' - kit_tab_state：在 #tabs 的分頁上加 .kit-tab-done（多一個 ✓）或 .kit-tab-locked（灰色，
-#'   title 是原因）。
-#' - 收合區塊（<details>）打開時，通知 Shiny 裡面的輸出看得到了（才會畫），並讓圖重新量大小。
-#' @noRd
-kit_tabs_js <- function() {
-  shiny::HTML("
-    (function() {
-      $(document).on('shiny:connected', function() {
-        Shiny.addCustomMessageHandler('kit_tab_state', function(tabs) {
-          tabs.forEach(function(t) {
-            var a = document.querySelector('#tabs a[data-value=\"' + t.tab + '\"]');
-            if (!a) return;
-            a.classList.toggle('kit-tab-done', t.state === 'done');
-            a.classList.toggle('kit-tab-locked', t.state === 'locked');
-            var mark = a.querySelector('.kit-tab-mark');
-            if (t.state === 'done' && !mark) {
-              mark = document.createElement('span');
-              mark.className = 'kit-tab-mark';
-              mark.setAttribute('aria-label', '做完了');
-              mark.textContent = '✓';
-              a.appendChild(mark);
-            }
-            if (t.state !== 'done' && mark) mark.remove();
-            if (t.why) {
-              a.setAttribute('title', t.why);
-              a.setAttribute('aria-description', t.why);
-            } else {
-              a.removeAttribute('title');
-              a.removeAttribute('aria-description');
-            }
-          });
-        });
-      });
-      document.addEventListener('toggle', function(e) {
-        var d = e.target;
-        if (!d || d.tagName !== 'DETAILS' || !d.open) return;
-        $(d).trigger('shown');
-        window.dispatchEvent(new Event('resize'));
-      }, true);
-    })();
-  ")
+kitsui_tab_send <- function(states) {
+  locked <- states$state == "locked"
+  kitDesign::kit_tab_states(
+    stats::setNames(states$state, states$tab),
+    locked = states$tab[locked],
+    locked_tips = stats::setNames(states$why, states$tab)[locked],
+    tabset = "tabs"
+  )
 }

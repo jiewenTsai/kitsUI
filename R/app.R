@@ -37,17 +37,19 @@ kit_open_browser <- function(url) {
 #' 頁面（每次連線時產生，雲端判斷才會反映目前環境）
 #' @noRd
 kit_ui <- function(request) {
-  bslib::page_fluid(
-    lang = "zh-Hant-TW",
-    theme = kit_theme(),
-    title = "KIT 量尺建構工具",
-    shiny::tags$head(shiny::tags$style(kit_css()), shiny::tags$script(kit_js()),
-                     shiny::tags$script(kit_tabs_js())),
-    kit_header(),
-    if (kit_is_cloud()) kit_cloud_banner(),
+  # 主題、樣式、頁首：kitDesign；版本行是 kitsUI 的版本、日期與 kits 的版本
+  ver <- kitsui_description()
+  kitDesign::kit_page(
+    "KIT 量尺建構工具", "臺灣幼兒發展調查資料庫",
+    tagline = "量尺：校準、連結、計分",
+    version = ver$version, date = ver$date,
+    meta_extra = paste("kits", utils::packageVersion("kits")),
+    shiny::tags$head(shiny::tags$style(KITSUI_CSS)),
+    if (kit_is_cloud()) kitsui_cloud_banner(),
     if (!kit_pandoc_ok()) kit_pandoc_notice(),
-    shiny::tabsetPanel(
-      id = "tabs",
+    # 「使用手冊」不是流程的一步：放最右邊、虛線框
+    kitDesign::kit_flow_tabs(
+      id = "tabs", aside = "manual",
       shiny::tabPanel("① 資料", value = "data", mod_data_ui("data")),
       shiny::tabPanel("② 題目校準", value = "items", mod_items_ui("items")),
       shiny::tabPanel("③ 連結", value = "link", mod_link_ui("link")),
@@ -56,6 +58,26 @@ kit_ui <- function(request) {
     ),
     if (kit_is_cloud()) kit_cloud_footer()
   )
+}
+
+# kitsUI 自己的幾條樣式（其他都在 kitDesign）：本機版到 kitJoin 的一行說明裡的程式碼
+KITSUI_CSS <- ".kit-kitjoin-local code { font-size: 0.85rem; }"
+
+#' kitsUI 的版本與日期（頁首、固定檔的 VERSION）
+#'
+#' 套件載入時讀套件的 DESCRIPTION；從資料夾跑（雲端版 app.R、本機 run.bat）時讀資料夾裡的
+#' DESCRIPTION，不讀這台電腦另外裝的 kitsUI（版本可能不同）。
+#' @noRd
+kitsui_description <- function() {
+  if ("kitsUI" %in% loadedNamespaces()) return(kitDesign::kit_app_description("kitsUI"))
+  # 測試時工作目錄在 tests/testthat，往上找
+  paths <- c("DESCRIPTION", file.path("..", "DESCRIPTION"), file.path("..", "..", "DESCRIPTION"))
+  for (path in paths[file.exists(paths)]) {
+    if (identical(unname(read.dcf(path, fields = "Package")[1, 1]), "kitsUI")) {
+      return(kitDesign::kit_app_description(path = path))
+    }
+  }
+  list(version = NA_character_, date = NA_character_)
 }
 
 #' 伺服器邏輯：各分頁模組之間只透過 reactive 傳資料
@@ -75,16 +97,14 @@ kit_server <- function(input, output, session) {
   items <- mod_items_server("items", data, goto)
   links <- mod_link_server("link", data, items, goto)
   score <- mod_score_server("score", data, items, links, goto, next_round)
-  # 有這一回合的結果時，離開頁面前先問一次（kit_js()）
-  shiny::observe({
-    session$sendCustomMessage("kit_unload_guard", !is.null(items()))
-  })
+  # 有這一回合的結果時，離開頁面前先問一次
+  shiny::observe(kitDesign::kit_unload_guard(!is.null(items()), session))
   # 步驟分頁的進度：做完的打 ✓，還不能做的灰色（kit_tabs.R）
   tab_states <- shiny::reactive({
     ok <- \(f) tryCatch(f(), error = \(e) NULL)
     lk <- ok(links)
-    kit_tab_states(!is.null(ok(data)), ok(items), !is.null(lk) && length(lk$todo) == 0,
-                   ok(score))
+    kitsui_tab_states(!is.null(ok(data)), ok(items), !is.null(lk) && length(lk$todo) == 0,
+                      ok(score))
   })
-  shiny::observe(session$sendCustomMessage("kit_tab_state", kit_tab_message(tab_states())))
+  kitDesign::kit_watch_tab_states(session, shiny::reactive(kitsui_tab_send(tab_states())))
 }

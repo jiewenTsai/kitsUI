@@ -93,7 +93,7 @@ kit_download_filter <- function(session) {
   }
 }
 
-#' 下載失敗時給使用者看的一句話：kit_abort() 的訊息照原文；其他錯誤不給內部訊息
+#' 下載失敗時給使用者看的一句話：kitDesign::kit_abort() 的訊息照原文；其他錯誤不給內部訊息
 #' @noRd
 kit_download_error_text <- function(e) {
   if (inherits(e, "kit_user_error")) return(paste0("下載失敗：", conditionMessage(e)))

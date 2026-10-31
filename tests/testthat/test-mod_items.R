@@ -31,8 +31,8 @@ test_that("示範資料跑一回合：回傳 items，圖、表、程式都出得
       session$setInputs(plot_type = type)
       expect_s3_class(plot_obj(), "plotly")
     }
-    expect_match(output$code, "kits_item\\(X, scale")
-    expect_match(output$code, "kits version")
+    expect_match(code_of(output$code), "kits_item\\(X, scale")
+    expect_match(code_of(output$code), "kits version")
     expect_match(output$next_step$html, "go_link")
     # 題目參數：每一題每一步，畫面與 csv 相同
     expect_match(output$coef, "threshold_se")
@@ -88,7 +88,7 @@ test_that("有固定檔：偏移把關；沒有題庫的量尺拿掉分數類別
     expect_match(output$status$html, "分數類別有問題")
     expect_match(output$scale_info$html, "固定校準")
     expect_match(output$drift, "suggest_fix")
-    expect_match(output$code, "kits_drift")
+    expect_match(code_of(output$code), "kits_drift")
     session$setInputs(scale = "motor M03")
     expect_match(output$scale_info$html, "自由校準")
     expect_match(output$scale_info$html, "這一回合不放進來：[1-9]")
@@ -142,7 +142,7 @@ test_that("借用另一世代題庫：② 顯示校準的量尺（另一個世�
     expect_equal(scales(), "motor M36")
     expect_match(output$scale_info$html, "借用另一世代題庫：M03 60 months on motor M36 bank")
     expect_match(output$log, "borrowed bank")
-    expect_match(output$code, 'keys <- "motor M03 60"')
+    expect_match(code_of(output$code), 'keys <- "motor M03 60"')
   })
 })
 
@@ -163,13 +163,13 @@ test_that("flag 的量尺（可固定的題少於 5 題）：照做，② 用橘
     expect_match(html, "sim M03（flag）")
     # 要注意收在細節列的「要注意」裡（不是另一個黃框）
     expect_match(html, "kit-attention")
-    expect_false(grepl("kit-callout-warning", html))
+    expect_false(grepl("kit-callout-warn", html))
     expect_match(output$result$html, "<summary>要注意</summary>")
     expect_match(html, "被 flag 的量尺照樣往下做；請看偏移的題，必要時在下一回合處理。")
     expect_match(output$scale_info$html, "flag：")
     expect_match(output$log, "warn")
     expect_match(output$overview, "可固定的題少於 5 題")
-    expect_match(output$code, "n_fixed < 5")
+    expect_match(code_of(output$code), "n_fixed < 5")
     expect_match(output$next_step$html, "go_link")
   })
 })
@@ -192,7 +192,7 @@ test_that("用哪一個題庫：表上有規則選的與原因；手動改成自
     expect_true(res$plan$manual)
     choice <- dplyr::filter(res$fixed$checks, check == "bank choice")
     expect_equal(choice$detail, "M03 60 months on motor M03 bank; manual choice (rule: motor M36)")
-    expect_match(output$code, "手動選了題庫")
+    expect_match(code_of(output$code), "手動選了題庫")
     expect_match(output$overview, "motor M03 60")
   })
 })
@@ -425,12 +425,13 @@ test_that("固定了哪些題：狀態、核對、全部固定的題、csv；偏
     p <- plot_obj()
     expect_s3_class(p, "plotly")
     names <- purrr::map_chr(p$x$data, \(tr) as.character(tr$name)[1])
-    # 圖例換成中文（kitsui_drift_plot() 本身是英文，畫面上用 kit_chart_zh()）
-    expect_true("偏移，換成新版本" %in% names)
-    expect_equal(p$x$layout$title$text, "固定之前的偏移把關（試算）")
+    # 圖的字照 kits 的英文；套上 KIT 的樣子（kitDesign::kit_plotly_style()：粗體標題）
+    expect_true("Drifted -> new version" %in% names)
+    expect_equal(p$x$layout$title$text, "<b>Drift check before fixing</b>")
+    expect_equal(p$x$layout$font$family, "\"Chiron GoRound TC\", sans-serif")
     expect_match(output$plot_help$html, "落在帶子裡的步驟")
     expect_equal(download_name(plot_name), "item_lan_M03_drift")
-    expect_match(output$code, "drift <- kits_drift\\(.*\\)\nplot\\(drift\\)")
+    expect_match(code_of(output$code), "drift <- kits_drift\\(.*\\)\nplot\\(drift\\)")
   })
 })
 
@@ -441,7 +442,7 @@ test_that("自由校準：沒有固定的題，偏移把關圖是一句說明", 
     expect_match(output$fixed_status$html, "沒有題庫，這個量尺是自由校準，沒有固定的題")
     expect_match(output$fixed_status$html, "看全部自由校準的題（6 題）")
     expect_error(plot_obj(), "沒有偏移把關圖")
-    expect_false(grepl("plot\\(drift\\)", output$code))
+    expect_false(grepl("plot\\(drift\\)", code_of(output$code)))
   })
 })
 
@@ -460,7 +461,7 @@ test_that("校準以後改了設定：結果留著、標【要重新執行】，
     expect_true(res$ok)
     expect_equal(res$args, list(flag_share = 0.2, flag_fixed = NA, bank_choice = NULL,
                                 exclude = character()))
-    expect_match(output$code, "max(1, 0.2 * judged)", fixed = TRUE)
+    expect_match(code_of(output$code), "max(1, 0.2 * judged)", fixed = TRUE)
     expect_match(output$next_step$html, "go_link")
     expect_gt(notified, 0)
     # 改 flag 的比例：結果還在畫面上，但狀態框說要重新校準；程式碼還是跑的時候的 0.2
@@ -472,7 +473,7 @@ test_that("校準以後改了設定：結果留著、標【要重新執行】，
     expect_match(output$status$html, "上一次的設定")
     expect_match(output$overview, "lan M03")
     expect_false(is.null(output$result))
-    expect_match(output$code, "max(1, 0.2 * judged)", fixed = TRUE)
+    expect_match(code_of(output$code), "max(1, 0.2 * judged)", fixed = TRUE)
     expect_null(output$next_step)
     # 改回去：不用重跑，結果照舊交出去
     session$setInputs(flag_share = 0.2)
@@ -492,7 +493,7 @@ test_that("校準以後改了設定：結果留著、標【要重新執行】，
     session$setInputs(exclude = NULL, flag_share = 0.3, run = 2)
     res <- session$getReturned()()
     expect_equal(res$args$flag_share, 0.3)
-    expect_match(output$code, "max(1, 0.3 * judged)", fixed = TRUE)
+    expect_match(code_of(output$code), "max(1, 0.3 * judged)", fixed = TRUE)
     expect_false(grepl("要重新執行", output$status$html))
   })
 })

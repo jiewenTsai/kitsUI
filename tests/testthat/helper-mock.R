@@ -10,3 +10,15 @@ mock_app_fn <- function(name, fn, env = environment(kit_app), frame = parent.fra
   }, envir = frame)
   invisible(old)
 }
+
+# 「用 R 怎麼做」畫出來的程式碼（kitDesign::kit_render_code_panel() 的 HTML）換回純文字；
+# 沒有程式碼時是那一行說明
+code_of <- function(x) {
+  html <- if (is.list(x)) x$html else x
+  html <- as.character(html)
+  if (!grepl("<pre><code>", html, fixed = TRUE)) return(gsub("<[^>]+>", "", html))
+  code <- sub("(?s).*<pre><code>(.*?)</code></pre>.*", "\\1", html, perl = TRUE)
+  ents <- c(lt = "<", gt = ">", quot = "\"", "#39" = "'", amp = "&")
+  for (k in names(ents)) code <- gsub(paste0("&", k, ";"), ents[[k]], code, fixed = TRUE)
+  code
+}

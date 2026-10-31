@@ -8,7 +8,7 @@
 # 2. inst/manual/kitsui_manual.html：獨立網頁（「在新分頁開啟」）。內容和 1. 相同，
 #    套用 app 的主題（bslib 編譯好的 Bootstrap CSS）、頁首與手冊樣式，兩邊看起來一樣。
 # 兩者共用 inst/manual/img/ 的截圖。
-# 要讀 app 的主題與樣式，所以先載入套件（需要 kits 等相依套件）。
+# 要讀 app 的主題與樣式（kitDesign），所以先載入套件（需要 kits、kitDesign 等相依套件）。
 
 src <- "tools/manual/kitsui_manual_src.html"
 out_dir <- "inst/manual"
@@ -53,7 +53,7 @@ writeLines(enc2utf8(app_body), file.path(out_dir, "kitsui_manual_body.html"), us
 # 2. 獨立網頁：app 的主題、頁首與手冊樣式，內容和 app 裡的一樣
 suppressMessages(pkgload::load_all(".", quiet = TRUE))
 pick <- function(pattern) regmatches(head, regexpr(pattern, head))
-deps <- bslib::bs_theme_dependencies(kit_theme())
+deps <- bslib::bs_theme_dependencies(kitDesign::kit_theme())
 fonts <- unlist(lapply(deps, function(d) if (!is.null(d$head)) as.character(d$head)))
 css <- unlist(lapply(deps, function(d) {
   files <- unlist(d$stylesheet)
@@ -62,6 +62,21 @@ css <- unlist(lapply(deps, function(d) {
     paste(readLines(f, encoding = "UTF-8", warn = FALSE), collapse = "\n")
   }, character(1))
 }))
+# kitDesign 的樣式（inst/www/ 的三個 CSS，順序不能換）
+kit_design_css <- paste(vapply(
+  c("kit-base.css", "kit-brite.css", "kit-design.css"),
+  function(f) paste(readLines(system.file("www", f, package = "kitDesign"), encoding = "UTF-8",
+                              warn = FALSE), collapse = "\n"),
+  character(1)
+), collapse = "\n")
+# 頁首：kitDesign 的頁首；標誌換成 data URI（獨立網頁沒有 kitDesign 的標誌檔）
+ver <- kitsui_description()
+header <- as.character(kitDesign::kit_header(
+  "KIT 量尺建構工具", "臺灣幼兒發展調查資料庫", tagline = "使用手冊",
+  version = ver$version, date = ver$date,
+  meta_extra = paste("kits", utils::packageVersion("kits"))
+))
+header <- gsub("kitDesign-logo-[^\"/]*/kit-logo\\.svg", kitDesign::kit_logo_uri(192, "logo"), header)
 standalone_css <- paste(
   "body { padding: 1rem 1.5rem 2rem; }",
   ".kit-manual .km-standalone { display: inline; }",
@@ -77,11 +92,11 @@ standalone <- c(
   pick("<meta name=\"description\"[^>]*>"),
   fonts,
   paste0("<style>", css, "</style>"),
-  paste0("<style>", kit_css(), "</style>"),
+  paste0("<style>", kit_design_css, "</style>"),
   paste0("<style>", kit_manual_css(), "\n", standalone_css, "</style>"),
   "</head>",
   "<body>",
-  as.character(kit_header(tagline = "使用手冊")),
+  header,
   "<div class=\"kit-manual\">",
   gsub("kitsui-manual/img/", "img/", app_body, fixed = TRUE),
   "</div>",

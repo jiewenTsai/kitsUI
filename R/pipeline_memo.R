@@ -18,7 +18,7 @@ kitsui_own_scores <- function(round, scale, persons = NULL) {
     return(get(key, envir = memo, inherits = FALSE))
   }
   item <- round$items[[scale]]
-  if (is.null(item)) kit_abort(scale, " 這一回合停下來了，沒有校準結果，不能算分數。")
+  if (is.null(item)) kitDesign::kit_abort(scale, " 這一回合停下來了，沒有校準結果，不能算分數。")
   # kits_info()$call 和 ④ 的 R 程式一樣：kits_subj(X, item, persons = persons)
   X <- round$data[[scale]]
   scores <- kits::kits_subj(X, item, persons = persons)

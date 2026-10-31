@@ -11,12 +11,10 @@ kit_is_cloud <- function() {
   identical(Sys.getenv("R_CONFIG_ACTIVE"), "rsconnect")
 }
 
-#' 雲端版提醒（標題下方一行）
+#' 雲端版提醒（標題下方一行；框是 kitDesign::kit_cloud_banner()）
 #' @noRd
-kit_cloud_banner <- function() {
-  shiny::tags$div(
-    class = "alert alert-warning kit-cloud-banner",
-    role = "alert",
+kitsui_cloud_banner <- function() {
+  kitDesign::kit_cloud_banner(
     shiny::tags$span(
       paste0(
         "此為雲端版：上傳的資料會傳送至位於美國的 Posit 伺服器。",

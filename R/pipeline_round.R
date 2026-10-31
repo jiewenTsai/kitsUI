@@ -45,7 +45,7 @@ kitsui_round <- function(df, fixed, round_label, flag_share = 0.2, flag_fixed = 
                          exclude_info = NULL) {
   kitsui_check_data(df)
   problem <- kitsui_label_problem(round_label, fixed$version$rounds)
-  if (length(problem) > 0) kit_abort(problem)
+  if (length(problem) > 0) kitDesign::kit_abort(problem)
   # 不做的量尺：作答拿掉（記下來；檔案的 md5 照樣記，因為這一回合用了這個檔案）
   all_df <- df
   out <- kitsui_round_exclude(df, exclude, round_label, exclude_info)
@@ -95,10 +95,10 @@ kitsui_round_exclude <- function(df, exclude, round_label, info = NULL) {
   have <- scale_key(df$domain, df$cohort)
   extra <- setdiff(exclude, have)
   if (length(extra) > 0) {
-    kit_abort("這一回合的資料沒有 ", paste(extra, collapse = "、"), "，不能選它「這一回合不做」。")
+    kitDesign::kit_abort("這一回合的資料沒有 ", paste(extra, collapse = "、"), "，不能選它「這一回合不做」。")
   }
   keep <- !have %in% exclude
-  if (!any(keep)) kit_abort("每個量尺都選了「這一回合不做」，沒有量尺可以校準。")
+  if (!any(keep)) kitDesign::kit_abort("每個量尺都選了「這一回合不做」，沒有量尺可以校準。")
   log <- tibble::tibble(
     round = round_label, scale = exclude, item_id = NA_character_, check = "excluded",
     detail = "這一回合不做這個量尺（在 ② 選的）：作答沒有校準，題庫、版本、連結都不動",

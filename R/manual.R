@@ -32,7 +32,7 @@ kit_setup_manual <- function() {
 kit_manual_ui <- function() {
   dir <- kit_manual_dir()
   if (is.null(dir)) {
-    return(ui_callout(warning = TRUE, "找不到使用手冊（inst/manual/）。"))
+    return(kitDesign::kit_callout(warn = TRUE, "找不到使用手冊（inst/manual/）。"))
   }
   body <- readLines(file.path(dir, KIT_MANUAL_BODY), encoding = "UTF-8", warn = FALSE)
   src <- paste0(KIT_MANUAL_PREFIX, "/", KIT_MANUAL_FILE)
@@ -51,7 +51,7 @@ kit_manual_ui <- function() {
 #' 手冊的樣式：只作用在 .kit-manual 裡（class 都有 km- 前綴）
 #' @noRd
 kit_manual_css <- function() {
-  cols <- kit_colors()
+  cols <- kitDesign::kit_colors()
   css <- "
     .kit-manual .km-wrap {
       display: grid; grid-template-columns: 13rem minmax(0, 1fr); gap: 0 2.5rem;

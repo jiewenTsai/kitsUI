@@ -85,7 +85,7 @@ test_that("題庫的值被改過：核對抓得到，紅框列出步驟", {
   expect_false(txt$ok)
   expect_match(txt$verify, "有 1 個步驟和題庫不同")
   html <- as.character(items_fixed_ui(x$tab, check))
-  expect_match(html, "kit-callout-warning")
+  expect_match(html, "kit-callout-warn")
   expect_match(html, "固定的步驟和題庫不同")
   expect_match(html, "lana01 步驟 2")
   expect_match(html, "差 5.0e-01")

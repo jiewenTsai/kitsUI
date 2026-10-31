@@ -1,26 +1,8 @@
 # 共用小工具
 
-#' 給使用者看的錯誤
-#'
-#' 訊息需是白話中文、說明原因與怎麼修；UI 會原文顯示，不加技術細節。
-#' 其他未預期的錯誤則由 UI 包成「發生未預期的錯誤」並把原始訊息收在技術細節裡。
-#' @noRd
-kit_abort <- function(...) {
-  stop(structure(
-    class = c("kit_user_error", "error", "condition"),
-    list(message = paste0(...), call = NULL)
-  ))
-}
-
 #' x 為 NULL 時改用 y（R 4.4 起 base 也有，這裡為了支援較舊的 R）
 #' @noRd
 `%||%` <- function(x, y) if (is.null(x)) y else x
-
-#' 整數加千分位：3418 → "3,418"（KIT 設計語言 5：四位數以上加千分位；和 kitJoin 相同）
-#' @noRd
-kit_num <- function(x) {
-  formatC(as.numeric(x), format = "d", big.mark = ",")
-}
 
 #' 每列的 ID 合成一個比對用字串；任一 ID 欄缺漏的列回傳 NA
 #' @noRd
@@ -38,7 +20,7 @@ file_display_name <- function(wave_label, file_name) {
   ifelse(nzchar(wave_label), paste0(wave_label, "（", file_name, "）"), file_name)
 }
 
-#' 錯誤轉成給使用者看的句子：kit_abort() 的訊息原文；其他錯誤前面加上在做什麼
+#' 錯誤轉成給使用者看的句子：kitDesign::kit_abort() 的訊息原文；其他錯誤前面加上在做什麼
 #' @noRd
 kit_error_text <- function(e, action) {
   if (inherits(e, "kit_user_error")) return(conditionMessage(e))

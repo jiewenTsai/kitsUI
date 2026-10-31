@@ -397,7 +397,7 @@ test_that("停下來的原因的英文：kits 的訊息原文；kitsui 自己的
   r <- suppressMessages(kitsui_round(df, bc$fixed, "3"))
   expect_equal(dplyr::filter(r$fixed$checks, check == "error")$detail, kitsui_error_detail_en(e))
   # 沒有 en 的 kitsui 訊息：一句通用的英文
-  plain <- tryCatch(kit_abort("中文"), error = \(e) e)
+  plain <- tryCatch(kitDesign::kit_abort("中文"), error = \(e) e)
   expect_ascii(kitsui_error_detail_en(plain))
 })
 

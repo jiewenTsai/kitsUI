@@ -300,7 +300,7 @@ kitsui_score_search <- function(scores, text) {
 kitsui_item_table <- function(round, df, fixed, scale, links = NULL, persons = NULL,
                               steps = NULL) {
   item <- round$items[[scale]]
-  if (is.null(item)) kit_abort("這一回合沒有 ", scale, " 的校準結果。")
+  if (is.null(item)) kitDesign::kit_abort("這一回合沒有 ", scale, " 的校準結果。")
   links <- links %||% kitsui_links(fixed, kitsui_link_path(fixed, scale))
   persons <- persons %||% kitsui_persons(df)
   steps <- steps %||% kitsui_steps_vec(fixed$pass_steps)
@@ -432,7 +432,7 @@ kitsui_read_steps <- function(path) {
                     lazy = FALSE, progress = FALSE),
     error = \(e) NULL
   )
-  if (is.null(out)) kit_abort("讀不進這個檔案。請上傳 CSV 檔（逗號分隔）。")
+  if (is.null(out)) kitDesign::kit_abort("讀不進這個檔案。請上傳 CSV 檔（逗號分隔）。")
   tibble::as_tibble(out)
 }
 

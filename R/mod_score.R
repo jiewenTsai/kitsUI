@@ -20,7 +20,7 @@ mod_score_ui <- function(id) {
     shiny::uiOutput(ns("flags")),
     shiny::uiOutput(ns("advanced")),
     shiny::uiOutput(ns("settings")),
-    ui_button(ns("run"), "計算這一回合的分數", "primary"),
+    kitDesign::kit_button(ns("run"), "計算這一回合的分數", "primary"),
     shiny::uiOutput(ns("status")),
     shiny::uiOutput(ns("done")),
     shiny::uiOutput(ns("result")),
@@ -31,7 +31,7 @@ mod_score_ui <- function(id) {
 #' 這一頁的說明
 #' @noRd
 score_guide <- function() {
-  mod_guide(
+  kitDesign::kit_tab_guide(
     goal = "算這一回合每個列次的分數。",
     steps = c(
       "需要時在「進階設定」改通過步驟（只影響題目表與 age50）。",
@@ -97,7 +97,7 @@ mod_score_server <- function(id, data, items, links, goto, next_round = NULL) {
     shiny::observe(shiny::updateActionButton(session, "run", disabled = nothing()))
     output$settings <- shiny::renderUI({
       if (is.null(items())) return(NULL)
-      ui_settings_line(kitsui_settings_text(data()))
+      kitDesign::kit_settings_line(kitsui_settings_text(data()), prefix = NULL)
     })
     output$flags <- shiny::renderUI(score_flags_ui(kitsui_round_flags(items())))
     shiny::observeEvent(input$go_items, goto("items"))
@@ -115,7 +115,9 @@ mod_score_server <- function(id, data, items, links, goto, next_round = NULL) {
         } else {
           "請按「計算這一回合的分數」。"
         }
-        status(ui_status("stale", "題目校準有變動，分數要重新計算。", shiny::tags$p(todo)))
+        status(kitDesign::kit_status_ui(
+          kitDesign::kit_status("stale", "題目校準有變動，分數要重新計算。"), shiny::tags$p(todo)
+        ))
       }
     }, ignoreInit = TRUE, ignoreNULL = FALSE)
     # 只有連結變了：分數不重算，只用新的連結重新換算（幾乎不花時間）
@@ -126,19 +128,19 @@ mod_score_server <- function(id, data, items, links, goto, next_round = NULL) {
                       error = function(e) e)
       if (inherits(out, "error")) {
         result(NULL)
-        status(ui_status("stale", "連結有變動，分數要重新計算。",
+        status(kitDesign::kit_status_ui(kitDesign::kit_status("stale", "連結有變動，分數要重新計算。"),
                          shiny::tags$p("請按「計算這一回合的分數」。")))
         return()
       }
       result(c(out, list(links_rows = fixed()$links)))
-      status(ui_status("done", "連結有變動，分數已用新的連結重新換算（沒有重算分數）。"))
+      status(kitDesign::kit_status_ui(kitDesign::kit_status("done", "連結有變動，分數已用新的連結重新換算（沒有重算分數）。")))
     }, ignoreInit = TRUE)
 
     shiny::observeEvent(input$run, {
       result(NULL)
       round <- items()
       if (is.null(round)) {
-        status(ui_status("stop", "還沒有這一回合的題目校準，沒有計算分數。",
+        status(kitDesign::kit_status_ui(kitDesign::kit_status("stop", "還沒有這一回合的題目校準，沒有計算分數。"),
                          shiny::tags$p("怎麼辦：先到「② 題目校準」按「開始校準」。")))
         return()
       }
@@ -155,7 +157,7 @@ mod_score_server <- function(id, data, items, links, goto, next_round = NULL) {
         }, error = function(e) e)
       })
       if (inherits(out, "error")) {
-        status(ui_status("stop", "分數沒有算出來。",
+        status(kitDesign::kit_status_ui(kitDesign::kit_status("stop", "分數沒有算出來。"),
                          shiny::tags$p(kitsui_error_ui(kit_error_text(out, "計算分數"))),
                          shiny::tags$p("怎麼辦：看上面的原因；必要時回到「② 題目校準」重跑這一回合。")))
         return()
@@ -193,8 +195,8 @@ mod_score_server <- function(id, data, items, links, goto, next_round = NULL) {
     output$next_step <- shiny::renderUI({
       if (is.null(result()) || is.null(next_round) || !isTRUE(items()$ok)) return(NULL)
       # 這一頁的主角是兩個下載；「下一回合」是次要按鈕
-      ui_next_step("這一回合做完了。要接著加新的波次，不用下載固定檔，直接開始下一回合。",
-                   ns("next_round"), "下一步：用這一回合的固定檔開始下一回合", kind = "secondary")
+      kitDesign::kit_next_step("這一回合做完了。要接著加新的波次，不用下載固定檔，直接開始下一回合。",
+                               ns("next_round"), "下一步：用這一回合的固定檔開始下一回合", kind = "secondary")
     })
 
     # 1. 分數表 ----
@@ -208,8 +210,8 @@ mod_score_server <- function(id, data, items, links, goto, next_round = NULL) {
     pages <- shiny::reactive(max(1, ceiling(nrow(shown()) / SCORE_PAGE_ROWS)))
     page <- shiny::reactive(score_page(input$page, pages()))
     output$page_info <- shiny::renderText({
-      sprintf("符合 %s 列，共 %s 頁；目前第 %s 頁。", kit_num(nrow(shown())), kit_num(pages()),
-              kit_num(page()))
+      sprintf("符合 %s 列，共 %s 頁；目前第 %s 頁。", kitDesign::kit_num(nrow(shown())),
+              kitDesign::kit_num(pages()), kitDesign::kit_num(page()))
     })
     output$scores <- kit_table({
       dplyr::slice(shown(), (page() - 1) * SCORE_PAGE_ROWS + seq_len(SCORE_PAGE_ROWS))
@@ -276,7 +278,7 @@ mod_score_server <- function(id, data, items, links, goto, next_round = NULL) {
         return(say("pick", steps_error_ui(chk$errors, "選好再按「套用到選的題」。")))
       }
       set_steps(kitsui_steps_merge(steps(), chk$steps))
-      say("pick", ui_callout(steps_applied_text(chk$steps)))
+      say("pick", kitDesign::kit_callout(steps_applied_text(chk$steps)))
     })
     shiny::observeEvent(input$steps_file, {
       f <- input$steps_file
@@ -290,20 +292,23 @@ mod_score_server <- function(id, data, items, links, goto, next_round = NULL) {
       }
       set_steps(kitsui_steps_merge(steps(), chk$steps))
       say("file", shiny::tagList(
-        ui_callout(paste0("已套用 ", f$name, "：共 ", length(chk$steps), " 題。"),
-                   "檔案裡沒列的題不變。"),
-        ui_warn_list("請注意", chk$warnings)
+        kitDesign::kit_callout(paste0("已套用 ", f$name, "：共 ", length(chk$steps), " 題。"),
+                               "檔案裡沒列的題不變。"),
+        if (length(chk$warnings) > 0) {
+          kitDesign::kit_callout(shiny::tags$strong("請注意"),
+                                 shiny::tags$ul(lapply(chk$warnings, shiny::tags$li)), warn = TRUE)
+        }
       ))
     })
     # 表格每一列的「改回 1」（按鈕把題號送到 steps_row_reset）
     shiny::observeEvent(input$steps_row_reset, {
       id <- input$steps_row_reset
       set_steps(kitsui_steps_merge(steps(), stats::setNames(1L, id)))
-      say("pick", ui_callout(paste0(id, " 改回 1 了。")))
+      say("pick", kitDesign::kit_callout(paste0(id, " 改回 1 了。")))
     })
     shiny::observeEvent(input$steps_reset, {
       set_steps(kitsui_steps_vec(NULL))
-      say("pick", ui_callout("已經全部改回 1。"))
+      say("pick", kitDesign::kit_callout("已經全部改回 1。"))
     })
     output$steps_template_ui <- render_download_csv(
       session, "steps_template", "下載範本（CSV）",
@@ -347,8 +352,8 @@ mod_score_server <- function(id, data, items, links, goto, next_round = NULL) {
       step <- kitsui_item_step_arg(items()$items[[s]], steps(), fixed()$versions)
       score_code(fixed(), s, kitsui_round_cohorts(items(), s), kitsui_fixed_name(label()), step)
     })
-    output$code <- shiny::renderText(kit_code_wrap(code_text()))
-    output$code_ui <- render_code_panel(session, "code", code_text)
+    # 用 R 怎麼做：打開時才算；每行最多 70 欄（kitDesign::kit_code()）
+    output$code <- kitDesign::kit_render_code_panel(\() list("kits 版" = code_text()))
 
     # 新的固定檔 ----
     # 這一回合的通過步驟寫進固定檔（pass_steps）；沒有改時固定檔原樣
@@ -363,7 +368,7 @@ mod_score_server <- function(id, data, items, links, goto, next_round = NULL) {
       session, "fixed_dl", SCORE_FIXED_LABEL, kitsui_fixed_name(label()),
       function(file) {
         # 有量尺停下來時不寫出（kitsui_write_fixed() 也會擋）
-        if (!isTRUE(items()$ok)) kit_abort("這一回合有量尺停下來，不產生新的固定檔。")
+        if (!isTRUE(items()$ok)) kitDesign::kit_abort("這一回合有量尺停下來，不產生新的固定檔。")
         kitsui_write_fixed(fixed_out(), file)
       },
       class = SCORE_DL_CLASS
@@ -419,7 +424,7 @@ score_flags_ui <- function(flags) {
   items <- purrr::map2(flags$scale, flags$detail, \(s, d) {
     shiny::tags$li(shiny::tags$span(class = "kit-warn-text", paste0(s, "（flag）：")), d)
   })
-  ui_callout(
+  kitDesign::kit_callout(
     shiny::tags$strong("② 題目校準給這些量尺 flag："),
     shiny::tags$ul(items),
     shiny::tags$p(
@@ -428,7 +433,7 @@ score_flags_ui <- function(flags) {
       "但這個量尺和題庫的尺可能沒有對得很準。",
       "請到「② 題目校準」看是哪些題，再決定要不要用這一回合的分數。"
     ),
-    warning = TRUE
+    warn = TRUE
   )
 }
 
@@ -437,7 +442,7 @@ score_flags_ui <- function(flags) {
 #' @noRd
 score_status <- function(out, round) {
   if (NROW(out$scores) == 0) return(score_nothing_status(round))
-  line <- sprintf("分數算好了：共 %s 列（每個量尺的每個列次一列）。", kit_num(nrow(out$scores)))
+  line <- sprintf("分數算好了：共 %s 列（每個量尺的每個列次一列）。", kitDesign::kit_num(nrow(out$scores)))
   flags <- kitsui_round_flags(round)
   points <- c(
     if (!isTRUE(round$ok)) {
@@ -447,8 +452,8 @@ score_status <- function(out, round) {
       paste0("被 flag 的量尺：", paste(unique(flags$scale), collapse = "、"), "；見上面的提醒。")
     }
   )
-  if (length(points) == 0) return(ui_status("done", line))
-  ui_status("warn", line, points = points)
+  if (length(points) == 0) return(kitDesign::kit_status_ui(kitDesign::kit_status("done", line)))
+  kitDesign::kit_status_ui(kitDesign::kit_status("warn", line, points = points))
 }
 
 #' 沒有可以評分的量尺（② 的量尺都停下來，或算出來 0 列）：【停下來】與怎麼辦，沒有下載
@@ -457,10 +462,11 @@ score_status <- function(out, round) {
 score_nothing_status <- function(round, ns = NULL) {
   stopped <- round$stopped %||% character()
   why <- if (length(stopped) > 0) {
-    paste0("（② 有 ", kit_num(length(stopped)), " 個量尺停下來：", kitsui_first(scale_label(stopped), 6), "）")
+    paste0("（② 有 ", kitDesign::kit_num(length(stopped)), " 個量尺停下來：",
+           kitsui_first(scale_label(stopped), 6), "）")
   }
-  ui_status(
-    "stop", paste0("沒有可以評分的量尺", why %||% "", "，所以沒有分數。"),
+  kitDesign::kit_status_ui(kitDesign::kit_status(
+    "stop", paste0("沒有可以評分的量尺", why %||% "", "，所以沒有分數。")),
     shiny::tags$p(
       class = "kit-status-action", shiny::tags$strong("怎麼辦："),
       "回到", if (!is.null(ns)) shiny::actionLink(ns("go_items"), "「② 題目校準」") else "「② 題目校準」",
@@ -481,13 +487,14 @@ score_done_ui <- function(ns, round, ref_final = NULL, label = NULL, scores = NU
       class = "kit-hint",
       "每個量尺、世代、波次一列：分數的人數、平均與標準差。",
       if (n_sum > SCORE_SUMMARY_ROWS) {
-        sprintf("共 %s 列，以下前 %s 列。", kit_num(n_sum), kit_num(SCORE_SUMMARY_ROWS))
+        sprintf("共 %s 列，以下前 %s 列。", kitDesign::kit_num(n_sum),
+                kitDesign::kit_num(SCORE_SUMMARY_ROWS))
       }
     ),
     shiny::tags$div(class = "kit-table-scroll", shiny::tableOutput(ns("summary"))),
     if (n_sum > SCORE_SUMMARY_ROWS) {
-      ui_details_row(ui_detail(
-        paste0("全部（", kit_num(n_sum), " 列）"),
+      kitDesign::kit_details_row(kitDesign::kit_detail(
+        paste0("全部（", kitDesign::kit_num(n_sum), " 列）"),
         shiny::tags$div(class = "kit-table-scroll kit-table-tall", shiny::tableOutput(ns("summary_all")))
       ))
     },
@@ -512,7 +519,7 @@ score_done_ui <- function(ns, round, ref_final = NULL, label = NULL, scores = NU
       "題庫是校準用的題庫；資料是哪一個世代、哪些波次的資料。"
     ),
     if (!is.null(ref_final)) {
-      ui_callout(
+      kitDesign::kit_callout(
         shiny::tags$strong("外部連結不適用："),
         paste0("參照世代（", ref_final, "）沒有 D 分數的錨題，最後的分數是 ref_score，",
                "在 ", ref_final, " 的量尺上；還沒有內部連結的世代，ref_score 是空白，",
@@ -537,7 +544,7 @@ score_fixed_ui <- function(round, button_id, label = NULL) {
       shiny::tags$p(class = "text-danger",
                     "請到「② 題目校準」看停下來的原因。", "處理後重跑這一回合，",
                     "或在 ② 把它們改成「這一回合不做」再校準一次。"),
-      shiny::tags$button(class = paste("btn", KIT_BTN[["secondary"]]), disabled = NA,
+      shiny::tags$button(class = paste("btn", kitDesign::kit_btn_class()), disabled = NA,
                          shiny::icon("download"), text)
     ))
   }
@@ -658,7 +665,7 @@ steps_picker_ui <- function(ns, choices, value = 2) {
                             options = list(placeholder = "選一題或好幾題（可以打字找）")),
       shiny::numericInput(ns("steps_value"), "通過步驟", value = value, min = 1, step = 1,
                           width = "7rem"),
-      ui_button(ns("steps_apply"), "套用到選的題")
+      kitDesign::kit_button(ns("steps_apply"), "套用到選的題")
     ),
     shiny::tags$small(class = "kit-hint",
                       "清單是這一回合每個量尺的全部題目，依量尺分組。",
@@ -678,7 +685,8 @@ steps_table_ui <- function(ns, shown) {
   row <- \(id, step, top) {
     shiny::tags$tr(
       shiny::tags$td(id), shiny::tags$td(step), shiny::tags$td(top),
-      shiny::tags$td(shiny::tags$button(type = "button", class = paste("btn", KIT_BTN[["secondary"]]),
+      shiny::tags$td(shiny::tags$button(type = "button",
+                                        class = paste("btn", kitDesign::kit_btn_class()),
                                         `data-item` = id, onclick = click, "改回 1"))
     )
   }
@@ -700,7 +708,7 @@ steps_table_ui <- function(ns, shown) {
       ))
     },
     if (nrow(shown) > 0) {
-      shiny::tags$div(class = "mb-3", ui_button(ns("steps_reset"), "全部改回 1"))
+      shiny::tags$div(class = "mb-3", kitDesign::kit_button(ns("steps_reset"), "全部改回 1"))
     }
   )
 }
@@ -722,7 +730,7 @@ steps_msg_at <- function(msg, where) if (identical(msg$where, where)) msg$ui
 #' @param todo 下一步怎麼做（「請改好再上傳。」等）
 #' @noRd
 steps_error_ui <- function(errors, todo) {
-  ui_status("stop", "通過步驟沒有套用，設定沒有改。",
+  kitDesign::kit_status_ui(kitDesign::kit_status("stop", "通過步驟沒有套用，設定沒有改。"),
             shiny::tags$ul(lapply(errors, shiny::tags$li)),
             shiny::tags$p(class = "mb-0", "怎麼辦：", todo))
 }
@@ -731,8 +739,8 @@ steps_error_ui <- function(errors, todo) {
 #' @param ref 參照世代；ref_final 是外部連結不適用時的參照世代（kitsui_ref_final()），適用時 NULL
 #' @noRd
 score_result_ui <- function(ns, scales, ref = KITSUI_REF_COHORT, ref_final = NULL) {
-  ui_details_row(
-    ui_detail(
+  kitDesign::kit_details_row(
+    kitDesign::kit_detail(
       "分數表（逐列）",
       shiny::textInput(ns("search"), "找人：輸入 visit_id 或 subj_id 的一部分",
                        placeholder = "例如 c55df9b"),
@@ -741,7 +749,7 @@ score_result_ui <- function(ns, scales, ref = KITSUI_REF_COHORT, ref_final = NUL
       shiny::tags$div(class = "kit-table-scroll", shiny::tableOutput(ns("scores"))),
       shiny::uiOutput(ns("columns"))
     ),
-    ui_detail(
+    kitDesign::kit_detail(
       "分數對照表",
       shiny::tags$small(class = "kit-hint",
                         "每個原始分數對應的能力值與人數（kits_subj_table()）。欄位說明在表的下面。"),
@@ -785,7 +793,7 @@ score_result_ui <- function(ns, scales, ref = KITSUI_REF_COHORT, ref_final = NUL
         shiny::tags$small(class = "kit-hint", "下載的是完整的表，包括沒有人的原始分數。")
       )
     ),
-    ui_detail(
+    kitDesign::kit_detail(
       "題目表",
       shiny::tags$small(
         class = "kit-hint",
@@ -804,6 +812,6 @@ score_result_ui <- function(ns, scales, ref = KITSUI_REF_COHORT, ref_final = NUL
       )
     ),
     ui_check_panel(ns("checks")),
-    ui_code_panel(ns("code"))
+    kitDesign::kit_code_panel(ns("code"))
   )
 }

@@ -114,13 +114,13 @@ kitsui_apply_choice <- function(plan, fixed, bank_choice) {
   if (length(bank_choice) == 0) return(plan)
   extra <- setdiff(names(bank_choice), plan$data_scale)
   if (length(extra) > 0) {
-    kit_abort("這一回合的資料沒有 ", paste(extra, collapse = "、"), "，不能選它的題庫。")
+    kitDesign::kit_abort("這一回合的資料沒有 ", paste(extra, collapse = "、"), "，不能選它的題庫。")
   }
   for (s in names(bank_choice)) {
     to <- bank_choice[[s]]
     ok <- c(s, kitsui_bank_candidates(fixed, s))
     if (!to %in% ok) {
-      kit_abort(s, " 不能用 ", to, " 的題庫。可以選：", paste(ok, collapse = "、"), "。")
+      kitDesign::kit_abort(s, " 不能用 ", to, " 的題庫。可以選：", paste(ok, collapse = "、"), "。")
     }
     i <- which(plan$data_scale == s & plan$rule != to)
     plan$scale[i] <- to

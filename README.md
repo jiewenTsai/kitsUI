@@ -22,6 +22,21 @@ kitsUI 是 [kits](https://github.com/jiewenTsai/kits) 的 Shiny 介面。
 已經收完的好幾波，建議一次勾；以後每次新收一波，再只勾那一波。
 兩種做法的對照與 kitsUI 的處理流程，見使用手冊「任務二 → 一次加好幾波」。
 
+## 0.5.0 的新功能
+
+這一版的畫面改用 KIT 共用的介面套件 [kitDesign](https://github.com/jiewenTsai/kitDesign)（0.2.0 以上）：
+主題、樣式、頁首、步驟分頁、說明框、狀態框、按鈕、提示框、細節列、「用 R 怎麼做」都由 kitDesign 提供，
+kitsUI 只留自己的規則（分頁什麼時候打 ✓、圖的類別色）與 kits 的計算。校準、連結、分數和 0.4.0 完全相同。
+
+- 圖套上 KIT 的樣子（`kitDesign::kit_plotly_style()`）：圓體字、細的格線、白底、靠左的粗體標題、
+  圖例太多時放到圖的下面、精簡的工具列（下載 PNG、放大、縮小、回到原來的範圍）。下載的圖（HTML）也一樣。
+- 圖上的字（標題、軸、圖例）照 kits 畫的英文，不再換成中文；資料裡的名字（題號、世代、量尺、領域）
+  照資料裡的寫法，中文也一樣。圖旁的說明寫出圖例的意思，例如 Score 1 是 1 分、
+  Kept／Dropped 是留下／拿掉的點、Drifted -> new version 是偏移、換成新版本。
+- 「用 R 怎麼做」的程式碼框改用 kitDesign 的寫法：每行最多 70 欄，長的行自動換行；「複製」一樣。
+- 看得到的小改變：狀態框的「還有 N 點」和其他點一樣大；「這一回合不做」等危險按鈕是鮭魚色；
+  頁首的標誌是向量圖（放大也清楚）。
+
 ## 0.4.0 的新功能
 
 這一版讓 KIT 以外的資料（例如世代不叫 M03、M36，或不是發展量表）也能從頭做到尾。
@@ -130,7 +145,7 @@ KIT 的資料照舊：示範資料 M03 + M36 兩回合的題庫、連結、分�
 
 ```r
 install.packages("pak")
-pak::pkg_install("jiewenTsai/kitsUI")   # 會一起裝 kits，並把太舊的套件更新到需要的版本
+pak::pkg_install("jiewenTsai/kitsUI")   # 會一起裝 kits、kitDesign，並把太舊的套件更新到需要的版本
 kitsUI::run_kitsui()
 ```
 

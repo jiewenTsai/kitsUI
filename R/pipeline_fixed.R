@@ -68,10 +68,10 @@ kitsui_ref_pick <- function(pick, cohorts) {
   kitsui_ref_default(cohorts)
 }
 
-#' kitsUI 的版本：和頁首一樣讀 DESCRIPTION（kit_app_description()）；找不到時 "dev"
+#' kitsUI 的版本：和頁首一樣讀 DESCRIPTION（kitsui_description()）；找不到時 "dev"
 #' @noRd
 kitsui_version <- function() {
-  v <- kit_app_description()$version
+  v <- kitsui_description()$version
   if (is.null(v) || is.na(v)) "dev" else as.character(v)
 }
 
@@ -83,9 +83,9 @@ kitsui_version <- function() {
 kitsui_write_fixed <- function(fixed, zip_path) {
   stopped <- attr(fixed, "stopped")
   if (length(stopped) > 0) {
-    kit_abort("這一回合有量尺停下來（", paste(stopped, collapse = "、"), "），不產生新的固定檔。",
-              "請看檢查表的原因，處理後重跑這一回合；",
-              "或在 ② 把它們選成「這一回合不做」再校準一次，其他量尺就可以產生固定檔。")
+    kitDesign::kit_abort("這一回合有量尺停下來（", paste(stopped, collapse = "、"), "），不產生新的固定檔。",
+                         "請看檢查表的原因，處理後重跑這一回合；",
+                         "或在 ② 把它們選成「這一回合不做」再校準一次，其他量尺就可以產生固定檔。")
   }
   dir <- file.path(tempfile("fixed"), "fixed_set")
   dir.create(dir, recursive = TRUE)
@@ -184,7 +184,7 @@ kitsui_zip_junk <- function(names) {
 kitsui_open_fixed <- function(zip_path) {
   listed <- tryCatch(suppressWarnings(zip::zip_list(zip_path))$filename, error = \(e) NULL)
   if (length(listed) == 0) {
-    kit_abort("這不是固定檔（zip）。請上傳 kitsUI 在 ④ 下載的固定檔（kitsui_fixed_…zip）。")
+    kitDesign::kit_abort("這不是固定檔（zip）。請上傳 kitsUI 在 ④ 下載的固定檔（kitsui_fixed_…zip）。")
   }
   names <- listed[!kitsui_zip_junk(listed)]
   # 根目錄沒有檔案、只有一層資料夾時，讀那個資料夾
@@ -200,17 +200,17 @@ kitsui_open_fixed <- function(zip_path) {
   extra <- names[!root]
   twice <- extra[basename(extra) %in% c(known, "README.txt")]
   if (length(twice) > 0) {
-    kit_abort("這個 zip 裡除了固定檔，還有同名的檔案：", paste(twice, collapse = "、"), "。",
-              "不知道哪一個才是真的，所以不讀。",
-              "請上傳 kitsUI 在 ④ 下載的原始固定檔，不要解壓縮後再壓縮。")
+    kitDesign::kit_abort("這個 zip 裡除了固定檔，還有同名的檔案：", paste(twice, collapse = "、"), "。",
+                         "不知道哪一個才是真的，所以不讀。",
+                         "請上傳 kitsUI 在 ④ 下載的原始固定檔，不要解壓縮後再壓縮。")
   }
   read <- rel[root & rel %in% known]
   ignored <- c(extra, names[root & !rel %in% c(known, "README.txt")])
   need <- c("VERSION", paste0(setdiff(names(KITSUI_FIXED_COLS), KITSUI_FIXED_OPTIONAL), ".csv"))
   miss <- setdiff(need, read)
   if (length(miss) > 0) {
-    kit_abort("這個 zip 不是完整的固定檔：缺少 ", paste(miss, collapse = "、"), "。",
-              "請上傳 kitsUI 在 ④ 下載的固定檔。")
+    kitDesign::kit_abort("這個 zip 不是完整的固定檔：缺少 ", paste(miss, collapse = "、"), "。",
+                         "請上傳 kitsUI 在 ④ 下載的固定檔。")
   }
   dir <- tempfile("fixed")
   utils::unzip(zip_path, files = paste0(prefix, read), exdir = dir)
