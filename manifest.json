@@ -2961,79 +2961,97 @@
       "checksum": "a88997c1027ddd8ceaa5e0b0204884b6"
     },
     "DESCRIPTION": {
-      "checksum": "8042ee5d89cdc797cba903087ac90350"
+      "checksum": "c85223189bc838d748c5e34953d85572"
     },
     "inst/manual/img/t1_data_design.webp": {
-      "checksum": "f7e066d8adce96794925cfd46818bdfb"
+      "checksum": "fb7b25542d3ffbcaad6897e8402cb2ac"
     },
     "inst/manual/img/t1_data_pick.webp": {
-      "checksum": "e881a6d0e41f7416f7a4d40e49cc3aeb"
+      "checksum": "8fafa20815e20fb7f8210626c16dea76"
     },
     "inst/manual/img/t1_items_bank.webp": {
-      "checksum": "27557bf7900451e2ff6e987d4478fbb8"
+      "checksum": "43b13bc4f24a07bbf61d33a82e709492"
     },
     "inst/manual/img/t1_items_coef.webp": {
-      "checksum": "cde8695b3a1b19f66da75cba87f05ef3"
+      "checksum": "6f0b4eb2e7dcd77ec24d21ff42710cda"
     },
     "inst/manual/img/t1_items_done.webp": {
-      "checksum": "786a7831f647b5f24b708be0767eab2c"
+      "checksum": "4e5d9e79ac7a923ae4cc58bb3cf28b79"
     },
     "inst/manual/img/t1_items_fit.webp": {
-      "checksum": "f6934fe5535e3cc39016d637a56841b2"
+      "checksum": "3ec188aedea3ce903df8bcdf51d533cf"
     },
     "inst/manual/img/t1_items_plot.webp": {
-      "checksum": "319825898166c0492d15e9b32e408b93"
+      "checksum": "37c4bcfcceaf1dda175f5d1ed834a0da"
     },
     "inst/manual/img/t1_link_external.webp": {
-      "checksum": "3eb43c1c05fb87389e45d14083460964"
+      "checksum": "4364bfc88440b9513a80edc652b11f7b"
     },
     "inst/manual/img/t1_link_fixed.webp": {
-      "checksum": "77ea76cbc273bd2344ac080ff295f142"
+      "checksum": "d77631fc386e9085f6826ec6a991da0a"
     },
     "inst/manual/img/t1_link_internal.webp": {
-      "checksum": "0a98f15dc53a72512037615ade1964dd"
+      "checksum": "a26da7425abdb525550c5c832551b575"
     },
     "inst/manual/img/t1_link_vertical.webp": {
-      "checksum": "97cf7fbc7a3b5ab4573e0b1b87b259be"
+      "checksum": "a2281f90bdf39ec79e19906e56086a73"
     },
     "inst/manual/img/t1_score_done.webp": {
-      "checksum": "84352dc94a54f9e40bfc1e212b3e9594"
+      "checksum": "c9c8520397f5358bc2d1a0e185342b4f"
     },
     "inst/manual/img/t1_score_items.webp": {
-      "checksum": "68eacede355b87f8d0c58b0be040fafd"
+      "checksum": "89657619d424c2680cf10add80799dd9"
     },
     "inst/manual/img/t1_score_raw.webp": {
-      "checksum": "e6c2b8ff22899610252ee21acae89b01"
+      "checksum": "524a0e052187e92b03a8042fa057991e"
+    },
+    "inst/manual/img/t1_score_save.webp": {
+      "checksum": "f802422d3781ae990533ae1d30a3f1c5"
+    },
+    "inst/manual/img/t1_score_steps.webp": {
+      "checksum": "eec4f2665f366625f06d4a3a44fcf8a8"
     },
     "inst/manual/img/t1_score_table.webp": {
-      "checksum": "effe8654c1e50cd1f3c8bb4dfa7e990e"
+      "checksum": "6f53ae5a7370986f16ecc247c4bd5f88"
     },
     "inst/manual/img/t2_data.webp": {
-      "checksum": "4ba90430dc8e1f032841d40a70873ba0"
+      "checksum": "cfd080e1fea6b2ce5775b4495b25b615"
     },
     "inst/manual/img/t2_items_bank.webp": {
-      "checksum": "52c6a413219b55d128e972cb2d0faf63"
+      "checksum": "c866d30e6c86d51a2f772faf296dc08a"
     },
     "inst/manual/img/t2_items_done.webp": {
-      "checksum": "587b633a04665814f97dc206037493a8"
+      "checksum": "21aa3f4f16638f7a083fbe355e16807b"
+    },
+    "inst/manual/img/t2_items_drift.webp": {
+      "checksum": "b052a864d3583e99ecf0791e8744d587"
+    },
+    "inst/manual/img/t2_items_drifttable.webp": {
+      "checksum": "47258b831063ac371843b20b5f20ac05"
+    },
+    "inst/manual/img/t2_items_fixed.webp": {
+      "checksum": "15ab7bc4b761ac7b2b2ece681ca9c1e4"
     },
     "inst/manual/img/t2_items_log.webp": {
-      "checksum": "bef31b9fbe440f9dbe8ed0a1d052d870"
+      "checksum": "e68fda9f9ef0a7c66c0fbbc2d54413bb"
     },
     "inst/manual/img/t2_link_fixed.webp": {
-      "checksum": "d8a4e58ebb30ad7d07f9894acc14cba9"
+      "checksum": "f8741564ad3d3aefedd8823dc8eebe7f"
     },
     "inst/manual/img/t2_link_top.webp": {
-      "checksum": "de863f86c2d1ce4fdf0513cde4178ee6"
+      "checksum": "15761796b78262f64e4947934953b563"
+    },
+    "inst/manual/img/t2_link_vertical.webp": {
+      "checksum": "5f7330bc152010761c3f1d3791641264"
     },
     "inst/manual/img/t2_score_done.webp": {
-      "checksum": "811b41f7fb0d63afcfab87980d4df609"
+      "checksum": "5b75b524e3a69a0ffd5ee33a53589e9a"
     },
     "inst/manual/kitsui_manual_body.html": {
-      "checksum": "16576412e0b2f55ca0c19be6c990c90b"
+      "checksum": "8b14d56421131f69172efe7240a5b3ea"
     },
     "inst/manual/kitsui_manual.html": {
-      "checksum": "ac41d85580ed9876758df23bb4f7c290"
+      "checksum": "f7b7af9f9360d136fb087f882c63f620"
     },
     "NAMESPACE": {
       "checksum": "c5cfd36d75fc8e0fa559bb0c54745623"

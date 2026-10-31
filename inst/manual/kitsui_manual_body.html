@@ -1,6 +1,6 @@
 <div class="km-wrap">
 <header class="km-top">
-  <div class="km-eyebrow">KIT 量尺建構工具 · kitsUI 0.3.11</div>
+  <div class="km-eyebrow">KIT 量尺建構工具 · kitsUI 0.8.1</div>
   <h1>kitsUI 操作手冊</h1>
   <p class="km-lede">kitsUI 把 KIT 的作答資料校準、連結，算成每個孩子的分數。這份手冊分成兩個任務：第一次建立量尺時的<strong>基礎計分</strong>，以及之後每收到一波資料時的<strong>新增波次計分</strong>。</p>
   <div class="km-meta">
@@ -14,7 +14,9 @@
 <nav class="km-toc" aria-label="目錄">
   <div class="km-h">開始之前</div>
   <a href="#man-two">兩個任務的差別</a>
+  <a href="#man-screen">畫面怎麼看</a>
   <a href="#man-data">資料格式</a>
+  <a href="#man-local">本機版與雲端版</a>
   <a href="#man-terms">名詞</a>
   <div class="km-h">任務一：基礎計分</div>
   <a class="km-t1" href="#man-t1-data">① 資料</a>
@@ -46,7 +48,7 @@
     <thead><tr><th></th><th class="km-t1">任務一：過去波次的基礎計分</th><th class="km-t2">任務二：新增波次的計分</th></tr></thead>
     <tbody>
       <tr><td>什麼時候做</td><td>第一次建立量尺。只做一次。</td><td>每收到新的一波就做一次。</td></tr>
-      <tr><td>① 資料</td><td>放進所有過去的波次。不用固定檔。</td><td>放進新的波次，再上傳上一回合的固定檔（zip）。</td></tr>
+      <tr><td>① 資料</td><td>放進所有過去的波次。選波次的單位和參照世代。不用固定檔。</td><td>放進新的波次，再放上一回合的固定檔（zip）。單位和參照世代沿用固定檔。</td></tr>
       <tr><td>② 題目校準</td><td>每個量尺自由校準。</td><td>先檢查偏移，舊題固定在題庫的值，只估新的步驟。「固定了哪些題」核對固定的值。</td></tr>
       <tr><td>③ 連結</td><td>建立內部連結（M36 → M03）和外部連結（M03 → D）。</td><td>連結已經凍結，直接沿用，不用按任何按鈕。垂直圖會畫出之前回合的點。</td></tr>
       <tr><td>④ 受試者評分</td><td>算出過去所有列次的分數。需要時設定通過步驟。</td><td>只算新波次的分數。舊分數不重算。通過步驟沿用固定檔的設定。</td></tr>
@@ -59,19 +61,56 @@
   </div>
 </section>
 
+<section id="man-screen">
+  <h2>畫面怎麼看</h2>
+  <p>四頁的排法都一樣，由上往下：</p>
+  <ul>
+    <li><strong>這一頁做什麼</strong>：一句話說明。按「看步驟」打開這一頁的步驟。</li>
+    <li><strong>進階設定</strong>：通常不用改，預設收起來。</li>
+    <li>一行<strong>本回合</strong>：這一回合的名稱、世代、波次、參照世代和固定檔。</li>
+    <li>一個<strong>主要按鈕</strong>：開始校準、建立內部連結、計算這一回合的分數等。① 資料頁沒有，勾好波次就會自動檢查。</li>
+    <li><strong>狀態框</strong>：結果寫在最上面。</li>
+    <li>結果和細節。細節收在一排可以點開的標題裡，例如「題目參數」「kits 的檢查」「用 R 怎麼做」。點標題打開，再點一次收起來。</li>
+    <li>右下角的<strong>下一步</strong>按鈕，左邊一句話說明下一步。</li>
+  </ul>
+  <p>狀態框有四種：</p>
+  <div class="km-table-wrap">
+  <table>
+    <thead><tr><th>狀態框</th><th>意思</th></tr></thead>
+    <tbody>
+      <tr><td>【完成】（綠）</td><td>做好了，可以往下做。</td></tr>
+      <tr><td>【完成，但請注意】（黃）</td><td>做好了，但有幾點要看一下（例如得分不完整的題）。看過就可以往下做。</td></tr>
+      <tr><td>【停下來】（紅）</td><td>沒有做成。框裡寫原因和怎麼辦。要先處理再往下做。</td></tr>
+      <tr><td>【要重新執行】（黃）</td><td>資料或設定改過了，舊的結果已經清掉。再按一次主要按鈕。</td></tr>
+    </tbody>
+  </table>
+  </div>
+  <p>kits 的英文原文收在狀態框裡的「kits 的原文」，要看再點開。</p>
+  <p>校準和計算分數做完時，右下角會跳出一句短的通知，頁面也會自動捲到狀態框。分頁上做完的步驟會打 ✓；還不能做的步驟是灰色的。</p>
+  <h4>圖的工具列與下載</h4>
+  <p>滑鼠移到圖上，右上角會出現工具列：</p>
+  <ul>
+    <li><strong>相機圖示</strong>：下載 PNG。一律 2100 像素寬，檔案裡寫 300 dpi（7 吋寬，雙欄論文的寬度），和視窗大小無關。插進 Word 就是 7 吋寬。</li>
+    <li><strong>第二個圖示</strong>：下載 SVG 向量圖。期刊要 600 dpi 以上、EPS 或 PDF 時用它，再用 Inkscape 或 Illustrator 轉。SVG 的字用打開它的電腦裡有的字型。</li>
+    <li>有座標軸的圖還有放大、縮小、還原的按鈕。</li>
+  </ul>
+  <p>圖的下面有「下載…（HTML）」按鈕，存成可以互動的單一網頁，打開後工具列一樣能用。這個按鈕只在圖畫得出來時才出現。</p>
+  <p>頁首的版本行寫著 app 的名稱和版本，例如 <code>kitsUI v0.8.1 · 2026-11-01 · kits 0.25.2</code>。回報問題時請一起附上。</p>
+</section>
+
 <section id="man-data">
   <h2>資料格式</h2>
   <p>資料是<strong>長格式</strong>：一列是一個孩子在一個波次的一題作答。可以一次上傳好幾個檔，只要欄位一樣。檔案支援 CSV、壓縮過的 CSV.GZ 和 SPSS 的 SAV。單一檔案上限 200 MB；大的 CSV 請先壓成 .csv.gz。</p>
-  <p>資料是寬格式（一題一欄）、欄名不一樣，或分數不是從 0 開始時，先到 kitJoin 的「kits 作答檔」轉好再上傳。本機版：在 R 執行 <code>kitJoin::run_kitjoin()</code> 開啟 kitJoin，資料不會離開這台電腦。雲端版：① 資料頁的上傳說明和紅字裡有「開啟 kitJoin」按鈕，開的是<a href="https://jiewentsai-kitjoin.share.connect.posit.cloud/" target="_blank" rel="noopener noreferrer">雲端版 kitJoin</a>。</p>
+  <p>資料是寬格式（一題一欄）、欄名不一樣，或分數不是從 0 開始時，先到 kitJoin（KIT 資料處理工具）的「kits 作答檔」轉好再上傳。本機版：在 R 執行 <code>library(kitverse)</code>，再執行 <code>run_kitjoin()</code>，資料不會離開這台電腦。雲端版：① 資料頁的上傳說明和狀態框裡有「開啟 kitJoin」按鈕，開的是<a href="https://jiewentsai-kitjoin.share.connect.posit.cloud/" target="_blank" rel="noopener noreferrer">雲端版 kitJoin</a>。</p>
   <div class="km-table-wrap">
   <table>
     <thead><tr><th>欄位</th><th>必填</th><th>意思</th></tr></thead>
     <tbody>
-      <tr><td><span class="km-col">visit_id</span></td><td class="km-req">是</td><td>列次編號：一個孩子的一個波次一個編號。兩個世代不能重複。</td></tr>
+      <tr><td><span class="km-col">visit_id</span></td><td class="km-req">是</td><td>列次編號：一個孩子的一個波次一個編號。不同世代也不能重複。</td></tr>
       <tr><td><span class="km-col">subj_id</span></td><td>否</td><td>孩子編號：同一個孩子的各波次相同。分數表會帶著它。</td></tr>
-      <tr><td><span class="km-col">cohort</span></td><td class="km-req">是</td><td>世代，例如 M03、M36。參照世代是 M03。</td></tr>
+      <tr><td><span class="km-col">cohort</span></td><td class="km-req">是</td><td>世代，例如 M03、M36。參照世代在第一回合選（有 M03 時預設 M03）。</td></tr>
       <tr><td><span class="km-col">sex</span></td><td>否</td><td>性別，例如 boy、girl。</td></tr>
-      <tr><td><span class="km-col">wave_m</span></td><td class="km-req">是</td><td>波次（施測月齡），例如 3、6、12。</td></tr>
+      <tr><td><span class="km-col">wave_m</span></td><td class="km-req">是</td><td>波次，例如施測月齡 3、6、12。也可以是年或波次序號（在 ① 第一回合選單位）。</td></tr>
       <tr><td><span class="km-col">age_m</span></td><td>否</td><td>實際月齡。題目表的通過年齡要用它。</td></tr>
       <tr><td><span class="km-col">item_id</span></td><td class="km-req">是</td><td>題號，例如 lana01。</td></tr>
       <tr><td><span class="km-col">item_score</span></td><td class="km-req">是</td><td>得分：0、1、2…。沒有作答的題不用放。</td></tr>
@@ -79,8 +118,19 @@
     </tbody>
   </table>
   </div>
-  <p>① 資料頁選「上傳檔案」後，可以下載<strong>欄位範例檔</strong>，照著它的欄位整理就好。世代和領域都由資料提供，kitsUI 不會從檔名猜。</p>
-  <div class="km-note km-warn"><p><strong>雲端版只能放去識別化的資料。</strong>有姓名、身分證號等資料時，請改用本機版（<code>kitsUI::run_kitsui()</code>，或在 Windows 雙擊 <code>run.bat</code>）。</p></div>
+  <p>① 資料頁選「上傳檔案」後，點開<strong>資料檔要有哪些欄位</strong>可以看這張表，也可以按<strong>下載欄位範例檔（CSV）</strong>，照著它的欄位整理就好。世代和領域都由資料提供，kitsUI 不會從檔名猜。</p>
+</section>
+
+<section id="man-local">
+  <h2>本機版與雲端版</h2>
+  <div class="km-note km-warn"><p><strong>雲端版只能放去識別化的資料。</strong>有姓名、身分證號等資料時，請改用本機版。</p></div>
+  <p>本機版透過 kitverse 安裝和啟動。kitverse 會一起裝好 kits、kitsUI、kitJoin 和它們要用的套件。在 R 裡：</p>
+  <ul>
+    <li><code>library(kitverse)</code>，再執行 <code>run_kitsui()</code>：開啟 kitsUI。<code>run_kitjoin()</code> 開啟 kitJoin。</li>
+    <li><code>kitverse::kitverse_check()</code>：檢查這台電腦（R、套件、字型、存檔等）能不能用。</li>
+    <li><code>kitverse::kitverse_update()</code>：安裝缺的、更新太舊的套件。</li>
+  </ul>
+  <p>Windows 也可以雙擊 kitsUI 資料夾裡的 <code>run.bat</code>。它會先裝好或更新太舊的套件，再開啟 app。</p>
 </section>
 
 <section id="man-terms">
@@ -90,11 +140,12 @@
     <dt>列次</dt><dd>一個孩子的一次施測（一個 visit_id）。</dd>
     <dt>回合</dt><dd>按一次「開始校準」處理的資料。任務一是 R1，之後每一波各一回合：R2、R3…</dd>
     <dt>固定檔</dt><dd>④ 頁下載的 zip。記錄題庫、題目版本、連結、各波次的摘要、通過步驟和檢查紀錄。下一回合一定要用它。</dd>
-    <dt>內部連結</dt><dd>把 M36 的量尺換到 M03 的量尺上（每個領域一條）。</dd>
-    <dt>外部連結</dt><dd>用錨題把 M03 的量尺換到 D 量尺上（所有領域共用一條）。</dd>
+    <dt>參照世代</dt><dd>其他世代都換到它的量尺上。第一回合在 ① 選，寫進固定檔，之後不能改。示範資料是 M03。</dd>
+    <dt>內部連結</dt><dd>把其他世代的量尺換到參照世代的量尺上，例如 M36 → M03（每個領域一條）。</dd>
+    <dt>外部連結</dt><dd>用錨題把參照世代的量尺換到 D 量尺上（所有領域共用一條）。參照世代沒有錨題時不適用。</dd>
     <dt>偏移</dt><dd>舊題在新的一波變難或變簡單。偏移的題會換成新版本（題號加上 <code>_r名稱</code>），舊參數不動。</dd>
     <dt>借用另一世代題庫</dt><dd>自己世代的題庫沒有校準過這個月齡、另一個世代有時，就用另一個世代的題庫校準。</dd>
-    <dt>作答組合</dt><dd>一個波次裡最多孩子作答的那一組題目。分數對照表只算用這個作答組合的孩子。</dd>
+    <dt>作答組合</dt><dd>一個波次裡最多孩子作答的那一組題目。分數對照表的人數和百分比只算用這個作答組合的孩子。</dd>
     <dt>flag</dt><dd>需要特別看一下的量尺或題目（不是錯誤，照樣往下做）。</dd>
     <dt>門檻 threshold</dt><dd>Thurstonian 門檻：能力值到這裡時，有一半的機會得到這個分數以上。</dd>
     <dt>通過步驟 step</dt><dd>得分至少幾分算通過。預設每題都是 1。只影響題目表的門檻和 age50。</dd>
@@ -112,78 +163,95 @@
 
   <h3 id="man-t1-data"><span class="km-step-no">①</span> 資料：選資料、勾波次</h3>
   <ol>
-    <li><strong>資料來源</strong>選「上傳檔案」，一次選好所有過去波次的檔案（截圖用的是「示範資料」）。</li>
-    <li><strong>這一回合的世代與波次</strong>勾所有過去的波次。可以按「全選」。勾完停 1 秒才開始檢查。</li>
-    <li><strong>上一回合的固定檔</strong>留空。顯示「沒有（第一回合）」。</li>
-    <li><strong>這一回合的名稱</strong>用預設的 R1 就好。</li>
-    <li>右邊的<strong>量尺</strong>表列出這一回合要校準的量尺。calibration 都是「自由校準（沒有題庫）」。</li>
-    <li>藍框寫「資料沒問題」時，按<strong>下一步：題目校準</strong>。</li>
+    <li><strong>1. 資料來源</strong>選「上傳檔案」，一次選好所有過去波次的檔案。截圖用的是「示範資料」：<strong>領域</strong>勾語言 lan 和動作 motor（動作預設沒有勾）。</li>
+    <li><strong>2. 這一回合的世代與波次</strong>勾所有過去的波次。一個世代一列。可以按「全選」。勾完停 1 秒才開始檢查。</li>
+    <li><strong>波次（wave_m）的單位</strong>：KIT 用「月（施測月齡）」，不用改。單位是年或波次序號時，不照月齡借另一世代題庫，題目表也不算 age50。</li>
+    <li><strong>參照世代</strong>：資料有 M03 時預設是 M03。</li>
+    <li><strong>3. 上一回合的固定檔</strong>留空。顯示「沒有（第一回合）」。</li>
+    <li>這一回合的名稱在<strong>進階設定（這一回合的名稱）</strong>裡，預設是 R1，不用改。只能用英文字母與數字。</li>
+    <li>右邊的狀態框是【完成】時，看一下<strong>量尺</strong>表：每個量尺的列次數、題數、波次和校準方式。第一回合都是「自由校準（沒有題庫）」。</li>
+    <li>按右下角的<strong>下一步：題目校準</strong>。</li>
   </ol>
-  <figure class="km-shot"><img src="kitsui-manual/img/t1_data_pick.webp" alt="① 資料頁：左邊勾了 M03 3–48 和 M36 36–72，右邊的量尺表列出四個量尺，下方是「下一步：題目校準」按鈕"><figcaption>左邊選資料和波次，右邊確認量尺。紅字是錯誤，要先修資料；橘字是提醒，看過就可以往下做。</figcaption></figure>
-  <p>上傳的檔案讀不進來時，紅字旁邊有到 kitJoin 的說明（雲端版是<strong>開啟 kitJoin</strong>按鈕；本機版是一行「在 R 執行 kitJoin::run_kitjoin()」）。在 kitJoin 的「kits 作答檔」把檔案轉好，再回來上傳。</p>
-  <p>同一頁往下有<strong>作答設計</strong>圖：每一格是一個波次、一題的通過比例，空白表示那一波沒有施測。可以用它確認題目和波次有沒有放錯。</p>
+  <figure class="km-shot"><img src="kitsui-manual/img/t1_data_pick.webp" alt="① 資料頁：左邊勾了 M03 3–48 和 M36 36–72，下面是波次的單位和參照世代；右邊是【完成】資料可以用：4 個量尺、220,404 列作答，量尺表列出四個量尺"><figcaption>左邊選資料、波次、單位和參照世代；右邊看狀態框和量尺表。</figcaption></figure>
+  <div class="km-note">
+    <p><strong>波次的單位和參照世代只在第一回合選。</strong>兩個都會寫進固定檔，之後的回合沿用，不能再改。之後的回合，這兩個位置只顯示固定檔裡的設定。</p>
+  </div>
+  <p>資料有問題時，狀態框是【停下來】，寫原因和怎麼辦，例如缺欄位、重複的列、得分不是整數。要先修資料再上傳。上傳的檔案讀不進來時，旁邊有到 kitJoin 的說明（雲端版是<strong>開啟 kitJoin</strong>按鈕；本機版是一行在 R 開啟 kitJoin 的指令）。在 kitJoin 的「kits 作答檔」把檔案轉好，再回來上傳。</p>
+  <p>量尺表下面有一排可以點開的細節：固定檔的內容、作答設計、預覽、kits 的檢查、用 R 怎麼做。</p>
+  <p>點開<strong>作答設計</strong>：每一格是一個波次、一題的通過比例，空白表示那一波沒有施測。上方的<strong>量尺</strong>選單可以換量尺。可以用它確認題目和波次有沒有放錯。</p>
   <p>通過比例是「得分達到<a href="#man-t1-steps">通過步驟</a>以上」的比例。預設每題的通過步驟是 1，也就是得 1 分以上。固定檔裡有別的設定時，圖會照它算，圖的上方也會寫出來。</p>
-  <figure class="km-shot km-narrow"><img src="kitsui-manual/img/t1_data_design.webp" alt="作答設計熱圖：橫軸是題號，縱軸是波次，顏色是通過比例"><figcaption>作答設計（lan M03）。上方的選單可以換量尺；圖可以下載成 HTML。</figcaption></figure>
+  <figure class="km-shot km-narrow"><img src="kitsui-manual/img/t1_data_design.webp" alt="作答設計熱圖：橫軸是題號，縱軸是波次，顏色是通過比例"><figcaption>作答設計（lan M03）。圖可以下載成 HTML。</figcaption></figure>
 
   <h3 id="man-t1-items"><span class="km-step-no">②</span> 題目校準</h3>
   <ol>
-    <li><strong>用哪一個題庫</strong>：第一回合每個量尺都是「自由校準（自己的題庫是空的）」，不用改。</li>
     <li>按<strong>開始校準</strong>。</li>
+    <li>看狀態框。【完成】或【完成，但請注意】時可以往下做；【停下來】時，框裡寫哪個量尺停下來、原因和怎麼辦。</li>
   </ol>
-  <figure class="km-shot"><img src="kitsui-manual/img/t1_items_bank.webp" alt="用哪一個題庫：四個量尺都是自由校準，下方是開始校準按鈕"></figure>
-  <p>做完會出現綠色的「完成」，下面是每個量尺的摘要。用「看哪一個量尺」切換量尺；藍框列出列次、題數，以及偏移、估不出來、分數類別有問題的題數。</p>
-  <figure class="km-shot"><img src="kitsui-manual/img/t1_items_done.webp" alt="校準完成：四個量尺都自由校準，lan M03 的摘要是 3111 列次、24 題，偏移 0 題"><figcaption>flag 欄有字的量尺要特別看一下。</figcaption></figure>
-  <p>每個量尺的結果最上面是<strong>固定了哪些題</strong>。第一回合沒有題庫，所以這裡寫「自由校準，沒有固定的題」，每一題的狀態都是「自由校準」。任務二才會有固定的題，說明在<a href="#man-t2-status">任務二的 ②</a>。</p>
+  <p><strong>進階設定（這一回合不做的量尺、用哪一個題庫、flag 的條件）</strong>通常不用改。第一回合每個量尺的題庫都是「自由校準（自己的題庫是空的）」。</p>
+  <figure class="km-shot"><img src="kitsui-manual/img/t1_items_bank.webp" alt="② 的進階設定：這一回合不做的量尺、用哪一個題庫（四個量尺都是自由校準）、flag 的條件"><figcaption>進階設定。有量尺停下來時，可以在「這一回合不做的量尺」勾它，其他量尺照常做。</figcaption></figure>
+  <p>做完後，狀態框下面是<strong>看一個量尺</strong>：用「量尺」選單切換量尺。量尺名稱後面寫校準方式，下面列出列次、題數，以及偏移、分數類別有問題的題數。</p>
+  <figure class="km-shot"><img src="kitsui-manual/img/t1_items_done.webp" alt="校準完成：【完成】4 個量尺都校準好了；lan M03 自由校準，3,111 列次、24 題"><figcaption>第一回合每個量尺都是自由校準。</figcaption></figure>
+  <p>再下面是圖，最下面是一排可以點開的細節：每個量尺（每個量尺一列，flag 欄有字的要特別看一下）、要注意、題目參數、固定了哪些題、偏移把關、適配度、這一回合的紀錄、kits 的檢查、用 R 怎麼做。「要注意」只有狀態框是【完成，但請注意】時才有。</p>
+  <p>點開<strong>固定了哪些題</strong>：第一回合沒有題庫，所以這裡寫「沒有題庫，這個量尺是自由校準，沒有固定的題」，每一題的狀態都是「自由校準」。任務二才會有固定的題，說明在<a href="#man-t2-status">任務二的 ②</a>。</p>
 
   <h4>題目參數</h4>
   <p>每一題的每一個得分步驟一列。<span class="km-col">difficulty</span> 是步驟難度（kits 裡叫 beta）；<span class="km-col">threshold</span> 是 Thurstonian 門檻：能力值到這裡時，有一半的機會得到這個分數以上（kits 裡叫 thr）。欄位說明寫在表的下面。</p>
   <figure class="km-shot"><img src="kitsui-manual/img/t1_items_coef.webp" alt="題目參數表：item_id、item_score、difficulty、difficulty_se、threshold、threshold_se"></figure>
 
   <h4>圖與適配度</h4>
-  <p>圖有五種：類別機率曲線、題目與受試者分布（Wright map）、適配度、觀察與預期（依波次）、偏移把關圖。題目多時可以分頁看，或自己選題。偏移把關圖只有固定校準（任務二）才有。</p>
-  <figure class="km-shot"><img src="kitsui-manual/img/t1_items_plot.webp" alt="類別機率曲線：每題一小圖，曲線是各得分的機率"></figure>
+  <p>圖有五種：類別機率曲線、題目與受試者分布（Wright map）、適配度、觀察與預期（依波次）、偏移把關圖。題目多時可以分頁看，或自己選題。偏移把關圖只有固定校準（任務二）才有；第一回合選它時，圖的位置會說明為什麼沒有圖。</p>
+  <figure class="km-shot"><img src="kitsui-manual/img/t1_items_plot.webp" alt="類別機率曲線：每題一小圖，曲線是各得分的機率；右上角是工具列"><figcaption>滑鼠移到圖上，右上角有工具列（PNG、SVG、放大、縮小、還原）。</figcaption></figure>
   <p>適配度表的 <span class="km-col">infit</span>、<span class="km-col">outfit</span> 接近 1 最好。兩個都在 0.6–1.4 之間時 flag 是 ok；任一個大於 1.4 是 underfit（作答比模型預期亂），小於 0.6 是 overfit（比模型預期整齊）。</p>
-  <figure class="km-shot"><img src="kitsui-manual/img/t1_items_fit.webp" alt="題目適配度表：n、pvalue、rir、infit、outfit、flag"></figure>
-  <p>沒有紅字時，按頁尾的<strong>下一步：連結</strong>。</p>
+  <figure class="km-shot"><img src="kitsui-manual/img/t1_items_fit.webp" alt="題目適配度表：item_id、n、pvalue、rir、infit、outfit、flag"></figure>
+  <p>沒有【停下來】時，按右下角的<strong>下一步：連結</strong>。</p>
 
   <h3 id="man-t1-link"><span class="km-step-no">③</span> 連結：只在第一回合建立</h3>
   <h4>1. 內部連結（M36 → M03）</h4>
   <ol>
     <li>在「哪一個量尺要做內部連結？」選一個 M36 量尺（例如 lan M36）。</li>
-    <li>按<strong>建立內部連結</strong>。</li>
+    <li>按<strong>建立內部連結</strong>。連結一做好就凍結在固定檔裡，不能復原，也不會重做。</li>
     <li>換下一個 M36 量尺（例如 motor M36），再按一次。每個領域各做一次。</li>
   </ol>
-  <p>做好的連結會顯示公式，例如 <code>lan M03 = 1.00 + 0.94 × lan M36</code>，以及 linking error。連結圖裡每一個點是一個兩個世代共同的題目步驟；點越貼近直線，連結越可靠。橘色叉叉是篩選時拿掉的點。</p>
-  <figure class="km-shot"><img src="kitsui-manual/img/t1_link_internal.webp" alt="內部連結：公式 lan M03 = 1.00 + 0.94 × lan M36，下方是連結圖"></figure>
-  <p>連結圖下面有<strong>內部連結的獨立檢核</strong>（kits_link_check()），預設收起來。它用不靠共同題目的兩種方法再算一次。不是每次都要做；想多確認時再點開，按「做獨立檢核」。</p>
+  <p>做好時狀態框是【完成】內部連結建立好了，已凍結在固定檔裡。下面是公式，例如 <code>lan M03 = 1.00 + 0.94 × lan M36</code>，以及 linking_error。連結圖裡每一個點是一個兩個世代共同的題目步驟；點越貼近直線，連結越可靠。圖例的 Kept 是留下的點，Dropped（橘色叉叉）是篩選時拿掉的點。</p>
+  <figure class="km-shot"><img src="kitsui-manual/img/t1_link_internal.webp" alt="內部連結：【完成】內部連結建立好了；公式 lan M03 = 1.00 + 0.94 × lan M36，下方是連結圖"></figure>
+  <p>選單下面的<strong>每一條</strong>列出每條內部連結的狀態。其他已經做好的內部連結收在<strong>其他已經建好的內部連結</strong>裡，每條一列，點開看係數和圖。</p>
+  <p>連結圖下面有<strong>內部連結的獨立檢核</strong>（kits_link_check()），預設收起來。它用不靠共同題目的兩種方法再算一次。不是每次都要做；想多確認時再點開，按「做獨立檢核」。它要用兩個世代這一回合的作答，所以這一回合只有一個世代時不能做。</p>
 
   <h4>2. 外部連結（M03 → D）</h4>
-  <p>外部連結用錨題，把 M03 的量尺換到 D。所有領域共用一條，只要按一次<strong>建立外部連結</strong>。錨題總數至少要 3 題；只有一個領域、錨題又不夠時，按鈕不會出現，畫面會說明原因。</p>
-  <figure class="km-shot"><img src="kitsui-manual/img/t1_link_external.webp" alt="外部連結：lan M03 有 2 個錨題、motor M03 有 25 個；公式 D = 64.41 + 7.12 × M03"><figcaption>示範資料的外部連結：D = 64.41 + 7.12 × M03。檢查表的 note 是提醒，不是錯誤。</figcaption></figure>
+  <p>外部連結用錨題，把參照世代 M03 的量尺換到 D。所有領域共用一條，只要按一次<strong>建立外部連結</strong>。點開<strong>錨題數與外部連結涵蓋的量尺</strong>，看每個量尺有幾個錨題。錨題總數至少要 3 題；不夠時不能建立，畫面會說明原因。參照世代沒有 D 分數的錨題時，外部連結不適用（不是錯誤），最後的分數留在參照世代的量尺上（ref_score）。</p>
+  <figure class="km-shot"><img src="kitsui-manual/img/t1_link_external.webp" alt="外部連結：【完成】外部連結建立好了；lan M03 有 2 個錨題、motor M03 有 25 個；公式 D = 64.41 + 7.12 × lan M03 或 motor M03"><figcaption>示範資料的外部連結：D = 64.41 + 7.12 × M03。</figcaption></figure>
 
-  <h4>3. 兩個世代的垂直連結</h4>
-  <p>三個分頁：未連結、內部連結後、外部連結後。每個波次畫中位數，線段是 P25 到 P75。連結後，同一個月齡兩個世代的點應該靠在一起。</p>
+  <h4>3. 各世代的垂直連結</h4>
+  <p>三個分頁：未連結、內部連結後、外部連結後。每個波次畫中位數，線段是 P25 到 P75。用「哪一個領域？」換領域。連結後，同一個月齡兩個世代的點應該靠在一起。</p>
+  <p>一個領域只有一個世代、也沒有之前回合的點時（例如第一回合只放 M03），只畫未連結的圖，上方的說明會寫原因；內部連結後和外部連結後兩個分頁不會出現。</p>
   <p>每個波次的人數、P25、中位數、P75 和實際月齡的中位數會存進固定檔（<code>wave_summary.csv</code>）。之後的回合靠它畫出這一回合的點，說明在<a href="#man-t2-link">任務二的 ③</a>。</p>
   <figure class="km-shot km-narrow"><img src="kitsui-manual/img/t1_link_vertical.webp" alt="垂直連結圖（外部連結後）：M03 和 M36 在 36、48 個月的點重疊"></figure>
 
-  <p>頁尾的<strong>固定檔裡的連結</strong>列出做好的連結。三條都在（兩條內部、一條外部）時，按<strong>下一步：受試者評分</strong>。</p>
-  <figure class="km-shot"><img src="kitsui-manual/img/t1_link_fixed.webp" alt="固定檔裡的連結：lan M36、motor M36 兩條內部連結和一條外部連結 D"></figure>
+  <p>頁尾點開<strong>固定檔裡的連結</strong>，列出做好的連結。三條都在（兩條內部、一條外部）時，頁尾寫「固定檔裡有 3 條連結」，按<strong>下一步：受試者評分</strong>。還有連結沒做時，頁尾會寫「還可以建立：…」。</p>
+  <figure class="km-shot"><img src="kitsui-manual/img/t1_link_fixed.webp" alt="固定檔裡的連結：lan M36、motor M36 兩條內部連結和一條外部連結 D，都是這一回合 R1 做的"></figure>
 
   <h3 id="man-t1-score"><span class="km-step-no">④</span> 受試者評分</h3>
   <ol>
+    <li>需要時先在<strong>進階設定：通過步驟</strong>改通過步驟，見<a href="#man-t1-steps">通過步驟</a>。</li>
     <li>按<strong>計算這一回合的分數</strong>。</li>
-    <li>出現「這一回合做完了：請現在就存兩個檔案」時，按<strong>下載這一回合的分數表（CSV）</strong>和<strong>下載新的固定檔（ZIP）</strong>。</li>
+    <li>狀態框是【完成】時，下面是<strong>分數摘要</strong>：每個量尺、世代、波次一列的人數、平均與標準差。超過 20 列時，其他的收在「全部（N 列）」裡。</li>
+    <li>在<strong>請現在就存兩個檔案</strong>按<strong>下載這一回合的分數表（CSV）</strong>和<strong>下載新的固定檔（zip）</strong>。</li>
   </ol>
-  <figure class="km-shot"><img src="kitsui-manual/img/t1_score_done.webp" alt="這一回合做完了：下載這一回合的分數表、下載新的固定檔、用這一回合的固定檔開始下一回合"><figcaption>早先各回合的分數之後不會重算，所以分數表要現在下載保存。</figcaption></figure>
+  <figure class="km-shot"><img src="kitsui-manual/img/t1_score_done.webp" alt="【完成】分數算好了：共 8,280 列；下面是分數摘要"><figcaption>示範資料共 8,280 列：每個量尺的每個列次一列。</figcaption></figure>
+  <figure class="km-shot"><img src="kitsui-manual/img/t1_score_save.webp" alt="請現在就存兩個檔案：下載這一回合的分數表、下載新的固定檔；下面是每個量尺換到哪一把尺"><figcaption>早先各回合的分數之後不會重算，所以分數表要現在下載保存。</figcaption></figure>
+  <p><strong>每個量尺換到哪一把尺</strong>說明每個量尺的換算路線，例如 <code>lan M36 → lan M03 → D</code>。</p>
+  <p>再下面是一排可以點開的細節：分數表（逐列）、分數對照表、題目表、kits 的檢查、用 R 怎麼做。</p>
 
-  <h4>1. 分數表</h4>
-  <p>上方的表說明每個量尺的換算路線，例如 <code>lan M36 → lan M03 → D</code>。下方每個列次每個量尺一列，可以用 visit_id 或 subj_id 找人。點開「每一欄是什麼」看所有欄位的說明。</p>
+  <h4>1. 分數表（逐列）</h4>
+  <p>每個列次每個量尺一列，可以輸入 visit_id 或 subj_id 的一部分找人。一頁 20 列，用「第幾頁」換頁。點開「每一欄是什麼」看所有欄位的說明。</p>
   <div class="km-table-wrap">
   <table>
     <thead><tr><th>欄位</th><th>意思</th></tr></thead>
     <tbody>
       <tr><td><span class="km-col">visit_id</span>、<span class="km-col">subj_id</span></td><td>列次編號與孩子編號。</td></tr>
+      <tr><td><span class="km-col">round</span></td><td>這一回合的名稱。</td></tr>
       <tr><td><span class="km-col">bank</span></td><td>校準用的題庫。借用另一世代題庫時，這裡是那個世代的量尺。</td></tr>
+      <tr><td><span class="km-col">scale</span></td><td>分數最後在哪一把尺上（例如 D）。</td></tr>
       <tr><td><span class="km-col">raw</span></td><td>原始分數（通過的步驟數）。</td></tr>
       <tr><td><span class="km-col">ability</span>、<span class="km-col">ability_se</span></td><td>能力值與標準誤：各世代分開校準，沒有經過連結（logit）。</td></tr>
       <tr><td><span class="km-col">d_score</span>、<span class="km-col">d_score_se</span></td><td>量尺分數與標準誤：經過內部、外部連結，換到 D 之後的值。</td></tr>
@@ -192,16 +260,19 @@
     </tbody>
   </table>
   </div>
-  <figure class="km-shot"><img src="kitsui-manual/img/t1_score_table.webp" alt="分數表：visit_id、subj_id、cohort、wave_m、ability、ability_se、d_score、d_score_se、se_link、se_total"></figure>
+  <figure class="km-shot"><img src="kitsui-manual/img/t1_score_table.webp" alt="分數表（逐列）：找人、第幾頁，表的欄位 visit_id、subj_id、cohort、wave_m、age_m、sex、domain、round、bank、scale、raw、ability、ability_se、d_score…"></figure>
+  <p>下載的分數表是全部的列，不只畫面上這一頁。</p>
 
   <h4>2. 分數對照表</h4>
-  <p>每個波次的每個原始分數，對應到三把尺上的分數。截圖選的是 lan M36：</p>
+  <p>每個波次的每個原始分數，對應到三把尺上的分數。預設列出<strong>所有可能的原始分數</strong>；這一回合沒有人得到的原始分數，n 是 0。只想看實際出現的原始分數時，勾<strong>只顯示本次資料中實際出現的原始分數</strong>。下載的一律是所有可能的原始分數的對照表。</p>
+  <p>截圖選的是 lan M36：</p>
   <ul>
     <li><span class="km-col">ability</span>：在 M36 自己的量尺上，各世代分開估計。</li>
-    <li><span class="km-col">ability_linked</span>：經過內部連結，換到參照世代 M03 的量尺上。M03 是參照世代，所以 M03 的量尺沒有這兩欄。</li>
+    <li><span class="km-col">ability_linked</span>：經過內部連結，換到參照世代 M03 的量尺上。M03 是參照世代，所以 M03 的量尺沒有這兩欄（ability_linked、ability_linked_se）。</li>
     <li><span class="km-col">d_score</span>：再經過外部連結，換到 D 上。</li>
   </ul>
-  <figure class="km-shot"><img src="kitsui-manual/img/t1_score_raw.webp" alt="分數對照表（lan M36）：wave_m、raw、ability、ability_linked、d_score、se_link、se_total、n、pct"></figure>
+  <p><span class="km-col">n</span>、<span class="km-col">pct</span>、<span class="km-col">cum_pct</span> 只算用這個波次<strong>作答組合</strong>的孩子；<span class="km-col">wave_n</span> 是這個波次全部的孩子數，<span class="km-col">form_pct</span> 是用這個作答組合的孩子佔幾 %。</p>
+  <figure class="km-shot"><img src="kitsui-manual/img/t1_score_raw.webp" alt="分數對照表（lan M36）：wave_m、n_items、raw、ability、ability_se、ability_linked、ability_linked_se、d_score、d_score_se、se_link、se_total、n、pct；raw 0 到 9 的 n 是 0"></figure>
 
   <h4>3. 題目表</h4>
   <p>每一題<a href="#man-t1-steps">通過步驟</a>的門檻，也放在同樣的三把尺上。預設的通過步驟是 1，也就是第一步的門檻：</p>
@@ -211,24 +282,25 @@
     <li><span class="km-col">d_threshold</span>：在 D 上，和 d_score 同一把尺。</li>
   </ul>
   <p>讀法都一樣：孩子在某一把尺上的分數高於同一把尺上的門檻，通過這一題的機會就超過一半。題目依最後一把尺的門檻（通常是 d_threshold）由小到大排列。<span class="km-col">age50</span> 是一半孩子通過的月齡。</p>
-  <p><span class="km-col">age50</span> 是用這一回合的資料算的：至少兩個波次、通過比例在波次之間跨過 50%，而且落在資料的月齡範圍內。只有一個波次，或每一波都已經超過（或都還沒到）50% 時，它是空的。這是刻意的：資料裡看不到通過比例跨過一半的地方，就不往外推。</p>
+  <p><span class="km-col">age50</span> 是用這一回合的資料算的：至少兩個波次、通過比例在波次之間跨過 50%，而且落在資料的月齡範圍內。只有一個波次，或每一波都已經超過（或都還沒到）50% 時，它是空的。這是刻意的：資料裡看不到通過比例跨過一半的地方，就不往外推。波次的單位不是月時，不算 age50。</p>
   <figure class="km-shot"><img src="kitsui-manual/img/t1_score_items.webp" alt="題目表（lan M36）：item_id、ability_threshold、ability_linked_threshold、d_threshold、age50，依 d_threshold 由小到大"></figure>
   <p>有題目的通過步驟不是 1 時，題目表在題號旁邊多一欄 <span class="km-col">step</span>。那一題的三種門檻和 age50 都照它算。</p>
 
   <h4 id="man-t1-steps">4. 通過步驟：得分至少幾分算通過</h4>
   <p>預設每一題得 1 分以上就算通過。有些題要更高的分數才算通過。例如之後的認知題是 0–4 分，3 分以上才算通過。這時把那一題的通過步驟設成 3。</p>
-  <p>題目表上方的<strong>通過步驟</strong>是收起來的區塊，因為大多數題目都用預設的 1。標題會寫目前的狀態，例如「通過步驟（每題都是 1）」或「通過步驟（2 題不是 1：lana03＝2、lana05＝2）」。有題目不是 1 時，區塊會自動打開。</p>
+  <p>通過步驟在 ④ 頁上方的<strong>進階設定</strong>，預設收起來，因為大多數題目都用預設的 1。標題會寫目前的狀態，例如「進階設定：通過步驟（每題都是 1）」或「進階設定：通過步驟（2 題不是 1：lana03＝2、lana05＝2）」。有題目不是 1 時，區塊會自動打開。</p>
   <ol>
     <li>點標題打開區塊。</li>
-    <li>在<strong>題目</strong>選一題或好幾題，可以打字找。每個選項會寫目前的通過步驟和校準裡的最高分數。</li>
-    <li>在<strong>通過步驟</strong>填分數，按<strong>套用到選的題</strong>。題目表馬上照新的設定重算。</li>
+    <li>在<strong>題目</strong>選一題或好幾題，可以打字找。清單依量尺分組，每個選項會寫目前的通過步驟和校準裡的最高分數。</li>
+    <li>在<strong>通過步驟</strong>填分數，按<strong>套用到選的題</strong>。題目表照新的設定重算。</li>
     <li>下面的「不是 1 的題」列出設定過的題。每一題可以按<strong>改回 1</strong>，也可以按<strong>全部改回 1</strong>。</li>
   </ol>
+  <figure class="km-shot"><img src="kitsui-manual/img/t1_score_steps.webp" alt="進階設定：通過步驟（2 題不是 1：lana03＝2、lana05＝2）；已把 2 題設成 2；不是 1 的題列出 lana03、lana05，各有改回 1 按鈕"><figcaption>示範：把 lana03、lana05 的通過步驟設成 2。</figcaption></figure>
   <p>題目很多時，打開<strong>用檔案設定（題目很多時）</strong>：按<strong>下載範本（CSV）</strong>，只改 <span class="km-col">step</span> 欄，再上傳。只要 <span class="km-col">item_id</span> 和 <span class="km-col">step</span> 兩欄就可以；<span class="km-col">scale</span>、<span class="km-col">max_score</span> 兩欄只是參考。</p>
   <p>設定會先檢查：</p>
   <ul>
-    <li><strong>紅字</strong>：設定沒有套用。例如沒選題目、step 不是 1 以上的整數、step 比這一題在校準裡的最高分還高；用檔案時還有缺 item_id 或 step 欄、同一題列兩次而 step 不同。改好再套用或上傳。</li>
-    <li><strong>橘字</strong>：檔裡有這一回合沒有的題。設定照樣存進固定檔，之後的回合用得到。打錯的話，改好再上傳。</li>
+    <li><strong>【停下來】通過步驟沒有套用</strong>：設定沒有改。例如沒選題目、step 不是 1 以上的整數、step 比這一題在校準裡的最高分還高；用檔案時還有缺 item_id 或 step 欄、同一題列兩次而 step 不同。改好再套用或上傳。</li>
+    <li>檔裡有這一回合沒有的題：設定照樣存進固定檔，之後的回合用得到；畫面會列出這些題。打錯的話，改好再上傳。</li>
   </ul>
   <div class="km-note">
     <p><strong>通過步驟只影響題目表。</strong>它改的是 ability_threshold、ability_linked_threshold、d_threshold 和 age50。校準、偏移、連結和分數都用全部的分數，不受影響。① 作答設計圖的通過比例也照它算。</p>
@@ -245,18 +317,19 @@
   <table>
     <thead><tr><th>檔案</th><th>內容</th></tr></thead>
     <tbody>
-      <tr><td><span class="km-col">VERSION</span></td><td>版本、建立日期、各回合名稱、參照世代、量尺。</td></tr>
+      <tr><td><span class="km-col">VERSION</span></td><td>版本、建立日期、各回合名稱、參照世代、波次的單位、量尺。</td></tr>
       <tr><td><span class="km-col">bank.csv</span></td><td>題庫：每個量尺每一題每一步的 beta 與標準誤。</td></tr>
       <tr><td><span class="km-col">versions.csv</span></td><td>題目版本：偏移的題原來的題號和新的題號。</td></tr>
       <tr><td><span class="km-col">waves.csv</span></td><td>每個題庫校準過的波次。</td></tr>
       <tr><td><span class="km-col">wave_summary.csv</span></td><td>每個量尺、世代、波次的人數，能力值的 P25、中位數、P75（校準的量尺上），和實際月齡的中位數。只有摘要，沒有個人資料。畫垂直圖用。</td></tr>
       <tr><td><span class="km-col">pass_steps.csv</span></td><td>通過步驟。沒列的題用 1。</td></tr>
       <tr><td><span class="km-col">links.csv</span></td><td>連結的點與設定。</td></tr>
-      <tr><td><span class="km-col">checks.csv</span></td><td>每一回合的檢查紀錄：偏移、新版本、flag、借用另一世代題庫等。</td></tr>
+      <tr><td><span class="km-col">checks.csv</span></td><td>每一回合的檢查紀錄：偏移、新版本、flag、借用另一世代題庫、這一回合不做的量尺等。</td></tr>
       <tr><td><span class="km-col">README.txt</span></td><td>固定檔的說明。</td></tr>
     </tbody>
   </table>
   </div>
+  <p>固定檔裡有核對碼。下一回合讀它時會核對每個檔案；被改過的固定檔會先擋下來，畫面會說明。</p>
   <p>固定檔裡的欄名、說明和 README.txt 都是英文，在任何電腦打開都不會是亂碼。要放中文的 CSV（例如自己取的中文題號或領域名稱）會加上 UTF-8 BOM，用 Excel 打開也正常。app 的畫面仍然是中文。</p>
 </section>
 <section id="man-t2" class="km-t2">
@@ -269,18 +342,20 @@
 
   <h3 id="man-t2-data"><span class="km-step-no">①</span> 資料：新波次＋上一回合的固定檔</h3>
   <ol>
-    <li><strong>資料來源</strong>上傳新的資料。檔案裡有好幾個波次也沒關係，下一步只勾要更新的那一波。</li>
-    <li><strong>這一回合的世代與波次</strong>只勾新的一波（示範：M03 的 60）。要一次加好幾個已經收完的波次，見下面的<a href="#man-t2-many">一次加好幾波</a>。</li>
-    <li><strong>上一回合的固定檔</strong>按「選擇 zip…」，上傳上一回合的固定檔。右邊會出現固定檔的內容：之前的回合、題庫、連結。</li>
-    <li><strong>這一回合的名稱</strong>自動變成下一個（R2）。</li>
-    <li>看過橘色提醒和「借用另一世代題庫」，按<strong>下一步：題目校準</strong>。</li>
+    <li><strong>1. 資料來源</strong>上傳新的資料。檔案裡有好幾個波次也沒關係，下一步只勾要更新的那一波。</li>
+    <li><strong>3. 上一回合的固定檔</strong>按「選擇 zip…」，上傳上一回合的固定檔。</li>
+    <li><strong>2. 這一回合的世代與波次</strong>只勾新的一波（示範：M03 的 60）。要一次加好幾個已經收完的波次，見下面的<a href="#man-t2-many">一次加好幾波</a>。</li>
+    <li>波次的單位和參照世代改成一行字，寫著固定檔裡的設定，不能改。</li>
+    <li>這一回合的名稱自動變成下一個（R2）。</li>
+    <li>看過狀態框裡的每一點和「借用另一世代題庫」，按<strong>下一步：題目校準</strong>。</li>
   </ol>
-  <figure class="km-shot"><img src="kitsui-manual/img/t2_data.webp" alt="任務二的 ① 資料頁：只勾 M03 60，上傳了 kitsui_fixed_R1.zip，右邊有得分不完整的提醒、借用另一世代題庫的說明和固定檔的內容"></figure>
+  <p>點開<strong>固定檔的內容</strong>可以看之前的回合、核對的結果、題庫和連結。</p>
+  <figure class="km-shot"><img src="kitsui-manual/img/t2_data.webp" alt="任務二的 ① 資料頁：只勾 M03 60，上傳了 kitsui_fixed_R1.zip；右邊是【完成，但請注意】得分不完整的提醒、量尺表、借用另一世代題庫的說明和固定檔的內容"></figure>
   <div class="km-note km-warn">
-    <p><strong>橘色提醒：得分不完整。</strong>新的一波常有題目沒有人得 0 分，或少了中間的分數。kitsUI 會自動處理並列出來：題庫裡有的題，固定在題庫的值；題庫裡沒有的題，這一回合先不估。作答本身不會被改動。</p>
+    <p><strong>【完成，但請注意】：得分不完整。</strong>新的一波常有題目沒有人得 0 分，或少了中間的分數。kitsUI 會自動處理並列出來：題庫裡有的題，固定在題庫的值；題庫裡沒有的題，這一回合先不估。作答本身不會被改動。</p>
   </div>
   <div class="km-note km-t2">
-    <p><strong>借用另一世代題庫。</strong>示範的 M03 題庫只校準過 3–48 個月；60 個月只有 M36 的題庫有。所以 M03 的 60 個月用 M36 的題庫校準，分數再經 M36 → M03 → D 換算。這是自動判斷的；要改的話，在 ② 的 bank 欄選別的題庫。</p>
+    <p><strong>借用另一世代題庫。</strong>示範的 M03 題庫只校準過 3–48 個月；60 個月只有 M36 的題庫有（36–72 個月）。所以 M03 的 60 個月用 M36 的題庫校準，分數再經 M36 → M03 → D 換算。這是自動判斷的；要改的話，在 ② 的進階設定「用哪一個題庫」選別的題庫。</p>
   </div>
 
   <h4 id="man-t2-many">一次加好幾波</h4>
@@ -311,15 +386,16 @@
   </div>
 
   <h3 id="man-t2-items"><span class="km-step-no">②</span> 題目校準：舊題固定、檢查偏移</h3>
-  <p><strong>用哪一個題庫</strong>的 why 欄會寫為什麼選這個題庫。確認後按<strong>開始校準</strong>。</p>
+  <p>打開<strong>進階設定</strong>，<strong>用哪一個題庫</strong>的「原因」欄會寫為什麼選這個題庫。通常不用改。按<strong>開始校準</strong>。</p>
   <figure class="km-shot"><img src="kitsui-manual/img/t2_items_bank.webp" alt="用哪一個題庫：lan M03 和 motor M03 的 60 個月借用 M36 題庫"></figure>
-  <p>這一回合是<strong>固定校準</strong>：舊題固定在題庫的值。摘要會列出偏移的題、換成新版本的題、分數類別有問題的題。</p>
+  <p>這一回合是<strong>固定校準</strong>：舊題固定在題庫的值。示範的狀態框是【完成，但請注意】：有 17 題分數類別有問題，已照規則處理，細節在「要注意」。看一個量尺的摘要會列出偏移的題、換成新版本的題、分數類別有問題而固定的題。</p>
+  <figure class="km-shot"><img src="kitsui-manual/img/t2_items_done.webp" alt="固定校準完成：【完成，但請注意】2 個量尺都校準好了；lan M36 固定校準：固定 12 題（M03 的資料借用另一世代題庫），449 列次、18 題，偏移 1 題，換成新版本 1 題，分數類別有問題、固定在題庫的值 5 題"><figcaption>借用另一世代題庫時，量尺名稱是題庫的量尺（lan M36）。</figcaption></figure>
 
   <h4>校準的順序</h4>
   <p>固定校準不是一步做完。kitsUI 依序做這五件事：</p>
   <ol>
     <li><strong>自由試算。</strong>先不固定任何題，只用這一波的資料估一次。</li>
-    <li><strong>和題庫比。</strong>把試算的門檻和題庫的門檻放在一起，用 mean/sigma 畫一條線。離線太遠的步驟就是偏移。</li>
+    <li><strong>和題庫比。</strong>把試算的門檻和題庫的門檻放在一起，用 mean/sigma 畫一條判斷用的線。離線太遠的步驟就是偏移。</li>
     <li><strong>固定沒有偏移的題。</strong>在容許範圍內的題，beta 固定成題庫的值。所以固定之後，它們的門檻就等於題庫的門檻。「固定了哪些題」的核對會確認這一點。</li>
     <li><strong>偏移的題換成新版本。</strong>題號加上 <code>_r</code> 和回合名稱，例如 <code>lanc09_rR2</code>，用這一波重新估計。舊的參數不動。</li>
     <li><strong>固定校準。</strong>帶著上面的設定，正式估一次。</li>
@@ -327,13 +403,13 @@
   <p>偏移是在第 2 步、固定之前判斷的。所以圖上看到的偏移，是試算的門檻和題庫不一樣。固定之後的參數沒有偏移：固定的題等於題庫，偏移的題已經換成新版本。</p>
 
   <h4 id="man-t2-status">固定了哪些題</h4>
-  <p>每個量尺的結果最上面，是這一回合每一題的狀態：</p>
+  <p>點開<strong>固定了哪些題</strong>，是這一回合每一題的狀態：</p>
   <div class="km-table-wrap">
   <table>
     <thead><tr><th>狀態</th><th>意思</th></tr></thead>
     <tbody>
       <tr><td>固定（沿用題庫）</td><td>判斷過，沒有偏移。參數固定成題庫的值。</td></tr>
-      <tr><td>固定（不判斷偏移，沿用題庫）</td><td>題庫裡有，但這一回合沒辦法判斷（例如分數類別有問題）。直接固定成題庫的值。detail 欄寫原因。</td></tr>
+      <tr><td>固定（不判斷偏移，沿用題庫）</td><td>題庫裡有，但這一回合沒辦法判斷（例如分數類別有問題）。直接固定成題庫的值。說明欄寫原因。</td></tr>
       <tr><td>偏移 → 新版本</td><td>偏移了。換成新版本，例如 <code>lanc09 → lanc09_rR2</code>，用這一波重新估計。</td></tr>
       <tr><td>新題（這一回合估計）</td><td>不在題庫裡。這一回合第一次估計。</td></tr>
       <tr><td>這一回合拿掉</td><td>分數類別有問題，這一回合不用。</td></tr>
@@ -341,68 +417,78 @@
     </tbody>
   </table>
   </div>
-  <p>表的上方有一句核對，是 kitsUI 每次重新算的：</p>
-  <p><strong>「固定的 N 題、M 個步驟，參數和題庫完全相同（最大差 0）。」</strong></p>
-  <p>N 和 M 是這個量尺固定的題數和步驟數。</p>
+  <p>表的上方有一句總數和一句核對，核對是 kitsUI 每次重新算的：</p>
+  <p><strong>「核對：固定的 N 題、M 個步驟，參數和題庫完全相同（最大差 0）。」</strong></p>
+  <p>N 和 M 是這個量尺固定的題數和步驟數（包括不判斷偏移、直接固定的題）。</p>
   <p>它逐一比對固定的步驟和題庫的 beta。有任何一步不同時，這一句變成紅框，列出不同的步驟。這不應該發生；看到紅框時，請把量尺和那幾個步驟告訴維護 kitsUI 的人。</p>
-  <p>表裡先列不是固定的題（偏移、新題、拿掉）。固定的題收在<strong>看全部固定的題</strong>裡，點開才看得到（第一回合是自由校準，寫「看全部自由校準的題」）。按<strong>下載每一題的狀態（csv）</strong>可以存下整張表。</p>
+  <p>表裡先列不是固定的題（偏移、新題、拿掉）。固定的題收在<strong>看全部固定的題</strong>裡，點開才看得到（第一回合是自由校準，寫「看全部自由校準的題」）。按<strong>下載每一題的狀態（CSV）</strong>可以存下整張表。</p>
+  <figure class="km-shot"><img src="kitsui-manual/img/t2_items_fixed.webp" alt="固定了哪些題（lan M36）：這一回合固定 17 題，換成新版本 1 題；核對：固定的 17 題、51 個步驟，參數和題庫完全相同（最大差 0）；lanc09 → lanc09_rR2 偏移 → 新版本"></figure>
 
   <h4>偏移把關表</h4>
-  <p><strong>偏移把關</strong>的表是每一題的檢查：<span class="km-col">max_abs_resid</span> 是這一題離連結線最遠的距離；<span class="km-col">drift</span> 是 TRUE 的題會換成新版本，重新估計。</p>
-  <figure class="km-shot"><img src="kitsui-manual/img/t2_items_done.webp" alt="固定校準完成：lan M36 固定 12 題、偏移 1 題；偏移把關表列出每題的 max_abs_resid 與 drift"></figure>
+  <p>點開<strong>偏移把關</strong>，是每一題的檢查。表的下面寫這個量尺判斷了幾個步驟、殘差標準差和界線（2 個殘差標準差），以及每一欄的說明。</p>
+  <ul>
+    <li><span class="km-col">steps</span>：和題庫比較的步驟數；<span class="km-col">steps_judged</span>：其中上下的人夠、有判斷的步驟數（上下各要有 30 人）；<span class="km-col">steps_dropped</span>：被拿掉的步驟。</li>
+    <li><span class="km-col">max_dist_judging</span>：判斷的步驟離判斷用的線最遠的距離（logit）。這是判斷用的數字：偏移的題大於界線，其他判斷過的題不大於界線。</li>
+    <li><span class="km-col">max_dist_final</span>（kits 裡叫 max_abs_resid）：所有步驟離最後的線最遠的距離，只供參考，不能拿來和界線比。</li>
+    <li><span class="km-col">drift</span> 是 TRUE 的題會換成新版本，重新估計；<span class="km-col">suggest_fix</span> 是 TRUE 的題固定在題庫的值。不判斷的題 drift 是空的，<span class="km-col">reason</span> 寫原因。</li>
+  </ul>
+  <figure class="km-shot"><img src="kitsui-manual/img/t2_items_drifttable.webp" alt="偏移把關表（lan M36）：item_id、steps、steps_judged、steps_dropped、max_dist_judging、max_dist_final、drift、suggest_fix、reason；下面寫 24 個判斷的步驟，界線是 2 × 0.12 = 0.24 logit"><figcaption>示範：lan M36 判斷了 24 個步驟，界線 0.24 logit；lanc09 的第 1 步離線 0.28 logit，是偏移。</figcaption></figure>
 
   <h4 id="man-t2-drift">偏移把關圖</h4>
-  <p>在「圖」選<strong>偏移把關圖</strong>。它畫的是上面第 2 步的比較。圖上的字都是英文，下面括號裡是圖上的寫法：</p>
+  <p>在「圖」選<strong>偏移把關圖</strong>（Drift check before fixing）。它畫的是上面第 2 步的比較。圖上的字都是英文，下面括號裡是圖上的寫法：</p>
   <ul>
-    <li><strong>橫軸</strong>：這一回合自由試算的門檻（固定前）（Threshold, free trial this round）。</li>
-    <li><strong>縱軸</strong>：題庫的門檻（固定的值）（Bank threshold）。</li>
-    <li><strong>虛線</strong>：判斷用的線（Judging line）。<strong>灰色帶子</strong>（Grey band）是它上下的容許範圍（± cut 個標準差，圖例寫幾個）。</li>
-    <li><strong>實線</strong>：拿掉偏移的步驟之後，重新畫的線（Final line）。</li>
+    <li><strong>橫軸</strong>：這一回合自由試算的門檻（固定前）（Threshold, free trial this round (before fixing, own scale)）。</li>
+    <li><strong>縱軸</strong>：題庫的門檻（固定的值）（Bank threshold (fixed value)）。</li>
+    <li><strong>虛線</strong>：判斷用的線（Judging line (all judged steps)）。<strong>灰色帶子</strong>是它上下的容許範圍（Grey band: judging line ± 2 SD）。</li>
+    <li><strong>實線</strong>：拿掉偏移的步驟之後，重新畫的線（Final line (kept points)）。</li>
   </ul>
   <p>點的顏色是「固定了哪些題」的狀態：</p>
   <ul>
     <li><strong>藍色圓點</strong>：固定（Fixed (bank value)）。落在帶子裡，這一波的作答和題庫一致，可以放心固定。</li>
     <li><strong>橘色叉叉</strong>：偏移 → 新版本（Drifted -&gt; new version）。帶子外的步驟偏移了，那一題換成新版本。同一題的其他步驟也一起換，所以全部標成橘色。</li>
-    <li><strong>灰色菱形</strong>：固定，但不判斷偏移的題（例如分數類別有問題），沿用題庫的值（Fixed (not judged, bank value)）。</li>
-    <li><strong>灰色空心圓</strong>：沒有判斷的步驟（Step not judged）。這個分數上下的人太少，不判斷；在帶子外也不算偏移。</li>
+    <li><strong>綠色菱形</strong>：固定，但不判斷偏移的題，沿用題庫的值（Fixed (not judged, bank value)）。</li>
+    <li><strong>灰色空心圓</strong>：沒有判斷的步驟（Step not judged (too few people above/below)）。這個分數上下的人太少，不判斷；在帶子外也不算偏移。</li>
   </ul>
-  <p>把滑鼠移到點上，會顯示題號、步驟、狀態和兩個門檻。</p>
+  <figure class="km-shot"><img src="kitsui-manual/img/t2_items_drift.webp" alt="偏移把關圖（lan M36）：藍色圓點落在灰色帶子裡，lanc09 的三個步驟是橘色叉叉，左下有灰色空心圓"></figure>
+  <p>把滑鼠移到點上，會顯示題號、步驟、狀態、兩個門檻和離判斷用的線多遠。</p>
   <div class="km-note km-t2">
     <p><strong>為什麼比門檻，不比 beta？</strong>同一題的幾個步驟 beta 會一起移動，也可能順序顛倒，不好比。Thurstonian 門檻（能力值到這裡時，有一半的機會得到這個分數以上）比較穩定，也好讀。</p>
   </div>
-  <p><strong>這一回合的紀錄</strong>列出每一個處理：借用題庫、分數類別有問題而固定的題、偏移的題和它的新名字（例如 <code>lanc09 → lanc09_rR2</code>）。這份紀錄也會寫進新的固定檔。</p>
-  <figure class="km-shot"><img src="kitsui-manual/img/t2_items_log.webp" alt="這一回合的紀錄：borrowed bank、category problem kept fixed、drift、new version"></figure>
+  <p><strong>這一回合的紀錄</strong>列出每一個處理：借用題庫、分數類別有問題而固定的題、偏移的題和它的新名字（例如 <code>lanc09 -&gt; lanc09_rR2</code>）。這份紀錄也會寫進新的固定檔（checks.csv）。status 是 warn 的列要特別看一下。</p>
+  <figure class="km-shot"><img src="kitsui-manual/img/t2_items_log.webp" alt="這一回合的紀錄：borrowed bank、category problem, kept fixed、drift、new version、calibration"></figure>
   <div class="km-note km-warn">
-    <p><strong>flag 的條件：</strong>偏移的題比已判斷題的 20% 多（而且多於 1 題），或可以固定的題少於 5 題。量尺被 flag 時照樣往下做，但請記在報告裡。條件可以在 ② 頁的「進階設定」改。</p>
+    <p><strong>flag 的條件：</strong>偏移的題比已判斷題的 20% 多（而且多於 1 題），或可以固定的題太少（預設是 5 題和題數的一半中小的那個：10 題以上是 5 題）。量尺被 flag 時照樣往下做，但請記在報告裡。條件可以在 ② 頁的「進階設定」改。</p>
+    <p>只有 kits 出錯、沒有可固定的題，或沒有題可以估計時，量尺才會【停下來】。這時可以在進階設定的「這一回合不做的量尺」勾它，再校準一次，其他量尺照常做。</p>
   </div>
 
   <h3 id="man-t2-link"><span class="km-step-no">③</span> 連結：沿用，不用按</h3>
-  <p>內部連結和外部連結在任務一已經凍結。這一頁只會顯示「這條連結之前的回合就做好了，已經凍結」。直接按頁尾的<strong>下一步：受試者評分</strong>。</p>
+  <p>內部連結和外部連結在任務一已經凍結。這一頁只會顯示「這條連結之前的回合就做好了（在這一回合開始時的固定檔裡），已經凍結」。直接按右下角的<strong>下一步：受試者評分</strong>。</p>
   <figure class="km-shot"><img src="kitsui-manual/img/t2_link_top.webp" alt="這條連結之前的回合就做好了（在這一回合開始時的固定檔裡），已經凍結"></figure>
-  <figure class="km-shot"><img src="kitsui-manual/img/t2_link_fixed.webp" alt="固定檔裡的連結：三條連結都是之前的回合、R1 做的"><figcaption>made 欄是「之前的回合」，round 欄是 R1：這一回合沒有重做連結。</figcaption></figure>
+  <figure class="km-shot"><img src="kitsui-manual/img/t2_link_fixed.webp" alt="固定檔裡的連結：三條連結都是之前的回合、R1 做的"><figcaption>「什麼時候做的」欄是「之前的回合」，「回合」欄是 R1：這一回合沒有重做連結。</figcaption></figure>
 
   <h4>垂直連結圖：接上之前回合的點</h4>
   <p>這一回合常常只有一個世代。例如示範的 M03 60 個月，借用 M36 題庫。即使這樣，③ 頁照樣畫垂直連結圖：</p>
   <ul>
-    <li>這一回合的點，用這一回合的分數畫。</li>
-    <li>之前回合的點，來自固定檔的 <code>wave_summary.csv</code>（各波次的人數、P25、中位數、P75），再用現在的連結換算。</li>
+    <li>這一回合的點（實心），用這一回合的分數畫。</li>
+    <li>之前回合的點（空心、較淡），來自固定檔的 <code>wave_summary.csv</code>（各波次的人數、P25、中位數、P75），再用現在的連結換算。</li>
     <li>月齡有兩種：<strong>名義月齡</strong>是波次（<span class="km-col">wave_m</span>，例如 84 個月那一波）；<strong>實際月齡</strong>是施測時孩子真正的月齡（<span class="km-col">age_m</span>），例如 M36 的 84 個月那一波，實際是 86.5 個月。圖把點畫在各波次實際月齡的中位數，x 軸寫 <code>Age (months; median actual age of each wave)</code>。實際月齡和名義月齡差超過 1 個月的波次，標題下會註明。</li>
     <li>一張圖只用一種月齡，不混用。固定檔只存各波次的摘要，不存每個孩子的 <span class="km-col">age_m</span>；實際月齡的中位數（<code>wave_summary.csv</code> 的 <span class="km-col">age_med</span> 欄）從 kitsUI 0.3.11 開始才存。所以之前回合的固定檔是 0.3.11 以前做的，或這一回合的資料沒有 <span class="km-col">age_m</span> 時，整張圖改用名義月齡，x 軸寫 <code>Age (months; nominal age of each wave)</code>，圖的說明會寫出原因。要畫在實際月齡，就用 0.3.11 以後的版本重做那一回合，再用新的固定檔做這一回合。</li>
-    <li>圖上分得出「這一回合」和「之前的回合」。滑鼠移到點上，會顯示是哪一個回合。</li>
+    <li>滑鼠移到點上，會顯示是哪一個回合。</li>
   </ul>
+  <figure class="km-shot km-narrow"><img src="kitsui-manual/img/t2_link_vertical.webp" alt="任務二的垂直連結圖（外部連結後）：R1 的 M03、M36 點是空心的，這一回合 M03 60 個月的點是實心的，接在 M36 60 個月旁邊"></figure>
   <p>新的一波應該接在之前回合的點旁邊。突然跳高或跳低時，回 ② 看看有沒有偏移。</p>
   <div class="km-note km-warn">
-    <p><strong>0.3.8 以前的固定檔沒有各波次的摘要。</strong>用它時，圖上沒有之前回合的點，畫面會說明原因。下一回合起就會補上；或用這一版重跑之前的回合，產生新的固定檔。</p>
+    <p><strong>0.3.8 以前的固定檔沒有各波次的摘要。</strong>用它時，圖上沒有之前回合的點；這一回合又只有一個世代時，只畫未連結的圖，畫面會說明原因。下一回合起就會補上；或用新的版本重跑之前的回合，產生新的固定檔。</p>
   </div>
 
   <h3 id="man-t2-score"><span class="km-step-no">④</span> 受試者評分</h3>
-  <p>和任務一一樣：按<strong>計算這一回合的分數</strong>，再下載分數表和新的固定檔（<code>kitsui_fixed_R2.zip</code>）。分數表只有新波次的孩子。</p>
-  <figure class="km-shot"><img src="kitsui-manual/img/t2_score_done.webp" alt="任務二的計算完成：共 898 列，下載分數表與新的固定檔"></figure>
+  <p>和任務一一樣：按<strong>計算這一回合的分數</strong>，再下載分數表和新的固定檔（<code>kitsui_fixed_R2.zip</code>）。分數表只有新波次的孩子。示範是 898 列（lan、motor 各 449 個列次）。</p>
+  <figure class="km-shot"><img src="kitsui-manual/img/t2_score_done.webp" alt="任務二的計算完成：【完成】分數算好了：共 898 列；分數摘要、下載分數表與新的固定檔、每個量尺換到哪一把尺"><figcaption>「每個量尺換到哪一把尺」的說明欄寫著：M03 的資料借用另一世代題庫，孩子的世代（cohort）不變。</figcaption></figure>
   <h4>通過步驟：沿用固定檔的設定</h4>
   <ul>
-    <li>題目表的<a href="#man-t1-steps">通過步驟</a>預設用上傳的固定檔裡的設定（<code>pass_steps.csv</code>），不用再上傳一次。</li>
+    <li>題目表的<a href="#man-t1-steps">通過步驟</a>預設用上一回合固定檔裡的設定（<code>pass_steps.csv</code>），不用再設一次。</li>
     <li>偏移換成新版本的題（例如 <code>lanc09_rR2</code>）用原來那一題（<code>lanc09</code>）的通過步驟。</li>
-    <li>要改時，和任務一一樣上傳設定檔或按「全部改回 1」。改過的設定會寫進新的固定檔，再下一回合接著用。</li>
+    <li>要改時，和任務一一樣在進階設定改，或按「全部改回 1」。改過的設定會寫進新的固定檔，再下一回合接著用。</li>
   </ul>
 
   <h3 id="man-t2-next">再下一波</h3>
@@ -413,34 +499,40 @@
     <div><div class="km-k">分數表（R2）</div><div class="km-v">新波次的分數。把每一回合的分數表上下疊起來，就是全部孩子的分數。</div></div>
   </div>
   <div class="km-note km-t2">
-    <p><strong>同一次連線接著做：</strong>④ 的「用這一回合的固定檔開始下一回合」會把固定檔直接交給 ①，不用下載再上傳。但固定檔還是要下載保存。</p>
+    <p><strong>同一次連線接著做：</strong>④ 頁尾的<strong>下一步：用這一回合的固定檔開始下一回合</strong>會把固定檔直接交給 ①，不用下載再上傳。① 的固定檔位置會寫「上一回合的固定檔：來自這次連線的第 R1 回合」，世代與波次會清空，等你勾新的一波。但固定檔還是要下載保存。</p>
   </div>
 </section>
 
 <section id="man-faq">
   <h2>常見問題</h2>
-  <h4>紅字和橘字差在哪裡？</h4>
-  <p>紅字是錯誤，例如缺欄位、重複的列、得分不是整數。要先修資料再上傳。橘字是提醒，看過就可以往下做。</p>
+  <h4>【停下來】和【完成，但請注意】差在哪裡？</h4>
+  <p>【停下來】是沒有做成，例如資料缺欄位、重複的列、得分不是整數。框裡寫原因和怎麼辦，要先處理再往下做。【完成，但請注意】是做好了，但有幾點要看一下，看過就可以往下做。</p>
   <h4>可以一次放好幾波新資料嗎？</h4>
   <p>可以。已經收完的好幾波，建議一次勾，資料多、估得穩。以後每次新收一波，再一次只勾那一波。兩種做法的差別見<a href="#man-t2-many">一次加好幾波</a>。</p>
+  <h4>參照世代或波次的單位選錯了？</h4>
+  <p>它們寫在第一回合的固定檔裡，之後不能改。要改的話，從第一回合重做：不用固定檔，重新選好，再做一次任務一。</p>
   <h4>為什麼 age50 是空的？</h4>
-  <p>age50 要從這一回合的資料算：至少兩個波次，而且各波的通過比例跨過 50%。只有一個波次，或每一波都已經超過（或都還沒到）50% 時，就算不出來，不會往外推。門檻（ability_threshold 等）不受影響，照樣有值。</p>
+  <p>age50 要從這一回合的資料算：至少兩個波次，而且各波的通過比例跨過 50%。只有一個波次，或每一波都已經超過（或都還沒到）50% 時，就算不出來，不會往外推。波次的單位不是月時也不算。門檻（ability_threshold 等）不受影響，照樣有值。</p>
+  <h4>分數對照表裡為什麼有 n 是 0 的列？</h4>
+  <p>對照表預設列出所有可能的原始分數，這一回合沒有人得到的原始分數 n 是 0。勾「只顯示本次資料中實際出現的原始分數」就只看出現過的。下載的一律是完整的表。</p>
   <h4>beta 固定了，門檻為什麼還會偏移？</h4>
   <p>偏移是在固定<strong>之前</strong>判斷的。kitsUI 先不固定任何題、只用這一波試算一次，再拿試算的門檻和題庫比。離線太遠的題才算偏移，它不會被固定，而是換成新版本。沒有偏移的題才固定；固定之後，它們的門檻就等於題庫的門檻。詳見<a href="#man-t2-items">校準的順序</a>。</p>
   <h4>通過步驟改了，分數會變嗎？</h4>
   <p>不會。通過步驟只影響題目表的門檻和 age50。分數、分數對照表、校準和連結都用全部的分數。</p>
   <h4>固定檔解壓縮後是亂碼？</h4>
-  <p>0.3.8 起，固定檔的欄名和 README.txt 都是英文。要放中文的 CSV 會加上 UTF-8 BOM，Excel 也能正常打開。請只打開來看，不要修改後再壓縮。</p>
+  <p>0.3.8 起，固定檔的欄名和 README.txt 都是英文。要放中文的 CSV 會加上 UTF-8 BOM，Excel 也能正常打開。請只打開來看，不要修改後再壓縮；改過的固定檔讀的時候會被擋下來。</p>
   <h4>一個 M36 量尺沒做內部連結會怎樣？</h4>
   <p>它的分數會停在 M36 自己的量尺上，d_score 是空白。③ 頁尾會寫「還可以建立：…」，列出還沒做的連結。</p>
+  <h4>投稿要高解析度的圖？</h4>
+  <p>用圖右上角工具列的 PNG（2100 像素寬、300 dpi）或 SVG（向量圖）。見<a href="#man-screen">畫面怎麼看</a>。</p>
   <h4>下載圖（HTML）失敗？</h4>
-  <p>本機版下載圖要用 pandoc。裝了 RStudio 或 Quarto 就有。雲端版不受影響。</p>
+  <p>本機版存 HTML 圖要用 pandoc。kitverse 會裝好它：在 R 執行 <code>kitverse::kitverse_update()</code>，再用 <code>kitverse::kitverse_check()</code> 確認。裝了 RStudio 或 Quarto 的電腦也有。找不到 pandoc 時，app 最上方會有提醒。雲端版不受影響。</p>
   <h4>不小心關掉頁面？</h4>
   <p>有結果時，離開頁面前瀏覽器會先問一次。關掉之後要從 ① 重新做這一回合；已經下載的固定檔和分數表不受影響。</p>
   <h4>想看 R 程式碼？</h4>
-  <p>每一頁最下面的「用 R 怎麼做」列出這一步背後的 kits 程式碼，可以複製到 R 裡重跑。程式碼用 JetBrains Mono 字型。</p>
+  <p>每一頁最下面的「用 R 怎麼做」列出這一步背後的 kits 程式碼，是依目前的設定產生的簡化示範。按「複製」可以貼到 R 裡重跑。</p>
 </section>
 
-<footer>kitsUI 0.3.11（2026-10-30）· kits 0.25.2 · 截圖用 app 內建的示範資料（kits::kitm03、kits::kitm36）。</footer>
+<footer>kitsUI 0.8.1（2026-11-01）· kits 0.25.2 · 截圖用 app 內建的示範資料（kits::kitm03、kits::kitm36）。</footer>
 </main>
 </div>

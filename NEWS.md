@@ -1,3 +1,13 @@
+# kitsUI 0.8.1
+
+## Changes you can see
+
+* The 使用手冊 (manual) is up to date with this version: every screenshot retaken with the demo data,
+  and the text covers what changed since 0.3.11 — how a page reads (status boxes, one main button,
+  details), the reference cohort and wave unit in round 1, the round name under 進階設定, pass steps
+  in ④, the full raw-score table, the plot toolbar (PNG 300 dpi, SVG), and the local version through
+  kitverse (`library(kitverse)`, `run_kitsui()`, `kitverse_check()`). New FAQ entries.
+
 # kitsUI 0.8.0
 
 ## Changes you can see
