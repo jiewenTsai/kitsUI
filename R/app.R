@@ -38,6 +38,7 @@ kit_open_browser <- function(url) {
 #' @noRd
 kit_ui <- function(request) {
   bslib::page_fluid(
+    lang = "zh-Hant-TW",
     theme = kit_theme(),
     title = "KIT 量尺建構工具",
     shiny::tags$head(shiny::tags$style(kit_css()), shiny::tags$script(kit_js()),
