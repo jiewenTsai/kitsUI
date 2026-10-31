@@ -27,3 +27,7 @@ Rplots.pdf
 tests/testthat/_problems/
 tests/testthat/testthat-problems.rds
 BRIEF.md
+
+# testthat 測試失敗時自動產生的檔案
+tests/testthat/_problems/
+tests/testthat/testthat-problems.rds
