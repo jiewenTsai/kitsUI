@@ -336,7 +336,7 @@ kitsui_missing_hint <- function(cols) {
 #' 例如 0–3 分的題有 95–99，或有 7777、9999
 #'
 #' 只提醒（橘色），分數不改：kits 會把它們當成很高的分數，那一題會分數不連續，
-#' 量尺通常會停下來。遺漏碼要先在 kitJoin ② 轉成空白。
+#' 量尺通常會停下來。遺漏碼要先在 kitJoin「遺漏值處理」轉成空白。
 #' @return 一句中文；沒有時長度 0
 #' @noRd
 kitsui_note_codes <- function(df) {
@@ -356,7 +356,7 @@ kitsui_note_codes <- function(df) {
     length(hits), " 題有看起來是遺漏碼的分數（比其他分數大很多）：",
     kitsui_some(each, 3), "。這些值是：", kitsui_first(format(codes, trim = TRUE), 8), "。",
     "kits 會把它們當成真的分數，這些題會分數不連續，量尺可能停下來。",
-    "請先在 kitJoin「② 遺漏值轉 NA」把遺漏碼改成空白，再上傳。"
+    "請先在 kitJoin「", KITJOIN_MISSING_TAB, "」把遺漏碼改成空白，再上傳。"
   )
 }
 
@@ -414,6 +414,92 @@ kitsui_note_no_common <- function(df, plan, fixed) {
   sprintf(paste0("%s：%s 的題庫裡沒有這一回合的任何一題（題號都不一樣），② 會停下來。",
                  "請確認題號和之前的回合相同；或在 ② 把它選成「這一回合不做」。"),
           use$data_scale[bad], use$scale[bad])
+}
+
+#' 每個校準的量尺，題目有沒有連在一起：題目 × （世代、波次）的圖分成幾組
+#'
+#' 同一個（世代、波次）作答的題連在一起；兩個（世代、波次）有共同題，就連在一起。分成好幾組、
+#' 組和組之間沒有共同題時，kits 不能把它們放在同一把尺上，② 會停下來（kits："separate groups
+#' that share no item"）。所以在 ① 就先說。
+#' 校準的單位照 plan（借用另一世代題庫的波次放在那個量尺上）。有題庫時（固定校準），有題庫的題
+#' 的組由題庫定位，只有沒有題庫題的組才是問題；每一組都沒有題庫的題時，是 kitsui_note_no_common()
+#' 說的情況，這裡不重複。
+#' @param plan NULL 或 kitsui_round_plan()；fixed 是上一回合的固定檔（NULL 時沒有題庫）
+#' @return tibble：scale（校準的量尺）、n_groups（幾組）、groups（list：每組的世代 × 波次，
+#'   list 的每個元素是 tibble cohort、wave_m）；只列出不連在一起的量尺（都連在一起時 0 列）
+#' @noRd
+kitsui_item_groups <- function(df, plan = NULL, fixed = NULL) {
+  empty <- tibble::tibble(scale = character(), n_groups = integer(), groups = list())
+  if (NROW(df) == 0) return(empty)
+  cells <- dplyr::distinct(df, .data$domain, .data$cohort, .data$wave_m, .data$item_id)
+  cells$data_scale <- scale_key(cells$domain, cells$cohort)
+  cells$scale <- cells$data_scale
+  if (!is.null(plan) && nrow(plan) > 0) {
+    at <- match(paste(cells$data_scale, cells$wave_m), paste(plan$data_scale, plan$wave_m))
+    cells$scale <- dplyr::coalesce(plan$scale[at], cells$data_scale)
+  }
+  out <- purrr::map(split(cells, cells$scale), \(part) {
+    comp <- kitsui_cell_components(paste(part$cohort, part$wave_m), part$item_id)
+    n <- length(unique(comp$cell))
+    if (n < 2) return(NULL)
+    s <- part$scale[1]
+    bank <- if (!is.null(fixed) && s %in% fixed$bank$scale) {
+      c(fixed$bank$item_id[fixed$bank$scale == s],
+        fixed$versions$current_id[fixed$versions$scale == s])
+    }
+    group <- comp$cell[match(paste(part$cohort, part$wave_m), comp$key)]
+    if (length(bank) > 0) {
+      anchored <- unique(group[part$item_id %in% bank])
+      # 每一組都沒有題庫的題：kitsui_note_no_common() 說；每一組都有：題庫把它們放在同一把尺上
+      if (length(anchored) == 0 || length(anchored) == n) return(NULL)
+    }
+    waves <- dplyr::distinct(tibble::tibble(cohort = part$cohort, wave_m = part$wave_m,
+                                            group = group))
+    waves <- waves[order(waves$group, waves$cohort, waves$wave_m), ]
+    groups <- unname(split(waves[c("cohort", "wave_m")], factor(waves$group, unique(waves$group))))
+    tibble::tibble(scale = s, n_groups = n, groups = list(groups))
+  })
+  out <- purrr::list_rbind(purrr::compact(out))
+  if (nrow(out) == 0) return(empty)
+  order <- unique(plan$scale %||% character())
+  out[order(match(out$scale, order), out$scale), ]
+}
+
+#' 連通的組：cell（世代 × 波次）與 item 的二部圖，每個 cell 屬於哪一組
+#' @param cell,item 每一列是「這個 cell 有這一題」
+#' @return list(key = 各 cell 的名字, cell = 各 cell 的組號（1、2…，照第一次出現的順序）)
+#' @noRd
+kitsui_cell_components <- function(cell, item) {
+  keys <- unique(cell)
+  ci <- match(cell, keys)
+  ii <- match(item, unique(item))
+  comp <- seq_along(keys)
+  repeat {
+    by_item <- as.vector(tapply(comp[ci], ii, min))
+    new <- as.vector(tapply(by_item[ii], ci, min))
+    if (identical(new, comp)) break
+    comp <- new
+  }
+  list(key = keys, cell = match(comp, unique(comp)))
+}
+
+#' 題目沒有連在一起的量尺（kitsui_item_groups()）：每個量尺一句
+#' @param unit 波次的單位（kitsui_wave_unit()）
+#' @return 中文句子；沒有時長度 0
+#' @noRd
+kitsui_note_groups <- function(groups, unit = "months") {
+  if (NROW(groups) == 0) return(character())
+  purrr::map2_chr(groups$scale, groups$groups, \(s, gs) {
+    one_cohort <- length(unique(unlist(purrr::map(gs, "cohort")))) == 1
+    each <- purrr::map_chr(gs, \(g) {
+      w <- kitsui_waves_text(g$wave_m, unit)
+      if (one_cohort) w else paste(paste0(g$cohort, " ", kitsui_wave_text(g$wave_m, unit)),
+                                   collapse = "、")
+    })
+    shown <- if (length(each) > 4) c(each[1:4], "…") else each
+    paste0(s, "：這個量尺的題目分成 ", kit_num(length(gs)), " 組（", paste(shown, collapse = "；"),
+           "），各組之間沒有共同題，不能放在同一把尺上。")
+  })
 }
 
 #' 固定檔不是這次連線最新的一回合（④ 交過更新的一回合時）

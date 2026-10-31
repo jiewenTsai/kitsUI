@@ -10,7 +10,7 @@ mod_data_ui <- function(id) {
         "選資料來源：示範資料，或上傳自己的長格式資料（可以一次選好幾個檔案）。",
         "勾這一回合的世代與波次（例如月齡）。一個檔案可以有好幾個波次。新收一波時只勾那一波；已經收完的好幾波可以一次勾。",
         "第二回合起：上傳上一回合的固定檔（zip）。第一回合不用。",
-        "看右邊：沒有【停下來】；有「要注意」時先看過。量尺表確認每個量尺的列次數、題數與校準方式。",
+        "看右邊：沒有【停下來】；【完成，但請注意】時先看過裡面的每一點。量尺表確認每個量尺的列次數、題數與校準方式。",
         "按最下面的「下一步：題目校準」。"
       ),
       output = "這一回合的資料。還沒有校準；校準在 ② 題目校準。"
@@ -187,12 +187,12 @@ mod_data_server <- function(id, goto, handover = NULL) {
     output$upload_info <- shiny::renderUI({
       up <- upload()
       if (is.null(up$files)) return(NULL)
-      ui_callout(
-        shiny::tags$strong("匯入完成。"),
-        sprintf("讀進 %d 個檔案，共 %s 列：", nrow(up$files), format(sum(up$files$rows),
-                                                              big.mark = ",")),
-        paste(sprintf("%s（%s 列）", up$files$file, format(up$files$rows, big.mark = ",",
-                                                         trim = TRUE)), collapse = "、")
+      # 匯入的結果是一個動作的結果：薄荷的【完成】（和 kitJoin 的上傳相同）
+      ui_status(
+        "done",
+        sprintf("匯入完成：讀進 %s 個檔案，共 %s 列。", kit_num(nrow(up$files)),
+                kit_num(sum(up$files$rows))),
+        points = sprintf("%s（%s 列）", up$files$file, kit_num(up$files$rows))
       )
     })
     output$dl_example_ui <- render_download_csv(
@@ -401,14 +401,27 @@ mod_data_server <- function(id, goto, handover = NULL) {
         ck$notes
       )
     })
-    output$notes <- shiny::renderUI(ui_warn_list("要注意", notes()))
+    # 題目沒有連在一起的量尺（② 會停下來）：在 ① 就說
+    groups <- shiny::reactive({
+      df <- checked()$df
+      if (is.null(df)) return(NULL)
+      tryCatch(kitsui_item_groups(df, plan(), fixed_rv()$fixed), error = \(e) NULL)
+    })
+    # 資料可以用時，要注意的事都放進狀態框（一個黃框）；資料還不能用時才另外放黃框
+    output$notes <- shiny::renderUI({
+      if (!is.null(result())) return(NULL)
+      ui_warn_list("要注意", notes())
+    })
     # 得分不完整的題（沒有 0 分、中間少了分數、只有一種分數）
     categories <- shiny::reactive({
       df <- checked()$df
       if (is.null(df) || !exists("kitsui_category_problems", mode = "function")) return(NULL)
       tryCatch(kitsui_category_problems(df), error = \(e) NULL)
     })
-    output$categories <- shiny::renderUI(data_category_note(categories()))
+    output$categories <- shiny::renderUI({
+      if (!is.null(result())) return(NULL)
+      data_category_note(categories())
+    })
 
     output$scales <- kit_table({
       ck <- checked()
@@ -420,7 +433,12 @@ mod_data_server <- function(id, goto, handover = NULL) {
     output$next_step <- shiny::renderUI({
       if (is.null(result())) return(NULL)
       warned <- length(notes()) > 0 || NROW(categories()) > 0
-      text <- if (warned) "資料可以用，但有要注意的事，請先看過上面的「要注意」。下一步是校準。" else {
+      text <- if (NROW(groups()) > 0) {
+        paste0("有量尺的題目沒有連在一起，② 校準時這些量尺會停下來。",
+               "請先看上面【完成，但請注意】的「怎麼辦」。")
+      } else if (warned) {
+        "資料可以用，但有要注意的事，請先看過上面狀態框裡的「要注意」。下一步是校準。"
+      } else {
         "資料沒問題。下一步是校準。"
       }
       ui_next_step(text, ns("go_items"), "下一步：題目校準")
@@ -430,7 +448,7 @@ mod_data_server <- function(id, goto, handover = NULL) {
     output$data_status <- shiny::renderUI({
       r <- result()
       if (is.null(r)) return(NULL)
-      data_status_ui(r, length(notes()), NROW(categories()), fixed_rv()$integrity)
+      data_status_ui(r, notes(), categories(), fixed_rv()$integrity, groups())
     })
     shiny::observeEvent(input$go_items, goto("items"))
 
@@ -480,7 +498,7 @@ mod_data_server <- function(id, goto, handover = NULL) {
       )))
       # 通過比例照固定檔的通過步驟（示範資料、沒有固定檔時每題都是 1）
       p <- plot(kitsui_resp_pass(r, kitsui_steps_vec(fixed()$pass_steps)))
-      kitsui_wave_axis(p, kitsui_wave_unit(fixed()))
+      kit_chart_zh(kitsui_wave_axis(p, kitsui_wave_unit(fixed())))
     })
     output$design <- plotly::renderPlotly(design_plot())
     output$design_steps <- shiny::renderUI(data_steps_note(fixed()$pass_steps))
@@ -497,7 +515,7 @@ mod_data_server <- function(id, goto, handover = NULL) {
     output$preview_meta <- shiny::renderText({
       df <- checked()$df
       shiny::req(df)
-      sprintf("這一回合共 %s 列作答，以下前 %d 列。完整的請下載。", format(nrow(df), big.mark = ","),
+      sprintf("這一回合共 %s 列作答，以下前 %d 列。完整的請下載。", kit_num(nrow(df)),
               KIT_PREVIEW_ROWS)
     })
     output$preview <- kit_table({
@@ -519,7 +537,7 @@ mod_data_server <- function(id, goto, handover = NULL) {
         checks_or_ok()
     })
 
-    output$code <- shiny::renderText({
+    code_text <- shiny::reactive({
       ck <- checked()
       shiny::req(ck$scales)
       upload_name <- if (is_upload()) upload()$name
@@ -530,27 +548,69 @@ mod_data_server <- function(id, goto, handover = NULL) {
       kitsui_code_data(s, upload_name, sort(unique(ck$picks$wave_m)), picks = ck$picks,
                        steps = steps)
     })
+    output$code <- shiny::renderText(code_text())
+    output$code_ui <- render_code_panel(session, "code", code_text)
 
     result
   })
 }
 
-#' ① 的狀態框：資料可以用時【完成】一句（幾個量尺、幾列作答）；有要注意的事、固定檔的核對碼
-#' 不符時【完成，但請注意】
-#' @param n_notes 要注意的提醒有幾則；n_categories 得分不完整的題數
+#' ① 的狀態框：資料可以用時【完成】一句（幾個量尺、幾列作答）；有要注意的事、得分不完整的題、
+#' 題目沒有連在一起的量尺、固定檔的核對碼不符時【完成，但請注意】
+#'
+#' 要注意的事都放在這一個框裡（一個黃框，不另外疊一個「要注意」）：最多 3 點，其他收在「還有 N 點」。
+#' 題目沒有連在一起的量尺排在最前面（② 一定會停下來），後面接「怎麼辦」。
+#' @param notes 要注意的提醒（中文句子）；categories 是 kitsui_category_problems()（得分不完整的題）
 #' @param integrity NULL 或 kitsui_fixed_integrity()
+#' @param groups NULL 或 kitsui_item_groups()（題目沒有連在一起的量尺）
 #' @noRd
-data_status_ui <- function(r, n_notes = 0, n_categories = 0, integrity = NULL) {
-  line <- sprintf("資料可以用：%d 個量尺、%s 列作答。", nrow(r$scales), format(nrow(r$df), big.mark = ","))
+data_status_ui <- function(r, notes = character(), categories = NULL, integrity = NULL,
+                           groups = NULL) {
+  # 舊的寫法（則數）也接受
+  if (is.numeric(notes)) notes <- rep("要注意的事。", notes)
+  if (is.numeric(categories)) categories <- NULL
+  n_bad <- NROW(groups)
+  line <- if (n_bad > 0) {
+    sprintf("資料讀好了：%s 個量尺、%s 列作答；其中 %s 個量尺的題目沒有連在一起，② 校準時會停下來。",
+            kit_num(nrow(r$scales)), kit_num(nrow(r$df)), kit_num(n_bad))
+  } else {
+    sprintf("資料可以用：%s 個量尺、%s 列作答。", kit_num(nrow(r$scales)), kit_num(nrow(r$df)))
+  }
+  unit <- kitsui_wave_unit(r$fixed)
+  cat_items <- kitsui_note_categories(categories, n = Inf)
   points <- c(
+    kitsui_note_groups(groups, unit),
     if (!is.null(integrity) && !identical(integrity$status, "ok")) {
       paste0("固定檔的核對碼：", integrity$text)
     },
-    if (n_notes > 0) sprintf("有 %d 則要注意的事，請看下面的「要注意」。", n_notes),
-    if (n_categories > 0) sprintf("有 %d 題的得分不完整，② 會照規則處理。", n_categories)
+    notes,
+    if (length(cat_items) > 0) {
+      c(sprintf("有 %s 題的得分不完整（沒有 0 分、中間少了分數，或只有一種分數），② 會照規則處理：",
+                kit_num(NROW(categories))), cat_items)
+    }
   )
   if (length(points) == 0) return(ui_status("done", line))
-  ui_status("warn", line, points = points)
+  ui_status(
+    "warn", line, points = points,
+    if (n_bad > 0) {
+      shiny::tags$p(
+        class = "kit-status-action",
+        shiny::tags$strong("怎麼辦："),
+        paste0("各波的同一題要用同一個題號。回 kitJoin 的「", KITJOIN_KITS_TAB, "」，",
+               "第 2 步「合成同一組題號」，把各波的同一題合成一個題號，再重新上傳。"),
+        ui_kitjoin_button()
+      )
+    },
+    if (length(cat_items) > 0) {
+      shiny::tags$p(
+        class = "kit-status-action",
+        "得分不完整的題：② 校準時，題庫裡有這一題，就固定在題庫的值；題庫裡沒有這一題，",
+        "這一回合先不估它。作答的分數不會被改動。",
+        paste0("要平移或合併分數，可以在 kitJoin「", KITJOIN_KITS_TAB, "」的題目設定改好再上傳。"),
+        if (n_bad == 0) ui_kitjoin_button()
+      )
+    }
+  )
 }
 
 #' 波次的單位：第一回合可以選（之後沿用固定檔的）
@@ -606,7 +666,8 @@ data_category_note <- function(problems) {
     shiny::tags$p("② 校準時，題庫裡有這一題，就固定在題庫的值。",
                   "題庫裡沒有這一題，這一回合先不估它。"),
     shiny::tags$p("作答的分數不會被改動。",
-                  "要平移或合併分數，可以在 kitJoin「⑥ 轉成 kits 作答檔」的題目設定改好再上傳。",
+                  paste0("要平移或合併分數，可以在 kitJoin「", KITJOIN_KITS_TAB,
+                         "」的題目設定改好再上傳。"),
                   ui_kitjoin_button())
   )
 }

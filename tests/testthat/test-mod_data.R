@@ -120,9 +120,10 @@ test_that("上傳 CSV；缺欄位時說明缺什麼", {
     session$setInputs(file = upload_input(bad, "bad.csv"))
     expect_null(session$getReturned()())
     expect_match(output$problems$html, "domain")
-    # 上傳的檔案沒通過：紅字裡有開啟 kitJoin 的按鈕（新分頁）
-    expect_match(output$problems$html, KITJOIN_URL, fixed = TRUE)
-    expect_match(output$problems$html, "target=\"_blank\"", fixed = TRUE)
+    # 上傳的檔案沒通過：紅字裡說到 kitJoin 的「kits 作答檔」；本機版不連到雲端版
+    expect_match(output$problems$html, "「kits 作答檔」")
+    expect_match(output$problems$html, "kitJoin::run_kitjoin()", fixed = TRUE)
+    expect_false(grepl(KITJOIN_URL, output$problems$html, fixed = TRUE))
   })
 })
 
@@ -131,14 +132,21 @@ test_that("紅字只有名稱不合規時，不提 kitJoin", {
     session$setInputs(source = "demo", domains = "lan", waves = "M03 3", round_label = "第一回合")
     session$elapse(1001)
     expect_match(output$problems$html, "英文字母與數字")
-    expect_false(grepl(KITJOIN_URL, output$problems$html, fixed = TRUE))
+    expect_false(grepl("kitJoin", output$problems$html, fixed = TRUE))
   })
 })
 
-test_that("上傳說明有 kitJoin 的按鈕", {
+test_that("上傳說明說到 kitJoin 的「kits 作答檔」：本機版是一行說明，雲端版是按鈕", {
+  withr::local_envvar(KIT_DEPLOY = "local")
+  html <- as.character(mod_data_ui("data"))
+  expect_false(grepl(KITJOIN_URL, html, fixed = TRUE))
+  expect_match(html, "kitJoin::run_kitjoin()", fixed = TRUE)
+  expect_match(html, "「kits 作答檔」", fixed = TRUE)
+  expect_false(grepl("⑥", html, fixed = TRUE))
+  withr::local_envvar(KIT_DEPLOY = "cloud")
   html <- as.character(mod_data_ui("data"))
   expect_match(html, KITJOIN_URL, fixed = TRUE)
-  expect_match(html, "⑥ 轉成 kits 作答檔", fixed = TRUE)
+  expect_match(html, "雲端版 kitJoin")
 })
 
 test_that("上一回合的固定檔：讀入、顯示內容、改成固定校準、預設名稱是下一個 R", {
@@ -245,15 +253,16 @@ test_that("得分不完整的題：橘色提醒（不是紅字），說 ② 怎�
     session$setInputs(source = "upload", file = upload_input(path, "a.csv"), waves = "M03 3",
                       round_label = "")
     expect_type(session$getReturned()(), "list")
-    html <- output$categories$html
-    expect_match(html, "kit-callout-warn")
+    # 得分不完整的題併進狀態框（一個黃框）：不另外疊一個黃框
+    expect_null(output$categories)
+    html <- output$data_status$html
+    expect_match(html, "【完成，但請注意】")
     expect_match(html, it)
     expect_match(html, "固定在題庫的值")
     expect_match(html, "這一回合先不估它")
     expect_match(html, "作答的分數不會被改動")
-    expect_match(html, KITJOIN_URL, fixed = TRUE)
+    expect_match(html, "kitJoin::run_kitjoin()", fixed = TRUE)
     expect_null(output$problems)
-    expect_match(output$data_status$html, "【完成，但請注意】")
     expect_false(grepl("資料沒問題", output$next_step$html))
     expect_match(output$next_step$html, "要注意")
   })
@@ -272,8 +281,10 @@ test_that("橘色提醒：波次之前的回合校準過、資料檔之前的回
     session$setInputs(source = "upload", file = upload_input(path, "m03_3.csv"),
                       waves = "M03 3", round_label = "",
                       fixed_file = upload_input(zip, "fixed_R1.zip"))
-    html <- output$notes$html
-    expect_match(html, "kit-callout-warn")
+    # 要注意的事併進狀態框（一個黃框）
+    expect_null(output$notes)
+    html <- output$data_status$html
+    expect_match(html, "【完成，但請注意】")
     expect_match(html, "這些波次之前的回合已經校準過：lan M03 的 3 個月（第 R1 回合）")
     expect_match(html, "m03_3.csv：這個檔案在第 R1 回合用過")
     # 提醒不擋下一步
@@ -373,6 +384,9 @@ test_that("一次上傳好幾個檔案（含 .csv.gz）；欄位不一樣時說�
     expect_equal(names(d$files), c("m03.csv", "m36.csv.gz"))
     expect_equal(d$scales$scale, c("lan M03", "lan M36"))
     expect_match(output$upload_info$html, "讀進 2 個檔案")
+    # 匯入的結果是薄荷的【完成】狀態框（不是天藍的提示框）
+    expect_match(output$upload_info$html, "【完成】")
+    expect_match(output$upload_info$html, "alert-success")
     expect_match(output$upload_info$html, "匯入完成")
     expect_match(output$code, 'read_csv\\(c\\(')
     expect_match(output$dl_example_ui$html, 'download="kitsui_example.csv"')
@@ -506,4 +520,51 @@ test_that("名稱：自己打的名稱，換波次的單位或參照世代不會
     session$setInputs(fixed_clear = 1)
     expect_equal(sent[length(sent)], "R1")
   })
+})
+
+test_that("① 就看出題目沒有連在一起：各波沒有共同題時【完成，但請注意】，並說回 kitJoin 合成題號", {
+  df <- kitsui_demo("M03", c(3, 6, 12), "lan")
+  # 各波的同一題用了不同的題號（例如 w1d5_1、w2d5_1）：三個波次各自一組題
+  df$item_id <- paste0(df$item_id, "_w", df$wave_m)
+  path <- withr::local_tempfile(fileext = ".csv")
+  readr::write_csv(df, path)
+  g <- kitsui_item_groups(df)
+  expect_equal(g$scale, "lan M03")
+  expect_equal(g$n_groups, 3L)
+  expect_equal(purrr::map(g$groups[[1]], "wave_m"), list(3, 6, 12))
+  # 連在一起的資料：沒有列
+  expect_equal(nrow(kitsui_item_groups(kitsui_demo("M03", c(3, 6, 12), "lan"))), 0)
+  shiny::testServer(mod_data_server, args = list(goto = \(tab) NULL), {
+    session$setInputs(source = "upload", file = upload_input(path, "a.csv"),
+                      waves = c("M03 3", "M03 6", "M03 12"), round_label = "")
+    expect_type(session$getReturned()(), "list")
+    html <- output$data_status$html
+    expect_match(html, "【完成，但請注意】")
+    expect_match(html, "lan M03：這個量尺的題目分成 3 組（3 個月；6 個月；12 個月），各組之間沒有共同題，不能放在同一把尺上")
+    expect_match(html, "回 kitJoin 的「kits 作答檔」，第 2 步「合成同一組題號」")
+    expect_false(grepl("資料沒問題", output$next_step$html))
+    expect_match(output$next_step$html, "沒有連在一起")
+  })
+  # ② 也照樣停在同一個原因（① 說的和 kits 一致）
+  r <- suppressMessages(kitsui_round(df, kitsui_fixed_empty(), "R1"))
+  expect_equal(r$stopped, "lan M03")
+  why <- dplyr::filter(r$log, check %in% c("stop", "error"))
+  expect_match(items_stop_points(why), "^題目沒有連在一起：lan M03")
+  # 停下來的就是唯一的量尺：不給「這一回合不做」（不做就沒有東西可以校準）
+  html <- as.character(items_status(r, "skip"))
+  expect_false(grepl('id="skip"', html, fixed = TRUE))
+  expect_match(html, "先不做它們就沒有東西可以校準")
+})
+
+test_that("有題庫時：有題庫題的組由題庫定位，只有沒有題庫題的組才是問題", {
+  df <- kitsui_demo("M03", c(3, 6), "lan")
+  r1 <- suppressMessages(kitsui_round(dplyr::filter(df, wave_m == 3), kitsui_fixed_empty(), "R1"))
+  # 6 個月全部換成新的題號：和 3 個月（題庫）沒有共同題
+  new <- dplyr::mutate(df, item_id = ifelse(wave_m == 6, paste0(item_id, "_new"), item_id))
+  plan <- kitsui_round_plan(new, r1$fixed)
+  g <- kitsui_item_groups(new, plan, r1$fixed)
+  expect_equal(g$n_groups, 2L)
+  # 只有 6 個月（全部新題號）時：每一組都沒有題庫的題，是 kitsui_note_no_common() 說的，不重複
+  only6 <- dplyr::filter(new, wave_m == 6)
+  expect_equal(nrow(kitsui_item_groups(only6, kitsui_round_plan(only6, r1$fixed), r1$fixed)), 0)
 })

@@ -260,7 +260,7 @@ test_that("domain、cohort 是空字串時和空白一樣擋下來", {
   expect_error(kitsui_check_data(d), "domain 或 cohort 有空白", class = "kit_user_error")
 })
 
-test_that("看起來是遺漏碼的分數：簡短提醒，指到 kitJoin ②", {
+test_that("看起來是遺漏碼的分數：簡短提醒，指到 kitJoin 的「遺漏值處理」", {
   d <- kitsui_demo("M03", 3, "lan")
   ids <- unique(d$item_id)
   d$item_score[d$item_id == ids[1]][1:3] <- c(98, 99, 98)
@@ -268,7 +268,7 @@ test_that("看起來是遺漏碼的分數：簡短提醒，指到 kitJoin ②", 
   note <- kitsui_note_codes(d)
   expect_match(note, "^2 題有看起來是遺漏碼的分數")
   expect_match(note, "這些值是：98、99、7777。")
-  expect_match(note, "kitJoin「② 遺漏值轉 NA」")
+  expect_match(note, "kitJoin「遺漏值處理」")
   expect_length(kitsui_note_codes(kitsui_demo("M03", 3, "lan")), 0)
   # 0–100 分這種連續的分數不算
   e <- tibble::tibble(item_id = "p", item_score = 0:100)
