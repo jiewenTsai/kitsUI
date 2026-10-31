@@ -55,25 +55,26 @@ test_that("分數表有 visit_id、subj_id、round、bank、ability、ability_se
     expect_equal(csv$ability, s$ability)
     expect_true(all(c("ability", "ability_se", "d_score", "d_score_se") %in% names(csv)))
 
-    # 分數對照表：ability、ability_linked、d_score；預設不列沒有人的原始分數
+    # 分數對照表：ability、ability_linked、d_score；預設列出所有可能的原始分數
     session$setInputs(subj_scale = "lan M36")
     tab <- subj_table()
     expect_true(all(c("wave_m", "raw", "ability", "ability_linked", "d_score", "d_score_se",
                       "se_total") %in%
                       names(tab)))
     expect_true(any(tab$n == 0))
-    shown_n <- nrow(kitsui_raw_table_shown(tab))
-    expect_equal(lengths(regmatches(output$subj_table, gregexpr("<tr", output$subj_table))),
-                 shown_n + 1)
-    session$setInputs(show_empty = TRUE)
     expect_equal(lengths(regmatches(output$subj_table, gregexpr("<tr", output$subj_table))),
                  nrow(tab) + 1)
+    # 勾「只顯示本次資料中實際出現的原始分數」：只剩 n > 0 的列
+    session$setInputs(only_observed = TRUE)
+    expect_equal(lengths(regmatches(output$subj_table, gregexpr("<tr", output$subj_table))),
+                 sum(tab$n > 0) + 1)
     # 下載的是完整的表
     raw_csv <- kit_test_dl_file(output, session, "subj_table_dl")
     expect_equal(nrow(readr::read_csv(raw_csv, show_col_types = FALSE)), nrow(tab))
     expect_equal(kit_test_download_name(session, "subj_table_dl"), "raw_table_lan_M36.csv")
     html <- output$result$html
-    expect_match(html, "顯示沒有人的原始分數")
+    expect_match(html, "所有可能的原始分數的對照表")
+    expect_match(html, "只顯示本次資料中實際出現的原始分數")
     expect_match(html, "作答組合")
     expect_match(html, "form_pct")
     expect_match(html, "cum_pct")

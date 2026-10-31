@@ -1,3 +1,12 @@
+# kitsUI 0.7.0
+
+## Changes you can see
+
+* ④ 分數對照表 now shows every possible raw score by default, with a note that it is the table of all
+  possible raw scores (a raw score nobody in this round's data got has n = 0). The option 「只顯示本次
+  資料中實際出現的原始分數」 ("only the raw scores that occur in this round's data", off by default)
+  replaces 「顯示沒有人的原始分數」. The download is the full table either way, as before.
+
 # kitsUI 0.6.0
 
 ## Changes you can see

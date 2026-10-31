@@ -2955,13 +2955,13 @@
       "checksum": "ab29909152db0bbb48563f3595e1487e"
     },
     ".Rbuildignore": {
-      "checksum": "cb49fd89bf1edd8db59ae2b63e72f458"
+      "checksum": "0f9b535befee6df7af621a4776069a7a"
     },
     "app.R": {
       "checksum": "226d7cbec671c2e297aebc835d03041f"
     },
     "DESCRIPTION": {
-      "checksum": "e8045ebbf87481f90525b5d098f31260"
+      "checksum": "4e53af1edba25c8030483aa6a321b095"
     },
     "inst/manual/img/t1_data_design.webp": {
       "checksum": "f7e066d8adce96794925cfd46818bdfb"
@@ -3072,7 +3072,7 @@
       "checksum": "f1e8e1f116f7f215c12d6e522c12d7c4"
     },
     "R/mod_score.R": {
-      "checksum": "b4b9c3cb0544d98188a37eee70d6bafa"
+      "checksum": "4597da59ff689a18e13f32dccd7104d7"
     },
     "R/pipeline_bank.R": {
       "checksum": "a476725785fc0cae0ce8e68474a93a6f"
@@ -3099,7 +3099,7 @@
       "checksum": "c65e1b43cd50ba29f5dfc3890cced2bc"
     },
     "R/pipeline_score.R": {
-      "checksum": "13a123f0bab9d861ac8c7fe4a7a7e0cd"
+      "checksum": "1b70cd8f3dbd680a0abdd65cde6791e0"
     },
     "R/pipeline_status.R": {
       "checksum": "65e585a9809d33b5e1476e2fdc285150"

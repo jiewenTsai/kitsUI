@@ -658,10 +658,11 @@ kitsui_raw_table <- function(own, path = list(), internal = list()) {
   dplyr::relocate(out, dplyr::all_of(counts), .after = dplyr::last_col())
 }
 
-#' 畫面上的分數對照表：預設不列沒有人的原始分數（n = 0）
+#' 畫面上的分數對照表：預設列出所有可能的原始分數；only_observed 時只列本次資料中
+#' 實際出現的（n > 0）
 #' @noRd
-kitsui_raw_table_shown <- function(tab, show_empty = FALSE) {
-  if (isTRUE(show_empty) || !"n" %in% names(tab)) return(tab)
+kitsui_raw_table_shown <- function(tab, only_observed = FALSE) {
+  if (!isTRUE(only_observed) || !"n" %in% names(tab)) return(tab)
   tab[tab$n > 0, , drop = FALSE]
 }
 

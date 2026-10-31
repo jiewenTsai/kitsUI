@@ -126,11 +126,12 @@ test_that("分數對照表：ability 在校準的量尺上、ability_linked 經�
   inner <- kitsui_raw_table(sc$own[["lan M36"]], list(lk$internal), list(lk$internal))
   expect_equal(inner$ability_linked, inner_t$theta)
   expect_false("d_score" %in% names(inner))
-  # 畫面上預設不列沒有人的原始分數
+  # 畫面上預設列出所有可能的原始分數；only_observed 時只列 n > 0
   expect_true(any(tab$n == 0))
-  shown <- kitsui_raw_table_shown(tab)
+  expect_equal(nrow(kitsui_raw_table_shown(tab)), nrow(tab))
+  shown <- kitsui_raw_table_shown(tab, only_observed = TRUE)
   expect_true(all(shown$n > 0))
-  expect_equal(nrow(kitsui_raw_table_shown(tab, TRUE)), nrow(tab))
+  expect_equal(nrow(shown), sum(tab$n > 0))
 })
 
 test_that("分數只算一次：換算只要校準量尺上的分數與連結；傳進來的連結與列次資訊結果相同", {

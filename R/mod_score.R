@@ -243,7 +243,7 @@ mod_score_server <- function(id, data, items, links, goto, next_round = NULL) {
       }
       raw_memo[[s]]
     })
-    output$subj_table <- kit_table(kitsui_raw_table_shown(subj_table(), input$show_empty))
+    output$subj_table <- kit_table(kitsui_raw_table_shown(subj_table(), input$only_observed))
     output$subj_table_dl_ui <- render_download_csv(
       session, "subj_table_dl", "下載對照表（CSV）", subj_table,
       \() paste0("raw_table_", input$subj_scale %||% "scale")
@@ -757,9 +757,11 @@ score_result_ui <- function(ns, scales, ref = KITSUI_REF_COHORT, ref_final = NUL
     kitDesign::kit_detail(
       "分數對照表",
       shiny::tags$small(class = "kit-hint",
-                        "每個原始分數對應的能力值與人數（kits_subj_table()）。欄位說明在表的下面。"),
+                        shiny::tags$strong("這是所有可能的原始分數的對照表："),
+                        "每個原始分數對應的能力值與人數（kits_subj_table()）；",
+                        "本次資料中沒有人得到的原始分數，n 是 0。欄位說明在表的下面。"),
       shiny::selectInput(ns("subj_scale"), "哪一個量尺？", choices = scales),
-      shiny::checkboxInput(ns("show_empty"), "顯示沒有人的原始分數", value = FALSE),
+      shiny::checkboxInput(ns("only_observed"), "只顯示本次資料中實際出現的原始分數", value = FALSE),
       shiny::tags$div(class = "kit-table-scroll kit-table-tall",
                       shiny::tableOutput(ns("subj_table"))),
       shiny::tags$details(
@@ -795,7 +797,7 @@ score_result_ui <- function(ns, scales, ref = KITSUI_REF_COHORT, ref_final = NUL
       shiny::tags$div(
         class = "kit-downloads",
         ui_download(ns("subj_table_dl")),
-        shiny::tags$small(class = "kit-hint", "下載的是完整的表，包括沒有人的原始分數。")
+        shiny::tags$small(class = "kit-hint", "下載的一律是所有可能的原始分數的對照表。")
       )
     ),
     kitDesign::kit_detail(
