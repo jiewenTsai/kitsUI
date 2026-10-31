@@ -49,7 +49,7 @@ kitsui_settings_text <- function(d) {
 #'
 #' - 雲端版（kitDesign::kit_is_cloud()）：開新分頁連到 KITJOIN_URL，後面一行小字說明開的是雲端版。
 #' - 本機版：不放連結（連結會把人帶到雲端版，資料就上傳到雲端了），
-#'   改成一行說明：在 R 執行 kitJoin::run_kitjoin()。
+#'   改成一行說明：在 R 執行 kitJoin::run_kitjoin()（用了 library(kitverse) 時直接 run_kitjoin()）。
 #' @param label 連結（按鈕）的字
 #' @param class 雲端版按鈕的 class（kitDesign::kit_btn_class()）
 #' @param cloud 是不是雲端版（預設 kitDesign::kit_is_cloud()；測試用）
@@ -60,7 +60,8 @@ ui_kitjoin_button <- function(label = "開啟 kitJoin", class = kitDesign::kit_b
     return(shiny::tags$span(
       class = "kit-hint kit-kitjoin-local",
       "本機版：在 R 執行 ", shiny::tags$code("kitJoin::run_kitjoin()"),
-      " 開啟 kitJoin，資料不會離開這台電腦。"
+      "（用了 ", shiny::tags$code("library(kitverse)"), " 時直接 ", shiny::tags$code("run_kitjoin()"),
+      "）開啟 KIT 資料處理工具（kitJoin），資料不會離開這台電腦。"
     ))
   }
   shiny::tags$span(

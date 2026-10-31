@@ -1,3 +1,18 @@
+# kitsUI 0.8.2
+
+## Fixes
+
+* ④ 「下一步：用這一回合的固定檔開始下一回合」: ① could stay as it was (still showing 「沒有（第一回合）」,
+  and checking the new wave did nothing). The ① 作答設計 plot was drawn while its section was closed, at
+  76 px wide; plotly failed with "axis scaling" and that stopped the other ① outputs from updating. The plot
+  could also open squashed. Closed sections are now really hidden, so plots inside are drawn when opened
+  (kitDesign 0.6.1).
+* The message when pandoc is missing now says to run `kitverse::kitverse_update()` (it installs pandoc),
+  or install RStudio or Quarto.
+* The local hint for kitJoin mentions `run_kitjoin()` after `library(kitverse)` and kitJoin's title,
+  KIT 資料處理工具.
+* ② no longer logs a `map2_lgl` warning when the next round has fewer scales than the last.
+
 # kitsUI 0.8.1
 
 ## Changes you can see

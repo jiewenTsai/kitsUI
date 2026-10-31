@@ -110,12 +110,18 @@ mod_items_server <- function(id, data, goto) {
       if (is.null(b)) return(NULL)
       purrr::map_chr(seq_len(nrow(b)), \(i) input[[paste0("bank_", i)]] %||% b$rule[i])
     })
-    # why 欄跟著選擇
+    # why 欄跟著選擇。每次讀最新的表：表變短時（例如下一回合從 4 個量尺變 2 個），
+    # 之前建的 why_3、why_4 不再有對應的列，也還沒有新的選單值時，不算
     shiny::observe({
       b <- banks()
       if (is.null(b)) return()
       purrr::walk(seq_len(nrow(b)), \(i) {
-        output[[paste0("why_", i)]] <- shiny::renderText(kitsui_bank_why(b, bank_picks())[i])
+        output[[paste0("why_", i)]] <- shiny::renderText({
+          b <- banks()
+          pick <- bank_picks()
+          if (is.null(b) || i > nrow(b) || length(pick) != nrow(b)) return(NULL)
+          kitsui_bank_why(b, pick)[i]
+        })
       })
     })
     # 和規則不同的選擇（kitsui_round(bank_choice = )）；照規則時是 NULL

@@ -1462,7 +1462,7 @@
       "description": {
         "Package": "kitDesign",
         "Title": "Shared 'Shiny' User Interface Components for KIT Research Tools",
-        "Version": "0.6.0",
+        "Version": "0.6.1",
         "Date": "2026-11-01",
         "Authors@R": "person(\"Jie-Wen\", \"Tsai\", email = \"tsai.jiewen@gmail.com\", role = c(\"aut\", \"cre\"))",
         "Description": "The shared user interface layer of the KIT research tools built\n    with 'shiny': a 'bslib' theme based on Bootswatch Brite, the KIT style\n    sheets and logos, a page wrapper with the KIT header, and documented\n    components (page guide, buttons, download buttons, callouts, cloud-version\n    banner and footer, status boxes, details rows, code panels, step cards,\n    checklists, step tabs, diagrams, tables and a 'plotly' chart style),\n    a skeleton for tabs with one run button (page order and status flow),\n    plus a few server-side helpers (run gate, scroll to result, tab states,\n    notifications, number formatting, user-facing errors), value objects\n    for status boxes, checklists and code, 'shiny' modules for the stateful\n    pieces (step cards, step tabs, run gate, code panel) and a scaffold for\n    new apps. Load it with one call to kit_page() and build the page from\n    kit_*() components. The logo and the colour palette come from a brand\n    object (kit_brand()), so projects other than KIT can use their own.",
@@ -1481,12 +1481,12 @@
         "RemoteHost": "api.github.com",
         "RemoteRepo": "kitDesign",
         "RemoteUsername": "jiewenTsai",
-        "RemoteRef": "v0.6.0",
-        "RemoteSha": "a705611db6187322ccd3a6da3ac588b9a038030a",
+        "RemoteRef": "v0.6.1",
+        "RemoteSha": "57434db69f12aa3fb29f32ceca4ebaaab6c8ab1d",
         "GithubRepo": "kitDesign",
         "GithubUsername": "jiewenTsai",
-        "GithubRef": "v0.6.0",
-        "GithubSHA1": "a705611db6187322ccd3a6da3ac588b9a038030a",
+        "GithubRef": "v0.6.1",
+        "GithubSHA1": "57434db69f12aa3fb29f32ceca4ebaaab6c8ab1d",
         "NeedsCompilation": "no",
         "Packaged": "2026-10-31 18:36:58 UTC; jw",
         "Author": "Jie-Wen Tsai [aut, cre]",
@@ -2961,7 +2961,7 @@
       "checksum": "a88997c1027ddd8ceaa5e0b0204884b6"
     },
     "DESCRIPTION": {
-      "checksum": "c85223189bc838d748c5e34953d85572"
+      "checksum": "2b4add03252971ed86c35a79eb095672"
     },
     "inst/manual/img/t1_data_design.webp": {
       "checksum": "fb7b25542d3ffbcaad6897e8402cb2ac"
@@ -3048,10 +3048,10 @@
       "checksum": "5b75b524e3a69a0ffd5ee33a53589e9a"
     },
     "inst/manual/kitsui_manual_body.html": {
-      "checksum": "8b14d56421131f69172efe7240a5b3ea"
+      "checksum": "bacfcb932d7e8270c5daa815c5da07fd"
     },
     "inst/manual/kitsui_manual.html": {
-      "checksum": "f7b7af9f9360d136fb087f882c63f620"
+      "checksum": "44ae6f57a6f5fcd3ebac70efebdd884b"
     },
     "NAMESPACE": {
       "checksum": "c5cfd36d75fc8e0fa559bb0c54745623"
@@ -3066,7 +3066,7 @@
       "checksum": "3fe9acbb69a89773cb79bc26a8b76e86"
     },
     "R/constants.R": {
-      "checksum": "73547755ddeda775518d88da396ade77"
+      "checksum": "557a10813fafd68472404fef1062e335"
     },
     "R/io_data.R": {
       "checksum": "6e44f69927754698632e247196010008"
@@ -3087,7 +3087,7 @@
       "checksum": "9e84e26f2f809c1e0c7b6a58ac9499d9"
     },
     "R/mod_items.R": {
-      "checksum": "f46864ec757e2867f5766cfbcb222e9f"
+      "checksum": "02f8af34ec839af1f84fdddd5d578d1f"
     },
     "R/mod_link.R": {
       "checksum": "f1e8e1f116f7f215c12d6e522c12d7c4"
@@ -3132,7 +3132,7 @@
       "checksum": "042202265b7587f0d71a802e31b693d8"
     },
     "R/ui_common.R": {
-      "checksum": "3fab6d5419dc946fc83f38209febd5f2"
+      "checksum": "6a108659be3b27345ca453e822177e2f"
     },
     "R/utils.R": {
       "checksum": "256b7a09ec9f5eb16e8485875481d25b"

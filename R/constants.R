@@ -18,7 +18,10 @@ KITJOIN_MISSING_TAB <- "遺漏值處理"
 KIT_NOTIFY_SECONDS <- 6
 
 # 找不到 pandoc 時（圖檔要用 pandoc 存成單一 html）
-KIT_PANDOC_MISSING <- "找不到 pandoc：圖檔（HTML）不能下載。請安裝 RStudio 或 Quarto。"
+KIT_PANDOC_MISSING <- paste0(
+  "找不到 pandoc：圖檔（HTML）不能下載。請在 R 執行 kitverse::kitverse_update()（會安裝 pandoc），",
+  "或安裝 RStudio、Quarto，再重新開啟 R。"
+)
 
 # 這一回合名稱停手多久才檢查（毫秒）；勾世代與波次停手多久（毫秒）
 KIT_LABEL_DELAY_MS <- 500
