@@ -14,12 +14,6 @@ key_strings <- function(df, by_vars) {
   out
 }
 
-#' 「t1（wave1.csv）」這種給使用者看的檔案稱呼
-#' @noRd
-file_display_name <- function(wave_label, file_name) {
-  ifelse(nzchar(wave_label), paste0(wave_label, "（", file_name, "）"), file_name)
-}
-
 #' 錯誤轉成給使用者看的句子：kitDesign::kit_abort() 的訊息原文；其他錯誤前面加上在做什麼
 #' @noRd
 kit_error_text <- function(e, action) {

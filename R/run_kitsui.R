@@ -10,7 +10,7 @@
 #' if (interactive()) {
 #'   run_kitsui()
 #' }
-run_kitsui <- function(launch.browser = kit_open_browser, ...) {
+run_kitsui <- function(launch.browser = kitDesign::kit_open_browser, ...) {
   old <- Sys.getenv("KIT_DEPLOY", unset = NA)
   on.exit(
     if (is.na(old)) Sys.unsetenv("KIT_DEPLOY") else Sys.setenv(KIT_DEPLOY = old)

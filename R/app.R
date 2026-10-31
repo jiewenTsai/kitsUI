@@ -28,17 +28,6 @@ kit_set_options <- function() {
   kit_setup_manual()
 }
 
-#' 在預設瀏覽器開啟網址
-#' @noRd
-kit_open_browser <- function(url) {
-  if (.Platform$OS.type == "windows") {
-    utils::browseURL(url, browser = NULL)
-  } else {
-    utils::browseURL(url)
-  }
-  invisible(NULL)
-}
-
 #' 頁面（每次連線時產生，雲端判斷才會反映目前環境）
 #' @noRd
 kit_ui <- function(request) {
