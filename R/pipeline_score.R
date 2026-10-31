@@ -115,6 +115,69 @@ kitsui_score_rows <- function(subj, round_label = NULL, own = NULL, ref = NULL) 
     purrr::list_rbind()
 }
 
+#' 分數的摘要：每個量尺 × 世代 × 波次，分數的人數、平均、標準差（④ 結果第一眼看的小表）
+#'
+#' 分數是最後的分數（d_score；外部連結不適用時 ref_score）。還沒有換到最後的量尺的量尺（例如
+#' 還沒有內部連結的世代），分數留在 ability（自己的量尺），score_column 寫出用的是哪一欄。
+#' 只摘要分數表的值，不重算。
+#' @param scores kitsui_score_rows()
+#' @param ref NULL，或外部連結不適用時的參照世代（kitsui_ref_final()）
+#' @return tibble（欄名英文）：scale（校準的量尺 bank）、cohort、wave_m、score_column、n、mean、sd
+#' @noRd
+kitsui_score_summary <- function(scores, ref = NULL) {
+  final <- if (is.null(ref)) "d_score" else "ref_score"
+  empty <- tibble::tibble(scale = character(), cohort = character(), wave_m = numeric(),
+                          score_column = character(), n = integer(), mean = numeric(),
+                          sd = numeric())
+  if (NROW(scores) == 0) return(empty)
+  d <- tibble::as_tibble(scores)
+  if (!final %in% names(d)) d[[final]] <- NA_real_
+  if (!"wave_m" %in% names(d)) d$wave_m <- NA_real_
+  order <- unique(d$bank)
+  d |>
+    dplyr::mutate(.on_final = any(!is.na(.data[[final]])), .by = "bank") |>
+    dplyr::mutate(score_column = ifelse(.data$.on_final, final, "ability"),
+                  .value = ifelse(.data$.on_final, .data[[final]], .data$ability)) |>
+    dplyr::summarise(
+      n = sum(is.finite(.data$.value)),
+      mean = if (any(is.finite(.data$.value))) mean(.data$.value[is.finite(.data$.value)]) else NA_real_,
+      sd = if (sum(is.finite(.data$.value)) > 1) stats::sd(.data$.value[is.finite(.data$.value)]) else NA_real_,
+      .by = c("bank", "cohort", "wave_m", "score_column")
+    ) |>
+    dplyr::rename(scale = "bank") |>
+    dplyr::arrange(match(.data$scale, order), .data$cohort, .data$wave_m) |>
+    dplyr::mutate(n = as.integer(.data$n))
+}
+
+#' 畫面上的分數摘要：中文欄名（kitsUI 自己整理的摘要表，KIT 設計語言 3.8）
+#' @param tab kitsui_score_summary()
+#' @noRd
+kitsui_score_summary_display <- function(tab) {
+  out <- data.frame(tab$scale, tab$cohort, tab$wave_m, tab$score_column, tab$n, tab$mean, tab$sd)
+  names(out) <- c("量尺", "世代", "波次", "分數欄", "人數", "平均", "標準差")
+  out
+}
+
+#' 分數表的分數欄是哪一欄：下載鈕旁邊的一句（欄名照 kits，不改名）
+#'
+#' 例如「分數欄：d_score（D 量尺）」或「分數欄：ref_score（參照世代 M03 的量尺）」；
+#' 有量尺還沒換到最後的量尺時，加一句它們的分數留在 ability。
+#' @noRd
+kitsui_score_column_text <- function(scores, ref = NULL) {
+  final <- if (is.null(ref)) "d_score" else "ref_score"
+  where <- if (is.null(ref)) "D 量尺" else paste0("參照世代 ", ref, " 的量尺")
+  left <- if (NROW(scores) > 0 && final %in% names(scores)) {
+    on <- tapply(!is.na(scores[[final]]), scores$bank, any)
+    names(on)[!on]
+  }
+  paste0(
+    "分數欄：", final, "（", where, "）。",
+    if (length(left) > 0) {
+      paste0(kitsui_first(left, 4), " 還沒有換到這把尺，分數留在 ability（自己的量尺），", final, " 是空白。")
+    }
+  )
+}
+
 # 分數表各欄的一句說明（畫面上列在表的下面）
 KITSUI_SCORE_COLUMNS <- c(
   visit_id = "列次的編號（一個孩子的一次施測）。",

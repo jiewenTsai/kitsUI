@@ -504,3 +504,69 @@ test_that("② 沒有結果了（設定或資料改了、還沒重新校準）�
     expect_match(output$status$html, "請按「計算這一回合的分數」。")
   })
 })
+
+test_that("分數摘要：每個量尺 × 世代 × 波次的人數、平均、標準差（中文欄名），先於細節", {
+  r8 <- round8()
+  lk <- linked()
+  shiny::testServer(mod_score_server, args = score_args(r8$round, r8$df, lk$fixed), {
+    session$setInputs(run = 1)
+    s <- session$returned()$scores
+    tab <- kitsui_score_summary(s)
+    # 和直接從分數表算的一樣（只摘要，不重算分數）
+    by_hand <- dplyr::summarise(s, n = sum(is.finite(d_score)), mean = mean(d_score, na.rm = TRUE),
+                                sd = stats::sd(d_score, na.rm = TRUE), .by = c(bank, cohort, wave_m))
+    hit <- dplyr::inner_join(tab, by_hand, by = c(scale = "bank", "cohort", "wave_m"))
+    expect_equal(nrow(hit), nrow(tab))
+    expect_equal(hit$n.x, hit$n.y)
+    expect_equal(hit$mean.x, hit$mean.y)
+    expect_equal(hit$sd.x, hit$sd.y)
+    expect_equal(unique(tab$score_column), "d_score")
+    expect_match(output$summary, "<th[^>]*>\\s*人數\\s*</th>")
+    expect_match(output$summary, "<th[^>]*>\\s*平均\\s*</th>")
+    expect_match(output$summary, "<th[^>]*>\\s*標準差\\s*</th")
+    # 摘要在下載與換算路線的前面
+    html <- output$done$html
+    expect_lt(regexpr("分數摘要", html), regexpr("請現在就存兩個檔案", html))
+    expect_lt(regexpr("請現在就存兩個檔案", html), regexpr("每個量尺換到哪一把尺", html))
+    # 分數欄是哪一欄：寫在下載鈕旁邊（欄名不改）
+    expect_match(html, "分數欄：d_score（D 量尺）")
+    # 兩個下載是主要按鈕；「下一回合」是次要按鈕
+    expect_match(output$scores_dl_ui$html, "kit-download btn-primary")
+    expect_match(output$fixed_dl_ui$html, "kit-download btn-primary")
+  })
+  # 外部連結不適用：分數欄是 ref_score；還沒有內部連結的量尺留在 ability
+  sc <- data.frame(bank = c("a M03", "a M03", "a M36"), cohort = c("M03", "M03", "M36"),
+                   wave_m = c(3, 3, 36), ability = c(1, 3, 5), ref_score = c(1, 3, NA))
+  tab <- kitsui_score_summary(sc, ref = "M03")
+  expect_equal(tab$score_column, c("ref_score", "ability"))
+  expect_equal(tab$mean, c(2, 5))
+  expect_equal(tab$n, c(2L, 1L))
+  expect_true(is.na(tab$sd[2]))
+  expect_match(kitsui_score_column_text(sc, "M03"),
+               "分數欄：ref_score（參照世代 M03 的量尺）。a M36 還沒有換到這把尺，分數留在 ability")
+  expect_named(kitsui_score_summary_display(tab), c("量尺", "世代", "波次", "分數欄", "人數", "平均", "標準差"))
+})
+
+test_that("沒有可以評分的量尺（② 全部停下來）：【停下來】與怎麼辦，不是【完成】0 列，也沒有空的下載", {
+  r8 <- round8()
+  round <- r8$round
+  round$ok <- FALSE
+  round$stopped <- names(round$items)
+  round$items <- list()
+  shiny::testServer(mod_score_server, args = score_args(round, r8$df, round$fixed), {
+    expect_true(nothing())
+    expect_match(output$source$html, "【停下來】")
+    session$setInputs(run = 1)
+    html <- output$status$html
+    expect_match(html, "【停下來】")
+    expect_match(html, "沒有可以評分的量尺（② 有 2 個量尺停下來")
+    expect_match(html, "怎麼辦：")
+    expect_false(grepl("【完成", html))
+    expect_null(session$returned())
+    expect_null(output$done)
+  })
+  # 算出來 0 列時也一樣
+  html <- as.character(score_status(list(scores = data.frame()), round))
+  expect_match(html, "【停下來】")
+  expect_false(grepl("0 列", html))
+})
