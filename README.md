@@ -129,13 +129,21 @@ KIT 的資料照舊：示範資料 M03 + M36 兩回合的題庫、連結、分�
 ## 安裝與執行
 
 ```r
-install.packages("remotes")
-remotes::install_github("jiewenTsai/kits")
-remotes::install_github("jiewenTsai/kitsUI")
+install.packages("pak")
+pak::pkg_install("jiewenTsai/kitsUI")   # 會一起裝 kits，並把太舊的套件更新到需要的版本
 kitsUI::run_kitsui()
 ```
 
-Windows 也可以雙擊 `run.bat`（第一次會自動安裝需要的套件）。
+`pak` 安裝失敗時，可以改用 `remotes`（`upgrade = "always"` 才會更新太舊的套件）：
+
+```r
+install.packages("remotes")
+remotes::install_github("jiewenTsai/kitsUI", upgrade = "always")
+```
+
+Windows 也可以雙擊 `run.bat`：第一次會自動安裝需要的套件，之後每次打開都會檢查版本，
+太舊的會自動更新（照 DESCRIPTION 寫的最低版本）。
+打開時說「bslib 版本太舊」：在 R 執行 `install.packages("bslib")`，再重新開啟。
 下載圖檔（HTML）需要 pandoc；裝了 RStudio 或 Quarto 就有。
 
 ## 資料格式

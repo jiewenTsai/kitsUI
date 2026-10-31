@@ -3034,7 +3034,7 @@
       "checksum": "8dca0e59b393ee277bd9dd755ee5d27b"
     },
     "R/kit_brite.R": {
-      "checksum": "266a9714825efd6e8c35d234b3d71aa4"
+      "checksum": "254d6e88875cf34cff690c596fd74dfa"
     },
     "R/kit_chart.R": {
       "checksum": "982555abe923bff0cf1db2e69418a718"
@@ -3043,7 +3043,7 @@
       "checksum": "2cd48b5548c2276d1fdc1e8d5e86251f"
     },
     "R/kit_theme.R": {
-      "checksum": "dd21e3db91fa04721ee2bc8f3e475d54"
+      "checksum": "7e9ed1d47a44c497d31cdd881b0cd938"
     },
     "R/kitsUI-package.R": {
       "checksum": "4ffd9e6da95e61fd880674093b54b9d5"
@@ -3106,7 +3106,7 @@
       "checksum": "b36ff990a22fdc077d080901cb4f64f6"
     },
     "README.md": {
-      "checksum": "497e7564ad4a10f4f8e67e6d36ca3e55"
+      "checksum": "430a805a3f7dfd936163307e4ffbec6f"
     }
   },
   "users": null
