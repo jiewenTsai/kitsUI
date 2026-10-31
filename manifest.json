@@ -3021,6 +3021,9 @@
     "R/cloud.R": {
       "checksum": "089fbb01441aba32929888d59ee03953"
     },
+    "R/code_wrap.R": {
+      "checksum": "5b20765175280b34d4705f438dadf1a6"
+    },
     "R/constants.R": {
       "checksum": "1a29a136cc9c8941f6e98ab7685b88ac"
     },
@@ -3031,7 +3034,7 @@
       "checksum": "8dca0e59b393ee277bd9dd755ee5d27b"
     },
     "R/kit_brite.R": {
-      "checksum": "516c319780a77a608f098015545537d5"
+      "checksum": "266a9714825efd6e8c35d234b3d71aa4"
     },
     "R/kit_chart.R": {
       "checksum": "982555abe923bff0cf1db2e69418a718"
@@ -3049,16 +3052,16 @@
       "checksum": "627f45f35432a5b08d03863fc0a41cea"
     },
     "R/mod_data.R": {
-      "checksum": "9e225f9b9de0dec053c4d5951635d22e"
+      "checksum": "046a94710d0b27ee466bd429a5bb6558"
     },
     "R/mod_items.R": {
-      "checksum": "758bc26bf039c29ee94dc8ddd177afaa"
+      "checksum": "875b588f768b4f29480bc57a7efc0f62"
     },
     "R/mod_link.R": {
-      "checksum": "eca3e5f27de4ab8a64d2d04a4e090669"
+      "checksum": "540d63ef2ad27948798c1d992fd681ae"
     },
     "R/mod_score.R": {
-      "checksum": "6baaf2ad25887bb5eddc343814a90f1f"
+      "checksum": "3de5e5d199fcb585a9763c9b8c299532"
     },
     "R/pipeline_bank.R": {
       "checksum": "3c92ff6d2a9521a4fceaa4cf5b9de824"

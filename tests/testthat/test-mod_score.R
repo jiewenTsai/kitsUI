@@ -336,7 +336,8 @@ test_that("通過步驟：選兩題套用 2，題目表、R 程式、固定檔�
     # R 程式
     expect_match(output$code, "lanb08 = 2")
     expect_match(output$code, "lanc02 = 2")
-    expect_match(output$code, "kits_item_table\\(item, data = cbind\\(ages, X\\), step = steps\\)")
+    # 畫面上的程式碼每行最多 70 欄（kit_code_wrap()），逗號後面可能換行
+    expect_match(output$code, "kits_item_table\\(item, data = cbind\\(ages, X\\),\\s+step = steps\\)")
     # 新的固定檔與交給下一回合的固定檔
     back <- kitsui_read_fixed(kit_test_dl_file(output, session, "fixed_dl"))
     expect_equal(back$pass_steps$item_id, c("lanb08", "lanc02"))

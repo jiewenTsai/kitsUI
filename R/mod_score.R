@@ -347,7 +347,7 @@ mod_score_server <- function(id, data, items, links, goto, next_round = NULL) {
       step <- kitsui_item_step_arg(items()$items[[s]], steps(), fixed()$versions)
       score_code(fixed(), s, kitsui_round_cohorts(items(), s), kitsui_fixed_name(label()), step)
     })
-    output$code <- shiny::renderText(code_text())
+    output$code <- shiny::renderText(kit_code_wrap(code_text()))
     output$code_ui <- render_code_panel(session, "code", code_text)
 
     # 新的固定檔 ----

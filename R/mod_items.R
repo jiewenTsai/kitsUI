@@ -411,7 +411,7 @@ mod_items_server <- function(id, data, goto) {
       }
       paste(c(code, "", choice, "# 這一次在 app 裡的設定（kits_info）", info), collapse = "\n")
     })
-    output$code <- shiny::renderText(code_text())
+    output$code <- shiny::renderText(kit_code_wrap(code_text()))
     output$code_ui <- render_code_panel(session, "code", code_text)
 
     output$next_step <- shiny::renderUI({

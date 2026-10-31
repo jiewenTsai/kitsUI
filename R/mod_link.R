@@ -319,7 +319,7 @@ mod_link_server <- function(id, data, items, goto) {
       }
       paste(c(code, kitsui_code_vertical(fixed(), v$none$from, drawn), more), collapse = "\n\n")
     })
-    output$code <- shiny::renderText(code_text())
+    output$code <- shiny::renderText(kit_code_wrap(code_text()))
     output$code_ui <- render_code_panel(session, "code", code_text,
                                         "先做「② 題目校準」，這裡才會有程式碼。")
     # 還可以建立的內部連結

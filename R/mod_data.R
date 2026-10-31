@@ -548,7 +548,7 @@ mod_data_server <- function(id, goto, handover = NULL) {
       kitsui_code_data(s, upload_name, sort(unique(ck$picks$wave_m)), picks = ck$picks,
                        steps = steps)
     })
-    output$code <- shiny::renderText(code_text())
+    output$code <- shiny::renderText(kit_code_wrap(code_text()))
     output$code_ui <- render_code_panel(session, "code", code_text)
 
     result
