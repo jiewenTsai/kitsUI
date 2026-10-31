@@ -1,3 +1,13 @@
+# kitsUI 0.8.0
+
+## Changes you can see
+
+* Plots for papers: the toolbar above every plot saves a PNG that is always 2100 pixels wide with
+  300 dpi written in the file (7 inches, the width of a two-column paper; Word inserts it at that
+  size), whatever the window size. A new button saves an SVG (vector) for journals that want 600 dpi
+  or more, EPS or PDF; its text uses the fonts on your computer. Both also work in a downloaded
+  plot HTML file. (kitDesign 0.6.0)
+
 # kitsUI 0.7.2
 
 ## Fixes
