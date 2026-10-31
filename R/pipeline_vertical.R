@@ -87,38 +87,37 @@ kitsui_summary_convert <- function(ws, fixed, links, stage = "external") {
 
 # 領域 ----
 
-#' 這一回合可以畫垂直連結的領域
+#' 這一回合可以畫垂直連結的領域：這一回合校準好的每一個領域
 #'
-#' 這一回合有兩個以上量尺（世代）的領域，或固定檔裡有這個領域之前回合的摘要。
+#' 只有一個世代、也沒有之前回合的點的領域，連結不了，但照樣畫未連結的圖
+#' （各波次的中位數與 P25、P75），所以也列出來（kitsui_verticals()）。
 #' @param fixed 這一回合的固定檔（預設是 round$fixed）
 #' @noRd
 kitsui_vertical_domains <- function(round, fixed = round$fixed) {
-  domains <- scale_domain(names(round$items))
-  label <- utils::tail(fixed$version$rounds, 1)
-  ws <- fixed$wave_summary
-  before <- if (NROW(ws) > 0) scale_domain(ws$scale[!ws$round %in% label])
-  sort(unique(c(domains[duplicated(domains)], intersect(domains, before))))
+  sort(unique(scale_domain(names(round$items))))
 }
 
-#' 沒有可以畫的領域（或這個領域畫不了）時的一句說明
+#' 這個領域只有一個世代、也沒有之前回合的點時的一句說明（下面只畫未連結的圖）
 #'
-#' 第一個回合、舊的固定檔（沒有摘要）、固定檔裡沒有這些領域的摘要，各說一句。
+#' 第一個回合、舊的固定檔（沒有摘要）、固定檔裡沒有這個領域的摘要，各說一句。
 #' @noRd
 kitsui_vertical_alone <- function(fixed) {
   label <- utils::tail(fixed$version$rounds, 1)
   ws <- fixed$wave_summary
-  head <- "這一回合每個領域只有一個世代。"
+  head <- "這一回合這個領域只有一個世代。下面是未連結的圖（這個世代各波次的中位數與 P25、P75）。"
   if (length(setdiff(fixed$version$rounds, label)) == 0) {
-    return(paste0(head, "這是第一個回合，固定檔裡還沒有之前回合的點，所以還沒有垂直連結。"))
+    return(paste0(head, "這是第一個回合，固定檔裡還沒有之前回合的點。",
+                  "要看內部連結後、外部連結後的圖，要有另一個世代，或之前回合的點。"))
   }
   if (NROW(ws) == 0 || all(ws$round %in% label)) {
     return(paste0(
-      head, "上傳的固定檔裡沒有之前回合的各波次摘要（wave_summary.csv），所以畫不出之前回合的點。",
+      head, "上傳的固定檔裡沒有之前回合的各波次摘要（wave_summary.csv），所以畫不出之前回合的點，",
+      "也沒有內部連結後、外部連結後的圖。",
       "各波次摘要從 kitsUI ", KITSUI_SUMMARY_SINCE, " 開始存進固定檔。",
       "用新版本重跑之前的回合，產生新的固定檔，這裡就會畫出之前回合的點。"
     ))
   }
-  paste0(head, "固定檔裡也沒有這些領域之前回合的點，所以沒有垂直連結。")
+  paste0(head, "固定檔裡也沒有這個領域之前回合的點，所以沒有內部連結後、外部連結後的圖。")
 }
 
 # 三個版本 ----
@@ -149,18 +148,29 @@ kitsui_vertical_scores <- function(round, domain, persons, progress = NULL) {
 #'   table 是畫圖的列（這一回合與之前回合，source 是 "this" 或 "earlier"，round 是回合）；
 #'   scale 是畫出來的量尺（未連結時是 NA）；from 是這一回合這個領域的量尺，scales 再加上之前回合
 #'   的量尺；畫不了時 vertical 是 NULL，why 是一句原因；note 是世代之間沒有共同波次時的一句說明；
-#'   wave_unit 是固定檔的波次單位（kitsui_wave_unit()）
+#'   wave_unit 是固定檔的波次單位（kitsui_wave_unit()）；只有一個世代、也沒有之前回合的點時，
+#'   只畫未連結，none 的 alone 是一句說明（kitsui_vertical_alone()），內部、外部連結後畫不了
 #' @noRd
 kitsui_verticals <- function(round, df, fixed, domain, links = NULL, persons = NULL,
                              raw = NULL) {
   scales <- names(round$items)[scale_domain(names(round$items)) == domain]
   label <- utils::tail(fixed$version$rounds, 1)
   earlier <- kitsui_vertical_earlier(fixed, domain, label)
-  if (length(scales) == 0 || (length(scales) < 2 && nrow(earlier) == 0)) {
+  if (length(scales) == 0) {
     why <- kitsui_vertical_alone(fixed)
     return(purrr::map(KITSUI_VERTICAL_STAGES, \(x) kitsui_vertical_none(scales, why)))
   }
   raw <- raw %||% kitsui_vertical_scores(round, domain, persons %||% kitsui_persons(df))
+  if (length(scales) < 2 && nrow(earlier) == 0) {
+    # 只有一個世代、沒有之前回合的點：連結不了，但未連結的圖照樣有用
+    why <- kitsui_vertical_alone(fixed)
+    none <- kitsui_vertical_raw(raw, earlier, label)
+    none <- utils::modifyList(none, list(from = scales, scales = scales, alone = why,
+                                         wave_unit = kitsui_wave_unit(fixed)))
+    out <- purrr::map(KITSUI_VERTICAL_STAGES, \(x) kitsui_vertical_none(scales, why))
+    out$none <- none
+    return(out)
+  }
   links <- links %||% kitsui_links(fixed)
   # 這一回合也校準的量尺 × 世代 × 波次：用這一回合的點
   now <- purrr::imap(raw, \(x, s) kitsui_wave_summary(x, s)) |>

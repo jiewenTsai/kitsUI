@@ -107,9 +107,11 @@ test_that("舊的固定檔沒有各波次摘要：一個世代的回合說明摘
   r2$fixed$wave_summary <- r2$fixed$wave_summary[r2$fixed$wave_summary$round == "2", ]
   args <- link_args(r2, b$df2, b$fixed)
   shiny::testServer(mod_link_server, args = args, {
-    session$flushReact()
-    html <- output$vertical_ui$html
+    session$setInputs(vertical_domain = "motor")
+    html <- output$vertical_body$html
     expect_match(html, "只有一個世代")
+    # 照樣畫未連結的圖
+    expect_match(html, "vertical_none_plot")
     expect_match(html, "wave_summary.csv")
     expect_match(html, "重跑之前的回合")
   })

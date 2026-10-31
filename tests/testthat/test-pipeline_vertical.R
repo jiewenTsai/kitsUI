@@ -115,8 +115,9 @@ test_that("摘要照連結換算，等於換算後的分數再做摘要", {
 test_that("兩個世代的垂直連結三個版本：未連結、內部連結後、外部連結後", {
   both <- both_cohorts()
   r <- both$round
-  # motor M03 只有 3 個月時 kits 出錯（停下來），所以只有 lan 有兩個世代
-  expect_equal(kitsui_vertical_domains(r), "lan")
+  # motor M03 只有 3 個月時 kits 出錯（停下來），所以只有 lan 有兩個世代；
+  # motor 只有 M36，也列出來（只畫未連結的圖）
+  expect_equal(kitsui_vertical_domains(r), c("lan", "motor"))
   v <- kitsui_verticals(r, both$df, r$fixed, "lan")
   expect_named(v, c("none", "internal", "external"))
   # 未連結：各世代自己的量尺，kits_vertical() 不標量尺
@@ -161,7 +162,7 @@ test_that("這一回合只有一個世代：之前回合的點（固定檔的摘
   r8 <- round8()
   lk <- linked()
   # lan 這一回合只有 M36，固定檔裡有之前回合 lan M03 的摘要；motor 只有 M03、沒有之前的點
-  expect_equal(kitsui_vertical_domains(r8$round), "lan")
+  expect_equal(kitsui_vertical_domains(r8$round), c("lan", "motor"))
   v <- kitsui_verticals(r8$round, r8$df, lk$fixed, "lan")
   expect_equal(v$none$from, "lan M36")
   expect_setequal(v$none$scales, c("lan M03", "lan M36"))
@@ -204,9 +205,13 @@ test_that("這一回合只有一個世代：之前回合的點（固定檔的摘
   plain <- kitsui_verticals(r8$round, r8$df, r8$round$fixed, "lan")
   expect_s3_class(kitsui_vertical_plot(plain$none), "plotly")
   expect_match(plain$internal$why, "lan M36 還沒有內部連結")
-  # motor：只有一個世代、沒有之前的點
+  # motor：只有一個世代、沒有之前的點：只畫未連結
   one <- kitsui_verticals(r8$round, r8$df, lk$fixed, "motor")
-  expect_true(all(purrr::map_lgl(one, \(x) grepl("只有一個世代", x$why))))
+  expect_s3_class(one$none$vertical, "kits_vertical")
+  expect_match(one$none$alone, "只有一個世代")
+  expect_match(one$none$alone, "固定檔裡也沒有這個領域之前回合的點")
+  expect_null(one$internal$vertical)
+  expect_null(one$external$vertical)
 })
 
 test_that("借用另一世代題庫（M03 60 個月用 motor M36 的題庫）：之前回合兩個世代的點都畫得出來", {
@@ -246,18 +251,55 @@ test_that("舊的固定檔沒有摘要、第一個回合：一句清楚的說明
   r2 <- b$r2
   # 舊的固定檔：之前的回合沒有摘要（只有這一回合用新版本算的）
   r2$fixed$wave_summary <- r2$fixed$wave_summary[r2$fixed$wave_summary$round == "2", ]
-  expect_equal(kitsui_vertical_domains(r2), character())
+  expect_equal(kitsui_vertical_domains(r2), "motor")
   why <- kitsui_vertical_alone(r2$fixed)
   expect_match(why, "只有一個世代")
   expect_match(why, "wave_summary.csv")
   expect_match(why, paste0("kitsUI ", KITSUI_SUMMARY_SINCE, " 開始"))
   expect_match(why, "重跑之前的回合")
   v <- kitsui_verticals(r2, b$df2, r2$fixed, "motor")
-  expect_true(all(purrr::map_lgl(v, \(x) identical(x$why, why))))
+  # 未連結照樣畫；連結後的兩個版本畫不了
+  expect_identical(v$none$alone, why)
+  expect_s3_class(v$none$vertical, "kits_vertical")
+  expect_identical(v$internal$why, why)
+  expect_identical(v$external$why, why)
   # 第一個回合
   first <- lan_chain()[["3"]]
-  expect_equal(kitsui_vertical_domains(first), character())
+  expect_equal(kitsui_vertical_domains(first), "lan")
   expect_match(kitsui_vertical_alone(first$fixed), "第一個回合")
+})
+
+test_that("第一個回合、只有一個世代（幾個波次）：照樣畫未連結的圖，連結後的兩頁不放", {
+  df <- kitsui_demo("M03", c(3, 6, 12), "motor")
+  r <- suppressMessages(kitsui_round(df, kitsui_fixed_empty(), "1"))
+  expect_equal(kitsui_vertical_domains(r), "motor")
+  v <- kitsui_verticals(r, df, r$fixed, "motor")
+  # 未連結：這個世代各波次的中位數與 P25、P75
+  expect_s3_class(v$none$vertical, "kits_vertical")
+  expect_equal(sort(v$none$vertical$wave_m), c(3, 6, 12))
+  expect_true(all(v$none$vertical$P25 <= v$none$vertical$median))
+  expect_true(all(v$none$vertical$median <= v$none$vertical$P75))
+  expect_true(all(v$none$table$source == "this"))
+  expect_equal(v$none$from, "motor M03")
+  expect_s3_class(kitsui_vertical_plot(v$none), "plotly")
+  expect_match(vertical_caption("none", v$none), "一個世代，在自己校準的量尺上（motor M03）")
+  # 說明：下面是未連結的圖，連結要另一個世代或之前回合的點
+  why <- v$none$alone
+  expect_match(why, "只有一個世代")
+  expect_match(why, "下面是未連結的圖")
+  expect_match(why, "第一個回合")
+  expect_match(why, "要有另一個世代，或之前回合的點")
+  expect_null(v$none$why)
+  # 內部、外部連結後畫不了（沒有圖）
+  expect_null(v$internal$vertical)
+  expect_null(v$external$vertical)
+  expect_equal(vertical_last_stage(v), "none")
+  # 畫面：沒有分頁，一句說明加上未連結的圖
+  html <- as.character(vertical_body_ui(shiny::NS("x"), v))
+  expect_match(html, "下面是未連結的圖")
+  expect_match(html, "x-vertical_none_plot")
+  expect_no_match(html, "vertical_internal_plot")
+  expect_no_match(html, "內部連結後</a>")
 })
 
 test_that("垂直連結：分數算一次（progress 每個世代一次），換算另外做；沒有共同月齡時一句說明", {

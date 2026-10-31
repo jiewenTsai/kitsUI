@@ -272,8 +272,7 @@ mod_link_server <- function(id, data, items, goto) {
       if (is.null(items())) return(NULL)
       shiny::tagList(
         vertical_head_ui(),
-        vertical_pick_ui(ns, v_domains(), shiny::isolate(input$vertical_domain),
-                         kitsui_vertical_alone(items()$fixed))
+        vertical_pick_ui(ns, v_domains(), shiny::isolate(input$vertical_domain))
       )
     })
     output$vertical_body <- shiny::renderUI({
@@ -504,7 +503,8 @@ vertical_head_ui <- function() {
       "波次的單位是月時，連結後同一個月齡各世代的點靠在一起，表示連結合理。",
       "單位是年或波次序號時，同一波各世代的年齡不同，點不一定會靠在一起。",
       "之前回合的點來自固定檔裡的各波次摘要，照現在的連結換算。",
-      "所以這一回合只有一個世代時，也看得到連結得怎樣。"
+      "所以這一回合只有一個世代時，也看得到連結得怎樣。",
+      "只有一個世代、也沒有之前回合的點時，只畫未連結的圖。"
     )
   )
 }
@@ -676,11 +676,11 @@ link_anchor_ui <- function(anchors, table_id, ref = KITSUI_REF_COHORT) {
   ))
 }
 
-#' 垂直連結：選領域；沒有可以畫的領域時，一句話說明（why，kitsui_vertical_alone()）
+#' 垂直連結：選領域；沒有校準好的領域時，一句話說明
 #' @noRd
 vertical_pick_ui <- function(ns, domains, pick, why = NULL) {
   if (length(domains) == 0) {
-    return(kitDesign::kit_callout(why %||% "這一回合每個領域只有一個世代，所以沒有世代之間的垂直連結。"))
+    return(kitDesign::kit_callout(why %||% "這一回合沒有校準好的領域，所以沒有垂直連結圖。"))
   }
   if (!isTRUE(pick %in% domains)) pick <- domains[1]
   shiny::tagList(
@@ -690,9 +690,16 @@ vertical_pick_ui <- function(ns, domains, pick, why = NULL) {
 }
 
 #' 垂直連結本身：三個分頁（未連結、內部連結後、外部連結後）
+#'
+#' 只有一個世代、也沒有之前回合的點時（vs$none$alone），連結後的兩頁永遠畫不了：
+#' 不放分頁，一句說明加上未連結的圖。
 #' @param vs kitsui_verticals() 的結果；pick 是原本選的分頁（重畫時留在同一頁）
 #' @noRd
 vertical_body_ui <- function(ns, vs, pick = NULL) {
+  if (!is.null(vs$none$alone)) {
+    return(shiny::tagList(kitDesign::kit_callout(vs$none$alone),
+                          vertical_tab_ui(ns, "none", vs$none)))
+  }
   tabs <- purrr::imap(KITSUI_VERTICAL_STAGES, \(label, st) {
     shiny::tabPanel(label, value = st, vertical_tab_ui(ns, st, vs[[st]]))
   })
@@ -742,8 +749,12 @@ vertical_caption <- function(stage, v) {
   unit <- v$wave_unit %||% "months"
   text <- switch(
     stage,
-    none = paste0("未連結：各世代在自己校準的量尺上（", paste(scales, collapse = "、"),
-                  "），數字不能直接比。",
+    none = paste0(if (length(scales) == 1) {
+                    paste0("未連結：一個世代，在自己校準的量尺上（", scales, "）。")
+                  } else {
+                    paste0("未連結：各世代在自己校準的量尺上（", paste(scales, collapse = "、"),
+                           "），數字不能直接比。")
+                  },
                   if (any(kitsui_vertical_borrowed(v$table$cohort))) {
                     paste0("借用另一世代題庫的波次在那個題庫的量尺上，另成一條線，",
                            "不和自己量尺的波次連在一起。")
