@@ -309,3 +309,31 @@ test_that("之前回合的點的程式碼能跑：讀 wave_summary.csv、照連�
   none <- kitsui_code_vertical_earlier(r2$fixed, v$none$scales, "none", "kitsui_fixed_2.zip")
   expect_false(grepl("kits_convert", none))
 })
+
+test_that("同一個波次有一個世代只有 1 人：kits_vertical() 的缺值（if (abs(z) > 2)）不讓垂直連結停下來", {
+  set.seed(1)
+  s <- data.frame(theta = c(stats::rnorm(40), stats::rnorm(30, 1), 0.5, stats::rnorm(20, 2)),
+                  wave_m = c(rep(36, 40), rep(48, 30), 36, rep(48, 20)),
+                  cohort = c(rep("A", 70), "B", rep("B", 20)))
+  # kits 0.25：B 的 36 個月只有 1 人，標準差是 NA，z 是 NA，kits_vertical() 停下來
+  expect_error(kits::kits_vertical(s), "missing value where TRUE/FALSE needed")
+  v <- kitsui_kits_vertical(s)
+  expect_s3_class(v, "kits_vertical")
+  expect_equal(attr(v, "dropped"), tibble::tibble(cohort = "B", wave_m = 36, n = 1L))
+  # 其他的格和拿掉那一格以後的 kits_vertical() 完全相同
+  ref <- kits::kits_vertical(s[!(s$cohort == "B" & s$wave_m == 36), ])
+  strip <- \(x) {
+    attr(x, "info") <- NULL
+    attr(x, "dropped") <- NULL
+    x
+  }
+  expect_equal(strip(v), strip(ref))
+  expect_match(kitsui_vertical_dropped_note(v), "有 1 個世代 × 波次只有 1 人，算不出分布，圖上不畫：B 的 36 個月（1 人）")
+  # 沒有這個問題時：和 kits_vertical() 一模一樣，沒有 dropped
+  ok <- s[s$cohort == "A", ]
+  expect_identical(strip(kitsui_kits_vertical(ok)), strip(kits::kits_vertical(ok)))
+  expect_null(attr(kitsui_kits_vertical(ok), "dropped"))
+  expect_null(kitsui_vertical_dropped_note(kitsui_kits_vertical(ok)))
+  # 別的錯誤照樣停下來
+  expect_error(kitsui_kits_vertical(data.frame(theta = "x", wave_m = 1)))
+})

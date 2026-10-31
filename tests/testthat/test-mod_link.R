@@ -280,3 +280,54 @@ test_that("主要按鈕一頁一個：還有內部連結可以建立時，外部
     expect_match(output$settings$html, "本回合 r8")
   })
 })
+
+test_that("建了第二條內部連結：第一條的公式與圖還看得到；垂直連結圖跳到「內部連結後」", {
+  two <- two_cohorts_linked()
+  args <- link_args(two$round, two$df, kitsui_fixed_empty())
+  shiny::testServer(mod_link_server, args = args, {
+    active <- \(html) {
+      m <- regmatches(html, regexpr('<li class="active">\\s*<a[^>]*data-value="[a-z]+"', html))
+      sub('^.*data-value="([a-z]+)"$', "\\1", m)
+    }
+    session$setInputs(internal_scale = "lan M36", vertical_domain = "lan")
+    # 還沒有連結：停在「未連結」（唯一畫得出來的分頁）
+    expect_equal(active(output$vertical_body$html), "none")
+    session$setInputs(make_internal = 1)
+    # 建好以後跳到最後一個畫得出來的分頁
+    expect_equal(active(output$vertical_body$html), "internal")
+    expect_null(output$internal_list)
+    # 換到 motor、建第二條：lan 那一條收在「其他已經建好的內部連結」，公式在標題上
+    session$setInputs(internal_scale = "motor M36", make_internal = 2)
+    expect_setequal(setdiff(names(links()), "D"), c("lan M36", "motor M36"))
+    html <- output$internal_list$html
+    expect_match(html, "其他已經建好的內部連結（1 條）")
+    expect_match(html, "lan M36 → lan M03：lan M03 = ")
+    key <- link_list_key("lan M36")
+    expect_match(html, session$ns(paste0(key, "_plot")))
+    expect_s3_class(output[[paste0(key, "_plot")]], "json")
+    expect_match(output[[paste0(key, "_checks")]], "kits_check|全部通過|object")
+    # 上面選的那一條照樣有完整的結果
+    expect_match(output$internal_result$html, "motor M03 = ")
+  })
+})
+
+test_that("還不能做的內部連結收成一句話，每一條收在「每一條（N 條）」", {
+  fx <- round8()$round$fixed
+  fx$version$reference <- "M99"
+  ov <- kitsui_internal_overview(fx, list(), character())
+  text <- kitsui_internal_summary(fx, ov)
+  expect_match(text, sprintf("^內部連結共 %d 條：還不能做 %d 條", nrow(ov), nrow(ov)))
+  expect_match(text, "題庫裡還沒有 .*M99 的題目參數")
+})
+
+test_that("垂直連結算不出來：【停下來】與白話，R 的原文收起來", {
+  html <- as.character(vertical_tab_ui(shiny::NS("x"), "none", list(
+    why = "垂直連結圖畫不出來。", error = TRUE,
+    raw = "In index: 27. missing value where TRUE/FALSE needed"
+  )))
+  expect_match(html, "【停下來】")
+  expect_match(html, "垂直連結圖畫不出來。")
+  expect_match(html, "<summary>R 的原文</summary>")
+  first <- sub("<details.*$", "", html)
+  expect_false(grepl("missing value", first))
+})

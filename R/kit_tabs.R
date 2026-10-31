@@ -9,8 +9,9 @@ KIT_STEP_TABS <- c("data", "items", "link", "score")
 #'
 #' - ① 資料：資料可以用時做完。
 #' - ② 題目校準：還沒有資料時不能做；這一回合校準完、沒有量尺停下來時做完。
-#' - ③ 連結：還沒有校準時不能做；能建立的連結都建立了（或這一回合不用做連結）時做完。
-#' - ④ 受試者評分：還沒有校準時不能做；算好這一回合的分數時做完。
+#' - ③ 連結：還沒有校準時不能做；② 做完（沒有量尺停下來），而且能建立的連結都建立了（或這一回合
+#'   不用做連結）時做完。② 有量尺停下來時可以先看，但不打 ✓（② 都還沒有 ✓）。
+#' - ④ 受試者評分：還沒有校準、或沒有一個量尺校準好時不能做；算好這一回合的分數時做完。
 #' @param data_ok ① 的資料可以用嗎（mod_data_server() 不是 NULL）
 #' @param items ② 的結果（kitsui_round()）或 NULL（還沒校準，或資料改了、結果清掉了）
 #' @param link_done ③ 能建立的連結都建立了嗎
@@ -19,14 +20,20 @@ KIT_STEP_TABS <- c("data", "items", "link", "score")
 #' @noRd
 kit_tab_states <- function(data_ok, items = NULL, link_done = FALSE, score = NULL) {
   no_items <- is.null(items)
+  items_done <- isTRUE(items$ok)
+  # ② 的結果裡沒有一個量尺校準好（全部停下來）：④ 沒有東西可以評分
+  none_ok <- !no_items && is.list(items$items) && length(items$items) == 0
   state <- c(
     data = if (isTRUE(data_ok)) "done" else "ready",
-    items = if (!isTRUE(data_ok)) "locked" else if (isTRUE(items$ok)) "done" else "ready",
-    link = if (no_items) "locked" else if (isTRUE(link_done)) "done" else "ready",
-    score = if (no_items) "locked" else if (!is.null(score)) "done" else "ready"
+    items = if (!isTRUE(data_ok)) "locked" else if (items_done) "done" else "ready",
+    link = if (no_items) "locked" else if (items_done && isTRUE(link_done)) "done" else "ready",
+    score = if (no_items || none_ok) "locked" else if (!is.null(score)) "done" else "ready"
   )
   why <- c(data = "", items = "先在「① 資料」選好這一回合的資料",
-           link = "先做「② 題目校準」", score = "先做「② 題目校準」")
+           link = "先做「② 題目校準」",
+           score = if (none_ok) "② 沒有一個量尺校準好，先處理「② 題目校準」停下來的量尺" else {
+             "先做「② 題目校準」"
+           })
   why[state != "locked"] <- ""
   data.frame(tab = KIT_STEP_TABS, state = unname(state[KIT_STEP_TABS]),
              why = unname(why[KIT_STEP_TABS]))

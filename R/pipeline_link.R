@@ -236,6 +236,24 @@ kitsui_internal_overview <- function(fixed, links, earlier) {
 
 # ③ 的標題與說明：用固定檔裡的參照世代與其他世代的名稱（不寫死 M03、M36） ----
 
+#' 內部連結的狀態收成一句話（kitsui_internal_overview() 的表）
+#'
+#' 例如「內部連結共 36 條：還不能做 36 條（題庫裡還沒有 distress B72、tsupport B72 的題目參數）。」
+#' @param ov kitsui_internal_overview()
+#' @noRd
+kitsui_internal_summary <- function(fixed, ov) {
+  if (NROW(ov) == 0) return("")
+  words <- c("已凍結", "可以建立", "還不能做（題庫缺一邊）")
+  n <- purrr::map_int(words, \(w) sum(ov$state == w))
+  parts <- paste0(c("已凍結 ", "可以建立 ", "還不能做 "), kit_num(n), " 條")[n > 0]
+  miss <- ov[ov$state == words[3], ]
+  why <- if (nrow(miss) > 0) {
+    lack <- unique(setdiff(c(miss$from, miss$to), fixed$bank$scale))
+    paste0("（題庫裡還沒有 ", kitsui_first(lack, 6), " 的題目參數，兩邊都校準過才能建立）")
+  }
+  paste0("內部連結共 ", kit_num(nrow(ov)), " 條：", paste(parts, collapse = "、"), why %||% "", "。")
+}
+
 #' 參照世代，與題庫裡（含這一回合的量尺）其他的世代
 #' @return list(ref, others)
 #' @noRd

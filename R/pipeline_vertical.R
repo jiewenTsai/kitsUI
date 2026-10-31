@@ -178,6 +178,58 @@ kitsui_verticals <- function(round, df, fixed, domain, links = NULL, persons = N
                                                   wave_unit = unit)))
 }
 
+#' kits_vertical()，加上 kits 0.25 的一個缺值問題的退路
+#'
+#' kits_vertical() 的診斷（世代之間同一個波次的比較）算 z = 平均差 / 標準誤，再 `if (abs(z) > 2)`。
+#' 同一個波次有一個世代只有 1 人時，標準差是 NA，z 也是 NA，整個 kits_vertical() 就停下來
+#' （"missing value where TRUE/FALSE needed"），連圖都畫不出來（TDCYP 有 B95 這種 1 人的世代）。
+#' 先照原樣算；只有遇到這個錯誤時，才拿掉「只有 1 人（或沒有有限值）」的世代 × 波次再算一次，
+#' 拿掉的格記在 attr(, "dropped")（cohort、wave_m、n），畫面上說明。其他的格、其他情況的結果和
+#' kits_vertical() 完全相同。
+#' @param s kits_subj（或 rbind() 的結果）
+#' @noRd
+kitsui_kits_vertical <- function(s) {
+  tryCatch(kits::kits_vertical(s), error = \(e) kitsui_vertical_retry(s, e))
+}
+
+#' kits_vertical() 出錯以後：是 kits 的缺值錯誤時，拿掉只有 1 人的世代 × 波次再算一次；
+#' 其他錯誤照樣停下來（kitsui_kits_vertical()）
+#' @param v kits_vertical() 的錯誤
+#' @noRd
+kitsui_vertical_retry <- function(s, v) {
+  if (!grepl("missing value where TRUE/FALSE needed", conditionMessage(v), fixed = TRUE)) stop(v)
+  d <- tibble::as_tibble(s)
+  ok <- is.finite(d$theta) & !is.na(d$wave_m)
+  cohort <- if ("cohort" %in% names(d)) as.character(d$cohort) else rep(NA_character_, nrow(d))
+  key <- paste(cohort, d$wave_m)
+  n <- tapply(ok, key, sum)
+  few <- names(n)[n < 2]
+  if (length(few) == 0) stop(v)
+  keep <- !key %in% few
+  part <- s[keep, , drop = FALSE]
+  for (a in setdiff(names(attributes(s)), c("names", "row.names", "class"))) {
+    attr(part, a) <- attr(s, a)
+  }
+  out <- kits::kits_vertical(part)
+  at <- match(few, key)
+  dropped <- tibble::tibble(cohort = cohort[at], wave_m = d$wave_m[at], n = as.integer(n[few]))
+  # 沒有有限值的格 kits 本來就不算，不用說明
+  attr(out, "dropped") <- dropped[dropped$n > 0, ]
+  out
+}
+
+#' 拿掉的世代 × 波次（kitsui_kits_vertical() 的 attr "dropped"）：一句說明；沒有時 NULL
+#' @param unit 波次的單位
+#' @noRd
+kitsui_vertical_dropped_note <- function(v, unit = "months") {
+  dr <- attr(v, "dropped")
+  if (NROW(dr) == 0) return(NULL)
+  dr <- dr[order(dr$cohort, dr$wave_m), ]
+  cells <- paste0(dr$cohort, " 的 ", kitsui_wave_text(dr$wave_m, unit), "（", kit_num(dr$n), " 人）")
+  paste0("有 ", kit_num(nrow(dr)), " 個世代 × 波次只有 1 人，算不出分布，圖上不畫：",
+         kitsui_first(cells, 6), "。其他的點不受影響。")
+}
+
 # 畫不了的版本
 kitsui_vertical_none <- function(scales, why) {
   list(vertical = NULL, table = NULL, scale = NULL, from = scales, scales = scales, why = why)
@@ -194,13 +246,15 @@ kitsui_vertical_raw <- function(raw, earlier, label) {
     unname() |>
     dplyr::bind_rows()
   attr(s, "scale") <- NULL
-  v <- kits::kits_vertical(s)
+  # 呼叫的寫法照舊（kits 把呼叫記在 info 裡）；只有 kits 的缺值錯誤時才走退路
+  v <- tryCatch(kits::kits_vertical(s), error = \(e) kitsui_vertical_retry(s, e))
   earlier$cohort <- kitsui_vertical_series(earlier$cohort, earlier$scale)
   list(vertical = v, table = kitsui_vertical_table(v, earlier, label), scale = NA_character_,
        why = NULL)
 }
 
-#' 未連結圖的一條線：世代；用另一世代的題庫校準的波次寫成「M03 (motor M36 bank)」（圖上用英文）
+#' 未連結圖的一條線：世代；用另一世代的題庫校準的波次寫成「M03 (motor M36 bank)」
+#' （畫面上 kit_chart_zh() 換成「M03（motor M36 題庫）」）
 #' @noRd
 kitsui_vertical_series <- function(cohort, scale) {
   if (length(cohort) == 0) return(as.character(cohort))
@@ -226,7 +280,8 @@ kitsui_vertical_linked <- function(raw, earlier, fixed, links, stage, label) {
     na <- stage == "external" && !kitsui_d_applicable(fixed)
     return(c(kitsui_vertical_none(names(raw), why), list(na = na)))
   }
-  v <- kits::kits_vertical(do.call(rbind, unname(converted)))
+  v <- tryCatch(kits::kits_vertical(do.call(rbind, unname(converted))),
+                error = \(e) kitsui_vertical_retry(do.call(rbind, unname(converted)), e))
   list(vertical = v, table = kitsui_vertical_table(v, before, label), scale = target, why = NULL)
 }
 

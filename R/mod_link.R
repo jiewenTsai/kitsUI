@@ -16,6 +16,8 @@ mod_link_ui <- function(id) {
     shiny::uiOutput(ns("internal_overview_ui")),
     shiny::uiOutput(ns("internal_status")),
     shiny::uiOutput(ns("internal_result")),
+    # 其他已經建好的內部連結：每條一列（公式），打開看圖
+    shiny::uiOutput(ns("internal_list")),
     # 2. 外部連結：不適用時整段只有一行
     shiny::uiOutput(ns("d_section")),
     # 3. 垂直連結（校準以後才出現）
@@ -87,11 +89,14 @@ mod_link_server <- function(id, data, items, goto) {
     # ① 算好的列次資訊；沒有時從資料算
     persons <- shiny::reactive(data()$persons %||% kitsui_persons(data()$df))
     # 建立一條連結：結果寫回 fixed，只重建這一條；訊息記在 notes[[name]]
+    # 建好一條連結後，垂直連結圖跳到最後一個畫得出來的分頁（不留在「未連結」）
+    jump_vertical <- FALSE
     make_link <- function(name, message, make) {
       shiny::withProgress(message = message, value = 0.1, {
         shiny::setProgress(0.2, detail = "用題庫的門檻估計，重抽 2000 次…")
         out <- make(fixed())
         if (isTRUE(out$new)) {
+          jump_vertical <<- TRUE
           shiny::setProgress(0.8, detail = "存進固定檔，從點重建這條連結…")
           link_objs(c(link_objs(), kitsui_links(out$fixed, name)))
           fixed(out$fixed)
@@ -148,13 +153,17 @@ mod_link_server <- function(id, data, items, goto) {
     })
 
     # 好幾個量尺可以做內部連結時（例如 M06、M40 都連到 M03），列出每一條的狀態
+    # 每一條的狀態收成一句話；表收在「每一條（N 條）」裡
     output$internal_overview_ui <- shiny::renderUI({
       if (is.null(fixed()) || length(kitsui_internal_scales(fixed())) < 2) return(NULL)
+      ov <- kitsui_internal_overview(fixed(), links(), earlier())
       shiny::tagList(
-        shiny::tags$small(class = "kit-hint",
-                          "每個世代、每個領域各有一條內部連結，都連到參照世代：",
-                          "在上面一條一條選、一條一條建立。"),
-        shiny::tags$div(class = "kit-table-scroll", shiny::tableOutput(ns("internal_overview")))
+        shiny::tags$p(class = "kit-hint", kitsui_internal_summary(fixed(), ov),
+                      "每個世代、每個領域各有一條，都連到參照世代：在上面一條一條選、一條一條建立。"),
+        ui_details_row(ui_detail(
+          paste0("每一條（", kit_num(nrow(ov)), " 條）"),
+          shiny::tags$div(class = "kit-table-scroll", shiny::tableOutput(ns("internal_overview")))
+        ))
       )
     })
     output$internal_overview <- kit_table(
@@ -168,6 +177,24 @@ mod_link_server <- function(id, data, items, goto) {
     })
     link_outputs(output, session, "internal", internal_link,
                  shiny::reactive(kitsui_link_var(input$internal_scale)))
+    # 其他已經建好的內部連結（不是上面選的那一條）：每條一個收合區塊，標題是公式
+    internal_built <- shiny::reactive(setdiff(names(links()), "D"))
+    made_outputs <- character()
+    shiny::observe({
+      for (n in setdiff(internal_built(), made_outputs)) {
+        local({
+          name <- n
+          link_outputs(output, session, link_list_key(name), shiny::reactive(links()[[name]]),
+                       shiny::reactive(kitsui_link_var(name)))
+        })
+        made_outputs <<- c(made_outputs, n)
+      }
+    })
+    output$internal_list <- shiny::renderUI({
+      others <- setdiff(internal_built(), input$internal_scale)
+      if (length(others) == 0) return(NULL)
+      link_list_ui(ns, links()[others])
+    })
 
     # 獨立檢核（kits_link_check()）：要這一回合兩個世代的作答
     shiny::observeEvent(input$run_check, {
@@ -236,7 +263,8 @@ mod_link_server <- function(id, data, items, goto) {
         if (inherits(raw, "error")) stop(raw)
         kitsui_verticals(items(), data()$df, fixed(), dom, links(), persons(), raw)
       }, error = \(e) purrr::map(KITSUI_VERTICAL_STAGES, \(x) {
-        list(why = paste0("垂直連結算不出來：", conditionMessage(e)))
+        # 第一層只有【停下來】與白話；R 的原文收在「R 的原文」裡
+        list(why = "垂直連結圖畫不出來。", error = TRUE, raw = conditionMessage(e))
       }))
     })
     output$vertical_ui <- shiny::renderUI({
@@ -248,7 +276,12 @@ mod_link_server <- function(id, data, items, goto) {
       )
     })
     output$vertical_body <- shiny::renderUI({
-      vertical_body_ui(ns, vertical(), shiny::isolate(input$vertical_tab))
+      vs <- vertical()
+      pick <- shiny::isolate(input$vertical_tab)
+      # 第一次畫、或剛建好一條連結：跳到最後一個畫得出來的分頁
+      if (is.null(pick) || jump_vertical) pick <- vertical_last_stage(vs)
+      jump_vertical <<- FALSE
+      vertical_body_ui(ns, vs, pick)
     })
     purrr::walk(names(KITSUI_VERTICAL_STAGES), \(st) {
       vertical_outputs(output, session, st, vertical, \() input$vertical_domain)
@@ -272,7 +305,7 @@ mod_link_server <- function(id, data, items, goto) {
       checks_or_ok(do.call(check_table, c(links(), more))) |>
         kitsui_check_explain()
     })
-    output$code <- shiny::renderText({
+    code_text <- shiny::reactive({
       d <- data()
       file <- \(n) kitsui_link_file(n, earlier(), d$fixed_file, score_round_label(d, fixed()))
       code <- link_code(shiny::req(fixed()), file)
@@ -286,6 +319,9 @@ mod_link_server <- function(id, data, items, goto) {
       }
       paste(c(code, kitsui_code_vertical(fixed(), v$none$from, drawn), more), collapse = "\n\n")
     })
+    output$code <- shiny::renderText(code_text())
+    output$code_ui <- render_code_panel(session, "code", code_text,
+                                        "先做「② 題目校準」，這裡才會有程式碼。")
     # 還可以建立的內部連結
     internal_ready <- shiny::reactive({
       fx <- shiny::req(fixed())
@@ -339,9 +375,10 @@ link_next_text <- function(fixed, ready, d) {
 link_outputs <- function(output, session, key, link, name) {
   out <- \(x) paste0(key, "_", x)
   kind <- if (key == "d") "外部連結" else "內部連結"
-  output[[out("plot")]] <- plotly::renderPlotly(plot(shiny::req(link())))
+  output[[out("plot")]] <- plotly::renderPlotly(kit_chart_zh(plot(shiny::req(link()))))
   output[[out("plot_dl_ui")]] <- render_download_plot(
-    session, out("plot_dl"), paste0("下載", kind, "圖（HTML）"), \() plot(link()), name
+    session, out("plot_dl"), paste0("下載", kind, "圖（HTML）"), \() kit_chart_zh(plot(link())),
+    name
   )
   output[[out("points_dl_ui")]] <- render_download_csv(
     session, out("points_dl"), paste0("下載", kind, "的點（CSV）"), \() link()$points,
@@ -365,7 +402,7 @@ vertical_outputs <- function(output, session, stage, vertical, domain) {
     v <- vertical()[[stage]]
     shiny::req(v$vertical)
     # 世代依序取 KIT 的類別色（三個分頁同一個世代同一個顏色）
-    kit_chart_categorical(kitsui_vertical_plot(v))
+    kit_chart_zh(kit_chart_categorical(kitsui_vertical_plot(v)))
   })
   output[[id("plot")]] <- plotly::renderPlotly(p())
   output[[id("dl_ui")]] <- render_download_plot(
@@ -473,6 +510,18 @@ vertical_head_ui <- function() {
 link_result_ui <- function(ns, key, link, extra = NULL) {
   out <- \(x) ns(paste0(key, "_", x))
   kind <- if (key == "d") "外部連結" else "內部連結"
+  if (startsWith(key, "il_")) {
+    # 其他已經建好的連結（收合區塊裡）：公式在標題上，這裡只放係數、圖與下載
+    return(shiny::tagList(
+      link_coef_table(kitsui_link_formula(link)$table),
+      link_plot_box(out("plot"), "正在畫連結圖…"),
+      shiny::tags$div(class = "kit-downloads", ui_download(out("plot_dl")),
+                      ui_download(out("points_dl"))),
+      ui_details_row(ui_detail(paste0(kind, "的檢查（kits_check）"),
+                               shiny::tags$div(class = "kit-table-scroll",
+                                               shiny::tableOutput(out("checks")))))
+    ))
+  }
   f <- kitsui_link_formula(link)
   shiny::tagList(
     shiny::h5(paste0(kind, "的公式")),
@@ -496,6 +545,30 @@ link_result_ui <- function(ns, key, link, extra = NULL) {
                 shiny::tags$div(class = "kit-table-scroll", shiny::tableOutput(out("checks")))),
       extra
     )
+  )
+}
+
+#' 一條連結的輸出用的 key（id 的一部分）：量尺名稱的 16 進位，換了選單也對得到同一條
+#' @noRd
+link_list_key <- function(name) {
+  paste0("il_", paste(as.character(charToRaw(enc2utf8(name))), collapse = ""))
+}
+
+#' 其他已經建好的內部連結：每條一個收合區塊，標題是起點 → 終點與公式；打開看圖與下載
+#' @param links 具名 list：kits_link（內部連結，以起點量尺命名）
+#' @noRd
+link_list_ui <- function(ns, links) {
+  blocks <- purrr::imap(links, \(link, name) {
+    f <- kitsui_link_formula(link)
+    ui_detail(
+      paste0(name, " → ", link$to_scale, "：", f$formula),
+      link_result_ui(ns, link_list_key(name), link)
+    )
+  })
+  shiny::tagList(
+    shiny::h5(paste0("其他已經建好的內部連結（", kit_num(length(links)), " 條）")),
+    shiny::tags$small(class = "kit-hint", "每條一列；打開看係數、連結圖與檢查。"),
+    ui_details_row(unname(blocks))
   )
 }
 
@@ -618,9 +691,26 @@ vertical_body_ui <- function(ns, vs, pick = NULL) {
   do.call(shiny::tabsetPanel, c(list(id = ns("vertical_tab"), selected = pick), unname(tabs)))
 }
 
+#' 最後一個畫得出來的分頁（外部連結後 > 內部連結後 > 未連結）
+#' @param vs kitsui_verticals() 的結果
+#' @noRd
+vertical_last_stage <- function(vs) {
+  ok <- purrr::map_lgl(names(KITSUI_VERTICAL_STAGES), \(st) !is.null(vs[[st]]$vertical))
+  if (!any(ok)) return(names(KITSUI_VERTICAL_STAGES)[1])
+  utils::tail(names(KITSUI_VERTICAL_STAGES)[ok], 1)
+}
+
 #' 一個分頁：畫不了時一句原因；畫得了時一句說明、圖、沒有共同月齡時的說明與下載
 #' @noRd
 vertical_tab_ui <- function(ns, stage, v) {
+  if (isTRUE(v$error)) {
+    return(ui_status(
+      "stop", v$why,
+      shiny::tags$p("怎麼辦：連結本身不受影響，可以照常到「④ 受試者評分」。",
+                    "請把這個領域與下面的原文告訴維護 kitsUI 的人。"),
+      ui_raw_text(v$raw, "R 的原文")
+    ))
+  }
   # 外部連結不適用（na）不是錯誤，不用橘色
   if (!is.null(v$why)) return(ui_callout(v$why, warning = !isTRUE(v$na)))
   id <- \(x) ns(paste0("vertical_", stage, "_", x))
@@ -628,6 +718,10 @@ vertical_tab_ui <- function(ns, stage, v) {
     shiny::tags$p(class = "kit-hint kit-tab-caption", vertical_caption(stage, v)),
     link_plot_box(id("plot"), "正在畫垂直連結圖…", "460px"),
     if (!is.null(v$note)) ui_callout(v$note, warning = TRUE),
+    if (!is.null(kitsui_vertical_dropped_note(v$vertical, v$wave_unit %||% "months"))) {
+      shiny::tags$p(class = "kit-hint",
+                    kitsui_vertical_dropped_note(v$vertical, v$wave_unit %||% "months"))
+    },
     shiny::tags$div(class = "kit-downloads",
                     ui_download(id("dl")))
   )

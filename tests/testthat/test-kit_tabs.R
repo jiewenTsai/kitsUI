@@ -9,11 +9,20 @@ test_that("每個分頁的狀態：還不能做、可以做、做完", {
   expect_equal(kit_tab_states(FALSE)$why,
                c("", "先在「① 資料」選好這一回合的資料", "先做「② 題目校準」", "先做「② 題目校準」"))
   expect_equal(st(TRUE), c(data = "done", items = "ready", link = "locked", score = "locked"))
-  ok <- list(ok = TRUE)
+  ok <- list(ok = TRUE, items = list(a = 1))
   expect_equal(st(TRUE, ok), c(data = "done", items = "done", link = "ready", score = "ready"))
   # 有量尺停下來：② 沒有做完，③、④ 仍然可以先看
-  expect_equal(st(TRUE, list(ok = FALSE)),
+  part <- list(ok = FALSE, items = list(a = 1))
+  expect_equal(st(TRUE, part),
                c(data = "done", items = "ready", link = "ready", score = "ready"))
+  # ② 沒有 ✓ 時 ③ 也不打 ✓（「沒有連結可以做」不算做完）
+  expect_equal(st(TRUE, part, TRUE),
+               c(data = "done", items = "ready", link = "ready", score = "ready"))
+  # 全部停下來：④ 沒有東西可以評分
+  none <- list(ok = FALSE, items = list())
+  expect_equal(st(TRUE, none, TRUE),
+               c(data = "done", items = "ready", link = "ready", score = "locked"))
+  expect_match(kit_tab_states(TRUE, none)$why[4], "沒有一個量尺校準好")
   expect_equal(st(TRUE, ok, TRUE, list(scores = 1)),
                c(data = "done", items = "done", link = "done", score = "done"))
   # 資料改了（② 的結果清掉）：② 以後的 ✓ 都拿掉
