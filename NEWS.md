@@ -1,3 +1,7 @@
+# kitsUI 0.8.3
+
+* Uses kitDesign 0.7.0 (the same version as kitJoin, kitverse and kitItemBank). Nothing changes on screen.
+
 # kitsUI 0.8.2
 
 ## Fixes
