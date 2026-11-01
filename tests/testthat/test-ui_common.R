@@ -32,7 +32,8 @@ test_that("頁面用 kitDesign：主題、樣式與小程式（離開前提醒�
   deps <- vapply(htmltools::resolveDependencies(html$dependencies), \(d) d$name, character(1))
   expect_true("kitDesign" %in% deps)
   ver <- kitDesign::kit_app_description("kitsUI")
-  expect_match(html$html, paste0("v", ver$version, " · ", ver$date, " · kits "), fixed = TRUE)
+  expect_match(html$html, paste0("kitsUI v", ver$version, " · kits v", utils::packageVersion("kits"),
+                                 " · ", ver$date, "<"), fixed = TRUE)
   expect_match(html$html, 'data-kit-aside="manual"', fixed = TRUE)
   expect_match(html$head, ".kit-kitjoin-local code", fixed = TRUE)
   expect_match(as.character(kitsui_cloud_banner()), "kit-cloud-banner")

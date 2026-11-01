@@ -1,7 +1,7 @@
 Package: kitsUI
 Title: KIT Scale Construction Tool
-Version: 0.8.3
-Date: 2026-11-01
+Version: 0.8.4
+Date: 2026-11-02
 Authors@R: person("Jie-Wen", "Tsai", email = "tsai.jiewen@gmail.com", role = c("aut", "cre"))
 Description: KIT scale construction tool: a Shiny application for the KIT developmental
     scale, built on 'kits': calibrate one wave at a time with the earlier item parameters
@@ -15,7 +15,7 @@ Imports:
     bslib (>= 0.11.0),
     dplyr (>= 1.1.0),
     haven,
-    kitDesign (>= 0.7.0),
+    kitDesign (>= 0.7.1),
     kits (>= 0.25.2),
     plotly,
     purrr,
@@ -29,7 +29,7 @@ Imports:
     zip
 Remotes:
     jiewenTsai/kits,
-    jiewenTsai/kitDesign@v0.7.0
+    jiewenTsai/kitDesign@v0.7.1
 Suggests:
     callr,
     rmarkdown,

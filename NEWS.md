@@ -1,3 +1,8 @@
+# kitsUI 0.8.4
+
+* Uses kitDesign 0.7.1. The header's version line lists the packages first and the date last, each
+  with a "v": "kitsUI v0.8.4 · kits v0.25.2 · 2026-11-02" (the user manual's header too).
+
 # kitsUI 0.8.3
 
 * Uses kitDesign 0.7.0 (the same version as kitJoin, kitverse and kitItemBank). Nothing changes on screen.

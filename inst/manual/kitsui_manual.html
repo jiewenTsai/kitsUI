@@ -1116,7 +1116,220 @@ pre,
 .kit-itemtable-dl { margin: 0.8rem 0 0.2rem; }
 
 /* 下載中（kit.js 在背景抓檔案）：按鈕變淡、游標是等待中，不能重複按 */
-.kit-downloading { opacity: 0.6; cursor: progress; pointer-events: none; }</style>
+.kit-downloading { opacity: 0.6; cursor: progress; pointer-events: none; }
+
+/* 互動資料表（kit_dt()，DT 的 style = "default"）：和 kit_static_table() 同一個樣子。
+   2px 框、黑表頭白字、列之間 1.5px 線、斑馬紋、small 字級、數字靠右；選到的列是淡萊姆（bg-new），不是藍色。
+   只在 table.kit-dt 與 kit_dt() 的 dom 放的 .kit-dt-box／-top／-scroll／-foot 裡生效，不碰頁面上其他的表。
+   DT 的 CSS 在 renderDT() 時才放進頁面（排在這個檔後面），所以選擇器寫得比 DataTables 的具體
+   （table.dataTable.kit-dt.compact、.dataTables_wrapper .kit-dt-foot …）。
+   DataTables 1.x（DT 0.34）：.dataTables_filter／_info／_paginate .paginate_button；
+   2.x：.dt-search／.dt-info／.dt-paging .dt-paging-button，兩種都寫。 */
+.kit-dt-box { width: fit-content; max-width: 100%; margin: 0.4rem 0 0.8rem; }
+/* 寬表在自己的框裡左右捲（手機上不撐開整頁） */
+.kit-dt-scroll { max-width: 100%; overflow-x: auto; }
+table.dataTable.kit-dt.compact {
+  border: var(--nb-border);
+  border-radius: var(--nb-radius);
+  border-collapse: separate;
+  border-spacing: 0;
+  overflow: hidden;
+  width: auto;
+  margin: 0;
+  font-size: 0.95rem;
+  line-height: 1.4;
+  background: var(--nb-card);
+  color: var(--nb-ink);
+}
+table.dataTable.kit-dt.compact > thead > tr > th {
+  background: var(--nb-ink);
+  color: #fff;
+  font-weight: 700;
+  border-bottom: 0;
+  padding: 0.45rem 0.6rem;
+  white-space: nowrap;
+  vertical-align: bottom;
+}
+table.dataTable.kit-dt.compact > thead > tr > th.sorting,
+table.dataTable.kit-dt.compact > thead > tr > th.sorting_asc,
+table.dataTable.kit-dt.compact > thead > tr > th.sorting_desc { padding-right: 1.6rem; }
+table.dataTable.kit-dt.compact > thead > tr > th:before,
+table.dataTable.kit-dt.compact > thead > tr > th:after { color: #fff; opacity: 0.4; }
+table.dataTable.kit-dt.compact > thead > tr > th.sorting_asc:before,
+table.dataTable.kit-dt.compact > thead > tr > th.sorting_desc:after { opacity: 1; }
+table.dataTable.kit-dt.compact > thead > tr > th:focus-visible {
+  outline: 3px solid #0044ff;
+  outline-offset: -3px;
+}
+table.dataTable.kit-dt.compact > tbody > tr > td {
+  padding: 0.4rem 0.6rem;
+  border-top: 1.5px solid var(--nb-ink);
+  vertical-align: top;
+  background: var(--nb-card);
+  color: var(--nb-ink);
+}
+table.dataTable.kit-dt.compact > tbody > tr:first-child > td { border-top: 0; }
+table.dataTable.kit-dt.compact > tbody > tr:nth-child(even) > td { background: #f3f0e6; }
+table.dataTable.kit-dt.compact > tbody > tr > td.dt-right { font-variant-numeric: tabular-nums; }
+table.dataTable.kit-dt.compact td.kit-dt-nowrap { white-space: nowrap; }
+table.dataTable.kit-dt.compact td.kit-dt-wrap { white-space: normal; overflow-wrap: anywhere; min-width: 16rem; }
+/* 可以點選的表：滑過的列淡一點、游標是手指；選到的列淡萊姆＋左邊一條 KIT 綠 */
+table.dataTable.kit-dt-selectable.compact > tbody > tr { cursor: pointer; }
+table.dataTable.kit-dt-selectable.compact > tbody > tr:hover > td { background: #f1eee4; }
+table.dataTable.kit-dt.compact > tbody > tr.selected > td,
+table.dataTable.kit-dt.compact > tbody > tr.selected:hover > td {
+  background: var(--nb-bg-new) !important;
+  box-shadow: none !important;
+  color: var(--nb-ink) !important;
+}
+table.dataTable.kit-dt.compact > tbody > tr.selected > td:first-child {
+  box-shadow: inset 4px 0 0 var(--nb-green) !important;
+}
+table.dataTable.kit-dt.compact > tbody > tr.selected a { color: var(--nb-green); }
+/* 沒有資料時的那一格不靠右、不加斑馬紋 */
+table.dataTable.kit-dt.compact > tbody > tr > td.dataTables_empty { color: #5a5a5a; text-align: left; }
+
+/* 上面：搜尋框（search = TRUE） */
+.dataTables_wrapper .kit-dt-top { display: flex; flex-wrap: wrap; align-items: center; margin-bottom: 0.5rem; }
+.dataTables_wrapper .kit-dt-top .dataTables_filter,
+.dataTables_wrapper .kit-dt-top .dt-search { float: none; text-align: left; margin: 0; }
+.dataTables_wrapper .kit-dt-top .dataTables_filter input,
+.dataTables_wrapper .kit-dt-top .dt-search input {
+  border: var(--nb-border);
+  border-radius: var(--nb-radius);
+  background: var(--nb-card);
+  color: var(--nb-ink);
+  min-height: 36px;
+  padding: 0.3rem 0.6rem;
+  margin-left: 0.4rem;
+  max-width: 100%;
+}
+.dataTables_wrapper .kit-dt-top .dataTables_filter input:focus,
+.dataTables_wrapper .kit-dt-top .dt-search input:focus { box-shadow: var(--nb-shadow-sm); outline: 0; }
+.dataTables_wrapper .kit-dt-top .dataTables_filter input:focus-visible,
+.dataTables_wrapper .kit-dt-top .dt-search input:focus-visible { outline: 3px solid #0044ff; outline-offset: 3px; }
+
+/* 下面：「共 37 列，第 1–20 列」（hint 小字）與換頁按鈕（小按鈕的樣子） */
+.dataTables_wrapper .kit-dt-foot {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  justify-content: space-between;
+  gap: 0.5rem 1rem;
+  padding-top: 0.5rem;
+}
+.dataTables_wrapper .kit-dt-foot .dataTables_info,
+.dataTables_wrapper .kit-dt-foot .dt-info {
+  float: none;
+  clear: none;
+  padding: 0;
+  font-size: 0.82rem;
+  color: #5a5a5a;
+}
+.dataTables_wrapper .kit-dt-foot .dataTables_paginate,
+.dataTables_wrapper .kit-dt-foot .dt-paging {
+  float: none;
+  margin: 0;
+  padding: 0;
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 0.3rem;
+}
+.dataTables_wrapper .kit-dt-foot .dataTables_paginate > span { display: contents; }
+.dataTables_wrapper .kit-dt-foot .paginate_button,
+.dataTables_wrapper .kit-dt-foot .dt-paging-button {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  box-sizing: border-box;
+  min-height: 36px;
+  min-width: 36px;
+  margin: 0;
+  padding: 0.25rem 0.7rem;
+  border: 1.5px solid var(--nb-ink) !important;
+  border-radius: var(--nb-radius);
+  background: var(--nb-card) !important;
+  box-shadow: none !important;
+  color: var(--nb-ink) !important;
+  font-size: 0.85rem;
+  font-weight: 500;
+  line-height: 1.2;
+}
+.dataTables_wrapper .kit-dt-foot .paginate_button:hover,
+.dataTables_wrapper .kit-dt-foot .dt-paging-button:hover { background: #f1eee4 !important; }
+.dataTables_wrapper .kit-dt-foot .paginate_button.current,
+.dataTables_wrapper .kit-dt-foot .paginate_button.current:hover,
+.dataTables_wrapper .kit-dt-foot .dt-paging-button.current,
+.dataTables_wrapper .kit-dt-foot .dt-paging-button.current:hover {
+  background: var(--nb-lime) !important;
+  font-weight: 700;
+}
+.dataTables_wrapper .kit-dt-foot .paginate_button.disabled,
+.dataTables_wrapper .kit-dt-foot .paginate_button.disabled:hover,
+.dataTables_wrapper .kit-dt-foot .paginate_button.disabled:active,
+.dataTables_wrapper .kit-dt-foot .dt-paging-button.disabled,
+.dataTables_wrapper .kit-dt-foot .dt-paging-button.disabled:hover {
+  background: #e8e4d8 !important;
+  color: #6e6a60 !important;
+  border-color: #8a8a8a !important;
+  cursor: default;
+}
+.dataTables_wrapper .kit-dt-foot .paginate_button:focus-visible,
+.dataTables_wrapper .kit-dt-foot .dt-paging-button:focus-visible {
+  outline: 3px solid #0044ff;
+  outline-offset: 3px;
+}
+.dataTables_wrapper .kit-dt-foot .ellipsis { padding: 0 0.2rem; }
+/* 手機：只留「上一頁」、目前這一頁、「下一頁」 */
+@media (max-width: 576px) {
+  .dataTables_wrapper .kit-dt-foot { justify-content: center; }
+  .dataTables_wrapper .kit-dt-foot .dataTables_info,
+  .dataTables_wrapper .kit-dt-foot .dt-info { width: 100%; text-align: center; }
+  .dataTables_wrapper .kit-dt-foot .paginate_button:not(.previous):not(.next):not(.current),
+  .dataTables_wrapper .kit-dt-foot .dt-paging-button:not(.previous):not(.next):not(.current),
+  .dataTables_wrapper .kit-dt-foot .ellipsis { display: none; }
+}
+
+/* 範圍選擇列（app 的「題庫」這類全 app 共用的選擇）：分頁列正下方，不加框。
+   一組單選圓鈕＋一行 hint 小字（現在用的是哪一份、規模），右邊放小按鈕；
+   .kit-scopebar-panel 是選擇後要確認的內容（檢查清單＋按鈕）。 */
+.kit-scopebar { margin: 0.9rem 0 1.6rem; padding-bottom: 0.8rem; border-bottom: 1.5px solid #d9d4c5; }
+.kit-scopebar > .form-group { margin-bottom: 0.3rem; }
+.kit-scopebar > .form-group > .control-label { font-weight: 700; margin-right: 0.8rem; }
+.kit-scopebar > .shiny-input-radiogroup.shiny-input-container-inline { display: flex; flex-wrap: wrap; align-items: baseline; }
+.kit-scopebar-line {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 0.4rem 1rem;
+  font-size: 0.82rem;
+  color: #5a5a5a;
+}
+.kit-scopebar-line strong { color: var(--nb-ink); }
+.kit-scopebar-actions { display: flex; flex-wrap: wrap; align-items: center; gap: 0.5rem; margin-left: auto; }
+.kit-scopebar-actions .form-group,
+.kit-scopebar-actions .shiny-input-container { margin: 0; width: auto !important; }
+.kit-scopebar-actions .input-group { flex-wrap: nowrap; }
+.kit-scopebar-actions .input-group > .form-control { display: none; }
+.kit-scopebar-actions .input-group .btn-file {
+  border: 1.5px solid var(--nb-ink);
+  border-radius: var(--nb-radius) !important;
+  background: var(--nb-card);
+  font-size: 0.85rem;
+  font-weight: 500;
+  min-height: 36px;
+  box-shadow: none;
+}
+.kit-scopebar-actions .progress { display: none; }
+.kit-scopebar-todo { color: #8a4a00; font-weight: 700; }
+.kit-scopebar-panel { margin-top: 1rem; max-width: 46rem; }
+@media (max-width: 576px) {
+  .kit-scopebar-actions { margin-left: 0; }
+}
+
+/* 一排按鈕（流程內的一般按鈕＋小按鈕）：間距 sp-2，放不下就換行 */
+.kit-buttons { display: flex; flex-wrap: wrap; align-items: center; gap: 0.5rem; margin-top: 0.6rem; }</style>
 <style>
     .kit-manual .km-wrap {
       display: grid; grid-template-columns: 13rem minmax(0, 1fr); gap: 0 2.5rem;
@@ -1210,7 +1423,7 @@ body { padding: 1rem 1.5rem 2rem; }
          · 
         使用手冊
       </p>
-      <div class="kit-app-meta">kitsUI v0.8.2 · 2026-11-01 · kits 0.25.2</div>
+      <div class="kit-app-meta">kitsUI v0.8.4 · kits v0.25.2 · 2026-11-02</div>
     </div>
   </div>
 </div>

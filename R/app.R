@@ -37,7 +37,7 @@ kit_ui <- function(request) {
     "KIT 量尺建構工具", "臺灣幼兒發展調查資料庫",
     tagline = "量尺：校準、連結、計分",
     version = ver$version, date = ver$date, package = "kitsUI",
-    meta_extra = paste("kits", utils::packageVersion("kits")),
+    meta_extra = paste0("kits v", utils::packageVersion("kits")),
     shiny::tags$head(shiny::tags$style(KITSUI_CSS)),
     if (kitDesign::kit_is_cloud()) kitsui_cloud_banner(),
     if (!kit_pandoc_ok()) kit_pandoc_notice(),

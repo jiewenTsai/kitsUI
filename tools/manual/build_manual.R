@@ -74,7 +74,7 @@ ver <- kitDesign::kit_app_description("kitsUI")
 header <- as.character(kitDesign::kit_header(
   "KIT 量尺建構工具", "臺灣幼兒發展調查資料庫", tagline = "使用手冊",
   version = ver$version, date = ver$date, package = "kitsUI",
-  meta_extra = paste("kits", utils::packageVersion("kits")), logo = "inline"
+  meta_extra = paste0("kits v", utils::packageVersion("kits")), logo = "inline"
 ))
 standalone_css <- paste(
   "body { padding: 1rem 1.5rem 2rem; }",
