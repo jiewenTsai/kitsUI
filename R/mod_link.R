@@ -12,7 +12,8 @@ mod_link_ui <- function(id) {
     shiny::uiOutput(ns("source")),
     # 1. 內部連結：標題與說明用固定檔裡的參照世代與其他世代的名稱
     shiny::uiOutput(ns("internal_head")),
-    shiny::selectInput(ns("internal_scale"), "哪一個量尺要做內部連結？", choices = NULL),
+    # 原文：哪一個量尺要做內部連結？
+    shiny::selectInput(ns("internal_scale"), "\u54ea\u4e00\u500b\u91cf\u5c3a\u8981\u505a\u5167\u90e8\u9023\u7d50\uff1f", choices = NULL),
     shiny::uiOutput(ns("internal_overview_ui")),
     shiny::uiOutput(ns("internal_status")),
     shiny::uiOutput(ns("internal_result")),
@@ -23,9 +24,12 @@ mod_link_ui <- function(id) {
     # 3. 垂直連結（校準以後才出現）
     shiny::uiOutput(ns("vertical_ui")),
     kitDesign::kit_details_row(
-      kitDesign::kit_detail("固定檔裡的連結",
-                            shiny::tags$p(class = "kit-hint", "內部連結與外部連結，每條一列。",
-                              "intercept、slope 是這條連結的係數（新的值 = intercept + slope × 舊的值）。"),
+      # 原文：固定檔裡的連結
+      kitDesign::kit_detail("\u56fa\u5b9a\u6a94\u88e1\u7684\u9023\u7d50",
+                            # 原文：內部連結與外部連結，每條一列。
+                            shiny::tags$p(class = "kit-hint", "\u5167\u90e8\u9023\u7d50\u8207\u5916\u90e8\u9023\u7d50\uff0c\u6bcf\u689d\u4e00\u5217\u3002",
+                              # 原文：intercept、slope 是這條連結的係數（新的值 = intercept + slope × 舊的值）。
+                              "intercept\u3001slope \u662f\u9019\u689d\u9023\u7d50\u7684\u4fc2\u6578\uff08\u65b0\u7684\u503c = intercept + slope \u00d7 \u820a\u7684\u503c\uff09\u3002"),
                             shiny::tags$div(class = "kit-table-scroll",
                                             shiny::tableOutput(ns("links_table")))),
       ui_check_panel(ns("checks")),
@@ -39,19 +43,27 @@ mod_link_ui <- function(id) {
 #' @noRd
 link_guide <- function() {
   kitDesign::kit_tab_guide(
-    goal = "把各量尺的分數換到同一把尺上。",
+    # 原文：把各量尺的分數換到同一把尺上。
+    goal = "\u628a\u5404\u91cf\u5c3a\u7684\u5206\u6578\u63db\u5230\u540c\u4e00\u628a\u5c3a\u4e0a\u3002",
     steps = c(
-      "內部連結：選一個參照世代以外的量尺，按「建立內部連結」。每個世代、每個領域各做一條。",
-      "外部連結：錨題夠了，按「建立外部連結」。參照世代沒有 D 分數的錨題時，這一步不適用。",
-      "看連結圖、連結前後的垂直連結與檢查，沒有紅字時，按「下一步：受試者評分」。"
+      # 原文：內部連結：選一個參照世代以外的量尺，按「建立內部連結」。每個世代、每個領域各做一條。
+      "\u5167\u90e8\u9023\u7d50\uff1a\u9078\u4e00\u500b\u53c3\u7167\u4e16\u4ee3\u4ee5\u5916\u7684\u91cf\u5c3a\uff0c\u6309\u300c\u5efa\u7acb\u5167\u90e8\u9023\u7d50\u300d\u3002\u6bcf\u500b\u4e16\u4ee3\u3001\u6bcf\u500b\u9818\u57df\u5404\u505a\u4e00\u689d\u3002",
+      # 原文：外部連結：錨題夠了，按「建立外部連結」。參照世代沒有 D 分數的錨題時，這一步不適用。
+      "\u5916\u90e8\u9023\u7d50\uff1a\u9328\u984c\u5920\u4e86\uff0c\u6309\u300c\u5efa\u7acb\u5916\u90e8\u9023\u7d50\u300d\u3002\u53c3\u7167\u4e16\u4ee3\u6c92\u6709 D \u5206\u6578\u7684\u9328\u984c\u6642\uff0c\u9019\u4e00\u6b65\u4e0d\u9069\u7528\u3002",
+      # 原文：看連結圖、連結前後的垂直連結與檢查，沒有紅字時，按「下一步：受試者評分」。
+      "\u770b\u9023\u7d50\u5716\u3001\u9023\u7d50\u524d\u5f8c\u7684\u5782\u76f4\u9023\u7d50\u8207\u6aa2\u67e5\uff0c\u6c92\u6709\u7d05\u5b57\u6642\uff0c\u6309\u300c\u4e0b\u4e00\u6b65\uff1a\u53d7\u8a66\u8005\u8a55\u5206\u300d\u3002"
     ),
     output = paste0(
-      "存進固定檔的連結。每條連結只做一次，做好就凍結。",
-      "之後每一回合都用同一條連結，所以早先算好的 D 分數永遠不會變。"
+      # 原文：存進固定檔的連結。每條連結只做一次，做好就凍結。
+      "\u5b58\u9032\u56fa\u5b9a\u6a94\u7684\u9023\u7d50\u3002\u6bcf\u689d\u9023\u7d50\u53ea\u505a\u4e00\u6b21\uff0c\u505a\u597d\u5c31\u51cd\u7d50\u3002",
+      # 原文：之後每一回合都用同一條連結，所以早先算好的 D 分數永遠不會變。
+      "\u4e4b\u5f8c\u6bcf\u4e00\u56de\u5408\u90fd\u7528\u540c\u4e00\u689d\u9023\u7d50\uff0c\u6240\u4ee5\u65e9\u5148\u7b97\u597d\u7684 D \u5206\u6578\u6c38\u9060\u4e0d\u6703\u8b8a\u3002"
     ),
     note = paste0(
-      "內部連結把其他世代換到參照世代（在 ① 第一回合選的）的量尺；外部連結把參照世代換到 D。",
-      "兩種連結都用題庫裡的題目參數（kits_linking()），不是只用這一回合的資料。"
+      # 原文：內部連結把其他世代換到參照世代（在 ① 第一回合選的）的量尺；外部連結把參照世代換到 D。
+      "\u5167\u90e8\u9023\u7d50\u628a\u5176\u4ed6\u4e16\u4ee3\u63db\u5230\u53c3\u7167\u4e16\u4ee3\uff08\u5728 \u2460 \u7b2c\u4e00\u56de\u5408\u9078\u7684\uff09\u7684\u91cf\u5c3a\uff1b\u5916\u90e8\u9023\u7d50\u628a\u53c3\u7167\u4e16\u4ee3\u63db\u5230 D\u3002",
+      # 原文：兩種連結都用題庫裡的題目參數（kits_linking()），不是只用這一回合的資料。
+      "\u5169\u7a2e\u9023\u7d50\u90fd\u7528\u984c\u5eab\u88e1\u7684\u984c\u76ee\u53c3\u6578\uff08kits_linking()\uff09\uff0c\u4e0d\u662f\u53ea\u7528\u9019\u4e00\u56de\u5408\u7684\u8cc7\u6599\u3002"
     )
   )
 }
@@ -94,11 +106,13 @@ mod_link_server <- function(id, data, items, goto) {
     jump_vertical <- FALSE
     make_link <- function(name, message, make) {
       shiny::withProgress(message = message, value = 0.1, {
-        shiny::setProgress(0.2, detail = "用題庫的門檻估計，重抽 2000 次…")
+        # 原文：用題庫的門檻估計，重抽 2000 次…
+        shiny::setProgress(0.2, detail = "\u7528\u984c\u5eab\u7684\u9580\u6abb\u4f30\u8a08\uff0c\u91cd\u62bd 2000 \u6b21\u2026")
         out <- make(fixed())
         if (isTRUE(out$new)) {
           jump_vertical <<- TRUE
-          shiny::setProgress(0.8, detail = "存進固定檔，從點重建這條連結…")
+          # 原文：存進固定檔，從點重建這條連結…
+          shiny::setProgress(0.8, detail = "\u5b58\u9032\u56fa\u5b9a\u6a94\uff0c\u5f9e\u9ede\u91cd\u5efa\u9019\u689d\u9023\u7d50\u2026")
           link_objs(c(link_objs(), kitsui_links(out$fixed, name)))
           fixed(out$fixed)
         }
@@ -138,7 +152,8 @@ mod_link_server <- function(id, data, items, goto) {
     })
     shiny::observeEvent(input$make_internal, {
       s <- shiny::req(input$internal_scale)
-      make_link(s, "正在建立內部連結…", \(fx) {
+      # 原文：正在建立內部連結…
+      make_link(s, "\u6b63\u5728\u5efa\u7acb\u5167\u90e8\u9023\u7d50\u2026", \(fx) {
         kitsui_link_internal(fx, scale_domain(s), scale_cohort(s))
       })
     })
@@ -146,11 +161,14 @@ mod_link_server <- function(id, data, items, goto) {
     output$internal_status <- shiny::renderUI({
       if (is.null(fixed())) return(NULL)
       if (length(kitsui_internal_scales(fixed())) == 0) {
-        return(kitDesign::kit_callout("題庫裡還沒有參照世代（", fixed()$version$reference,
-                                      "）以外的世代的量尺，這一步不用做。"))
+        # 原文：題庫裡還沒有參照世代（
+        return(kitDesign::kit_callout("\u984c\u5eab\u88e1\u9084\u6c92\u6709\u53c3\u7167\u4e16\u4ee3\uff08", fixed()$version$reference,
+                                      # 原文：）以外的世代的量尺，這一步不用做。
+                                      "\uff09\u4ee5\u5916\u7684\u4e16\u4ee3\u7684\u91cf\u5c3a\uff0c\u9019\u4e00\u6b65\u4e0d\u7528\u505a\u3002"))
       }
       link_status_ui(internal(), notes()[[input$internal_scale]], ns("make_internal"),
-                     "建立內部連結", "內部連結")
+                     # 原文：建立內部連結 | 內部連結
+                     "\u5efa\u7acb\u5167\u90e8\u9023\u7d50", "\u5167\u90e8\u9023\u7d50")
     })
 
     # 好幾個量尺可以做內部連結時（例如 M06、M40 都連到 M03），列出每一條的狀態
@@ -160,9 +178,11 @@ mod_link_server <- function(id, data, items, goto) {
       ov <- kitsui_internal_overview(fixed(), links(), earlier())
       shiny::tagList(
         shiny::tags$p(class = "kit-hint", kitsui_internal_summary(fixed(), ov),
-                      "每個世代、每個領域各有一條，都連到參照世代：在上面一條一條選、一條一條建立。"),
+                      # 原文：每個世代、每個領域各有一條，都連到參照世代：在上面一條一條選、一條一條建立。
+                      "\u6bcf\u500b\u4e16\u4ee3\u3001\u6bcf\u500b\u9818\u57df\u5404\u6709\u4e00\u689d\uff0c\u90fd\u9023\u5230\u53c3\u7167\u4e16\u4ee3\uff1a\u5728\u4e0a\u9762\u4e00\u689d\u4e00\u689d\u9078\u3001\u4e00\u689d\u4e00\u689d\u5efa\u7acb\u3002"),
         kitDesign::kit_details_row(kitDesign::kit_detail(
-          paste0("每一條（", kitDesign::kit_num(nrow(ov)), " 條）"),
+          # 原文：每一條（ |  條）
+          paste0("\u6bcf\u4e00\u689d\uff08", kitDesign::kit_num(nrow(ov)), " \u689d\uff09"),
           shiny::tags$div(class = "kit-table-scroll", shiny::tableOutput(ns("internal_overview")))
         ))
       )
@@ -200,7 +220,8 @@ mod_link_server <- function(id, data, items, goto) {
     # 獨立檢核（kits_link_check()）：要這一回合兩個世代的作答
     shiny::observeEvent(input$run_check, {
       link <- shiny::req(internal_link())
-      out <- shiny::withProgress(message = "正在做獨立檢核（約需數秒）…", value = 0.4, {
+      # 原文：正在做獨立檢核（約需數秒）…
+      out <- shiny::withProgress(message = "\u6b63\u5728\u505a\u7368\u7acb\u6aa2\u6838\uff08\u7d04\u9700\u6578\u79d2\uff09\u2026", value = 0.4, {
         tryCatch(kitsui_link_check(items(), data()$df, link, persons()), error = function(e) e)
       })
       check(list(scale = input$internal_scale, result = out))
@@ -213,14 +234,16 @@ mod_link_server <- function(id, data, items, goto) {
     output$check_table <- kit_table(kitsui_link_check_table(shiny::req(check_now())))
     output$check_print <- shiny::renderPrint(print(shiny::req(check_now())))
     output$check_dl_ui <- render_download_csv(
-      session, "check_dl", "下載檢核結果（CSV）", \() check_now()$at,
+      # 原文：下載檢核結果（CSV）
+      session, "check_dl", "\u4e0b\u8f09\u6aa2\u6838\u7d50\u679c\uff08CSV\uff09", \() check_now()$at,
       \() paste0(kitsui_link_var(input$internal_scale), "_check")
     )
 
     # 2. 外部連結 ----
     anchors <- shiny::reactive(kitsui_anchor_counts(shiny::req(fixed())))
     d_state <- shiny::reactive(kitsui_d_state(shiny::req(fixed()), links(), earlier(), anchors()))
-    shiny::observeEvent(input$make_d, make_link("D", "正在建立外部連結…", kitsui_link_D))
+    # 原文：正在建立外部連結…
+    shiny::observeEvent(input$make_d, make_link("D", "\u6b63\u5728\u5efa\u7acb\u5916\u90e8\u9023\u7d50\u2026", kitsui_link_D))
     # 外部連結不適用：整段收成一行（說明再收一層）；適用時標題、狀態、結果
     output$d_section <- shiny::renderUI({
       fx <- shiny::req(head_fixed())
@@ -233,7 +256,8 @@ mod_link_server <- function(id, data, items, goto) {
       # 主要按鈕一頁一個：內部連結都建立了，外部連結的按鈕才是主要按鈕
       primary <- length(tryCatch(internal_ready(), error = \(e) character())) == 0
       shiny::tagList(
-        link_status_ui(d_state(), notes()[["D"]], ns("make_d"), "建立外部連結", "外部連結",
+        # 原文：建立外部連結 | 外部連結
+        link_status_ui(d_state(), notes()[["D"]], ns("make_d"), "\u5efa\u7acb\u5916\u90e8\u9023\u7d50", "\u5916\u90e8\u9023\u7d50",
                        primary),
         if (d_ok()) link_anchor_ui(anchors(), ns("coverage"), fixed()$version$reference)
       )
@@ -251,7 +275,8 @@ mod_link_server <- function(id, data, items, goto) {
     v_raw <- shiny::reactive({
       dom <- shiny::req(input$vertical_domain)
       shiny::req(dom %in% v_domains())
-      shiny::withProgress(message = "正在算這一回合的分數…", value = 0, tryCatch(
+      # 原文：正在算這一回合的分數…
+      shiny::withProgress(message = "\u6b63\u5728\u7b97\u9019\u4e00\u56de\u5408\u7684\u5206\u6578\u2026", value = 0, tryCatch(
         kitsui_vertical_scores(items(), dom, persons(), vertical_progress),
         error = \(e) e
       ))
@@ -265,7 +290,8 @@ mod_link_server <- function(id, data, items, goto) {
         kitsui_verticals(items(), data()$df, fixed(), dom, links(), persons(), raw)
       }, error = \(e) purrr::map(KITSUI_VERTICAL_STAGES, \(x) {
         # 第一層只有【停下來】與白話；R 的原文收在「R 的原文」裡
-        list(why = "垂直連結圖畫不出來。", error = TRUE, raw = conditionMessage(e))
+        # 原文：垂直連結圖畫不出來。
+        list(why = "\u5782\u76f4\u9023\u7d50\u5716\u756b\u4e0d\u51fa\u4f86\u3002", error = TRUE, raw = conditionMessage(e))
       }))
     })
     output$vertical_ui <- shiny::renderUI({
@@ -321,7 +347,8 @@ mod_link_server <- function(id, data, items, goto) {
     })
     # 用 R 怎麼做：打開時才算；每行最多 70 欄（kitDesign::kit_code()）
     output$code <- kitDesign::kit_render_code_panel(
-      \() list("kits 版" = code_text()), empty = "先做「② 題目校準」，這裡才會有程式碼。"
+      # 原文：kits 版 | 先做「② 題目校準」，這裡才會有程式碼。
+      \() list("kits \u7248" = code_text()), empty = "\u5148\u505a\u300c\u2461 \u984c\u76ee\u6821\u6e96\u300d\uff0c\u9019\u88e1\u624d\u6703\u6709\u7a0b\u5f0f\u78bc\u3002"
     )
     # 還可以建立的內部連結
     internal_ready <- shiny::reactive({
@@ -333,7 +360,8 @@ mod_link_server <- function(id, data, items, goto) {
     output$next_step <- shiny::renderUI({
       if (is.null(fixed())) return(NULL)
       kitDesign::kit_next_step(link_next_text(fixed(), internal_ready(), d_state()$state),
-                               ns("go_score"), "下一步：受試者評分")
+                               # 原文：下一步：受試者評分
+                               ns("go_score"), "\u4e0b\u4e00\u6b65\uff1a\u53d7\u8a66\u8005\u8a55\u5206")
     })
 
     # todo：還可以建立的連結（步驟分頁的 ✓：都建立了才算做完）
@@ -348,7 +376,8 @@ mod_link_server <- function(id, data, items, goto) {
 
 # 每個世代開始算分數前更新進度條（kitsui_vertical_scores() 的 progress）
 vertical_progress <- function(i, n, scale) {
-  shiny::setProgress((i - 1) / n, detail = sprintf("%s（第 %d 個，共 %d 個世代）", scale, i, n))
+  # 原文：%s（第 %d 個，共 %d 個世代）
+  shiny::setProgress((i - 1) / n, detail = sprintf("%s\uff08\u7b2c %d \u500b\uff0c\u5171 %d \u500b\u4e16\u4ee3\uff09", scale, i, n))
 }
 
 #' 下一步的一句話：還沒有連結時不說「做好了」
@@ -356,18 +385,24 @@ vertical_progress <- function(i, n, scale) {
 #' @noRd
 link_next_text <- function(fixed, ready, d) {
   n <- length(kitsui_link_names(fixed))
-  todo <- c(ready, if (identical(d, "ready")) "外部連結（到 D）")
+  # 原文：外部連結（到 D）
+  todo <- c(ready, if (identical(d, "ready")) "\u5916\u90e8\u9023\u7d50\uff08\u5230 D\uff09")
   left <- if (length(todo) > 0) {
-    paste0("還可以建立：", paste(todo, collapse = "、"), "。不做也可以先評分。")
+    # 原文：還可以建立： | 、 | 。不做也可以先評分。
+    paste0("\u9084\u53ef\u4ee5\u5efa\u7acb\uff1a", paste(todo, collapse = "\u3001"), "\u3002\u4e0d\u505a\u4e5f\u53ef\u4ee5\u5148\u8a55\u5206\u3002")
   }
   na <- if (identical(d, "na")) {
-    paste0("外部連結不適用，分數停在參照世代（", fixed$version$reference, "）的量尺上。")
+    # 原文：外部連結不適用，分數停在參照世代（ | ）的量尺上。
+    paste0("\u5916\u90e8\u9023\u7d50\u4e0d\u9069\u7528\uff0c\u5206\u6578\u505c\u5728\u53c3\u7167\u4e16\u4ee3\uff08", fixed$version$reference, "\uff09\u7684\u91cf\u5c3a\u4e0a\u3002")
   }
   if (n == 0) {
-    return(paste0("還沒有連結，分數會留在各自校準的量尺上。", na,
-                  left %||% "這一回合不用做連結。", "下一步是評分。"))
+    # 原文：還沒有連結，分數會留在各自校準的量尺上。
+    return(paste0("\u9084\u6c92\u6709\u9023\u7d50\uff0c\u5206\u6578\u6703\u7559\u5728\u5404\u81ea\u6821\u6e96\u7684\u91cf\u5c3a\u4e0a\u3002", na,
+                  # 原文：這一回合不用做連結。 | 下一步是評分。
+                  left %||% "\u9019\u4e00\u56de\u5408\u4e0d\u7528\u505a\u9023\u7d50\u3002", "\u4e0b\u4e00\u6b65\u662f\u8a55\u5206\u3002"))
   }
-  paste0("固定檔裡有 ", n, " 條連結。", na, left %||% "", "下一步是評分。")
+  # 原文：固定檔裡有  |  條連結。 | 下一步是評分。
+  paste0("\u56fa\u5b9a\u6a94\u88e1\u6709 ", n, " \u689d\u9023\u7d50\u3002", na, left %||% "", "\u4e0b\u4e00\u6b65\u662f\u8a55\u5206\u3002")
 }
 
 #' 一條連結的輸出：圖、下載圖與點（key 是 "internal" 或 "d"）
@@ -375,15 +410,18 @@ link_next_text <- function(fixed, ready, d) {
 #' @noRd
 link_outputs <- function(output, session, key, link, name) {
   out <- \(x) paste0(key, "_", x)
-  kind <- if (key == "d") "外部連結" else "內部連結"
+  # 原文：外部連結 | 內部連結
+  kind <- if (key == "d") "\u5916\u90e8\u9023\u7d50" else "\u5167\u90e8\u9023\u7d50"
   # 畫面與下載的 HTML 是同一張圖：kits 的 plot()，套上 KIT 的樣子
   p <- shiny::reactive(kitDesign::kit_plotly_style(plot(shiny::req(link()))))
   output[[out("plot")]] <- plotly::renderPlotly(p())
   output[[out("plot_dl_ui")]] <- render_download_plot(
-    session, out("plot_dl"), paste0("下載", kind, "圖（HTML）"), p, name
+    # 原文：下載 | 圖（HTML）
+    session, out("plot_dl"), paste0("\u4e0b\u8f09", kind, "\u5716\uff08HTML\uff09"), p, name
   )
   output[[out("points_dl_ui")]] <- render_download_csv(
-    session, out("points_dl"), paste0("下載", kind, "的點（CSV）"), \() link()$points,
+    # 原文：下載 | 的點（CSV）
+    session, out("points_dl"), paste0("\u4e0b\u8f09", kind, "\u7684\u9ede\uff08CSV\uff09"), \() link()$points,
     \() paste0(name(), "_points")
   )
   output[[out("checks")]] <- kit_table({
@@ -408,7 +446,8 @@ vertical_outputs <- function(output, session, stage, vertical, domain) {
   })
   output[[id("plot")]] <- plotly::renderPlotly(p())
   output[[id("dl_ui")]] <- render_download_plot(
-    session, id("dl"), "下載這張垂直連結圖（HTML）", p,
+    # 原文：下載這張垂直連結圖（HTML）
+    session, id("dl"), "\u4e0b\u8f09\u9019\u5f35\u5782\u76f4\u9023\u7d50\u5716\uff08HTML\uff09", p,
     \() paste0("vertical_", domain(), "_", stage)
   )
 }
@@ -418,7 +457,8 @@ vertical_outputs <- function(output, session, stage, vertical, domain) {
 #' @noRd
 link_code <- function(fixed, file = \(n) "fixed_set.zip") {
   nm <- kitsui_link_names(fixed)
-  if (length(nm) == 0) return("# 還沒有連結。做好連結後，這裡會出現重建它的 R 程式。")
+  # 原文：# 還沒有連結。做好連結後，這裡會出現重建它的 R 程式。
+  if (length(nm) == 0) return("# \u9084\u6c92\u6709\u9023\u7d50\u3002\u505a\u597d\u9023\u7d50\u5f8c\uff0c\u9019\u88e1\u6703\u51fa\u73fe\u91cd\u5efa\u5b83\u7684 R \u7a0b\u5f0f\u3002")
   code <- purrr::map_chr(nm, \(n) kitsui_code_link(fixed, n, file(n)))
   paste(c("library(kits)", "library(dplyr)", code), collapse = "\n\n")
 }
@@ -437,9 +477,12 @@ link_source_ui <- function(round, ns) {
   if (is.null(round)) return(ui_go_items(ns))
   if (isTRUE(round$ok)) return(NULL)
   kitDesign::kit_callout(
-    "這一回合有量尺停下來（", paste(round$stopped, collapse = "、"), "）。",
-    "連結仍可以先看，但這一回合不會產生新的固定檔。",
-    "可以在 ② 把它們改成「這一回合不做」再校準一次。",
+    # 原文：這一回合有量尺停下來（ | 、 | ）。
+    "\u9019\u4e00\u56de\u5408\u6709\u91cf\u5c3a\u505c\u4e0b\u4f86\uff08", paste(round$stopped, collapse = "\u3001"), "\uff09\u3002",
+    # 原文：連結仍可以先看，但這一回合不會產生新的固定檔。
+    "\u9023\u7d50\u4ecd\u53ef\u4ee5\u5148\u770b\uff0c\u4f46\u9019\u4e00\u56de\u5408\u4e0d\u6703\u7522\u751f\u65b0\u7684\u56fa\u5b9a\u6a94\u3002",
+    # 原文：可以在 ② 把它們改成「這一回合不做」再校準一次。
+    "\u53ef\u4ee5\u5728 \u2461 \u628a\u5b83\u5011\u6539\u6210\u300c\u9019\u4e00\u56de\u5408\u4e0d\u505a\u300d\u518d\u6821\u6e96\u4e00\u6b21\u3002",
     warn = TRUE
   )
 }
@@ -450,11 +493,13 @@ link_source_ui <- function(round, ns) {
 #' @param kind 「內部連結」或「外部連結」
 #' @param primary 按鈕是這一頁的主要按鈕嗎（不是時用次要按鈕）
 #' @noRd
-link_status_ui <- function(st, note, button_id, button_label, kind = "連結", primary = TRUE) {
+# 原文：連結
+link_status_ui <- function(st, note, button_id, button_label, kind = "\u9023\u7d50", primary = TRUE) {
   tried <- !is.null(note)
   shiny::tagList(
     if (tried && st$state == "frozen") {
-      kitDesign::kit_status_ui(kitDesign::kit_status("done", paste0(kind, "建立好了，已凍結在固定檔裡。")),
+      # 原文：建立好了，已凍結在固定檔裡。
+      kitDesign::kit_status_ui(kitDesign::kit_status("done", paste0(kind, "\u5efa\u7acb\u597d\u4e86\uff0c\u5df2\u51cd\u7d50\u5728\u56fa\u5b9a\u6a94\u88e1\u3002")),
                 shiny::tags$p(kitsui_error_ui(st$text)))
     } else {
       # kits 的英文原文收起來（kitsui_error_ui()）
@@ -462,16 +507,19 @@ link_status_ui <- function(st, note, button_id, button_label, kind = "連結", p
     },
     if (tried && st$state != "frozen") {
       kitDesign::kit_status_ui(
-        kitDesign::kit_status("stop", paste0(kind, "沒有建立。")),
+        # 原文：沒有建立。
+        kitDesign::kit_status("stop", paste0(kind, "\u6c92\u6709\u5efa\u7acb\u3002")),
         shiny::tags$p(kitsui_error_ui(note)),
-        shiny::tags$p("怎麼辦：看上面的原因；題庫缺的題要在之後的回合校準，再回來建立。")
+        # 原文：怎麼辦：看上面的原因；題庫缺的題要在之後的回合校準，再回來建立。
+        shiny::tags$p("\u600e\u9ebc\u8fa6\uff1a\u770b\u4e0a\u9762\u7684\u539f\u56e0\uff1b\u984c\u5eab\u7f3a\u7684\u984c\u8981\u5728\u4e4b\u5f8c\u7684\u56de\u5408\u6821\u6e96\uff0c\u518d\u56de\u4f86\u5efa\u7acb\u3002")
       )
     },
     if (st$state == "ready") {
       shiny::tags$div(
         class = "kit-downloads",
         kitDesign::kit_button(button_id, button_label, if (primary) "primary" else "secondary"),
-        shiny::tags$small(class = "kit-hint", "連結一做好就凍結在固定檔裡，不能復原，也不會重做。")
+        # 原文：連結一做好就凍結在固定檔裡，不能復原，也不會重做。
+        shiny::tags$small(class = "kit-hint", "\u9023\u7d50\u4e00\u505a\u597d\u5c31\u51cd\u7d50\u5728\u56fa\u5b9a\u6a94\u88e1\uff0c\u4e0d\u80fd\u5fa9\u539f\uff0c\u4e5f\u4e0d\u6703\u91cd\u505a\u3002")
       )
     }
   )
@@ -484,9 +532,12 @@ link_d_na_ui <- function(fixed) {
   shiny::tagList(
     shiny::h4(kitsui_d_title(fixed, FALSE)),
     kitDesign::kit_callout(
-      shiny::tags$strong("外部連結不適用："),
-      paste0("參照世代（", ref, "）沒有 D 分數的錨題，分數留在 ", ref, " 的量尺上。這不是錯誤。"),
-      shiny::tags$details(shiny::tags$summary("為什麼"), kitsui_d_hint(fixed, FALSE))
+      # 原文：外部連結不適用：
+      shiny::tags$strong("\u5916\u90e8\u9023\u7d50\u4e0d\u9069\u7528\uff1a"),
+      # 原文：參照世代（ | ）沒有 D 分數的錨題，分數留在  |  的量尺上。這不是錯誤。
+      paste0("\u53c3\u7167\u4e16\u4ee3\uff08", ref, "\uff09\u6c92\u6709 D \u5206\u6578\u7684\u9328\u984c\uff0c\u5206\u6578\u7559\u5728 ", ref, " \u7684\u91cf\u5c3a\u4e0a\u3002\u9019\u4e0d\u662f\u932f\u8aa4\u3002"),
+      # 原文：為什麼
+      shiny::tags$details(shiny::tags$summary("\u70ba\u4ec0\u9ebc"), kitsui_d_hint(fixed, FALSE))
     )
   )
 }
@@ -495,16 +546,24 @@ link_d_na_ui <- function(fixed) {
 #' @noRd
 vertical_head_ui <- function() {
   shiny::tagList(
-    shiny::h4("3. 各世代的垂直連結：連結前後"),
+    # 原文：3. 各世代的垂直連結：連結前後
+    shiny::h4("3. \u5404\u4e16\u4ee3\u7684\u5782\u76f4\u9023\u7d50\uff1a\u9023\u7d50\u524d\u5f8c"),
     shiny::tags$small(
       class = "kit-hint",
-      "三個分頁：未連結、內部連結後、外部連結後。",
-      "每個波次畫中位數，線段是 P25 到 P75（kits_vertical()）。",
-      "波次的單位是月時，連結後同一個月齡各世代的點靠在一起，表示連結合理。",
-      "單位是年或波次序號時，同一波各世代的年齡不同，點不一定會靠在一起。",
-      "之前回合的點來自固定檔裡的各波次摘要，照現在的連結換算。",
-      "所以這一回合只有一個世代時，也看得到連結得怎樣。",
-      "只有一個世代、也沒有之前回合的點時，只畫未連結的圖。"
+      # 原文：三個分頁：未連結、內部連結後、外部連結後。
+      "\u4e09\u500b\u5206\u9801\uff1a\u672a\u9023\u7d50\u3001\u5167\u90e8\u9023\u7d50\u5f8c\u3001\u5916\u90e8\u9023\u7d50\u5f8c\u3002",
+      # 原文：每個波次畫中位數，線段是 P25 到 P75（kits_vertical()）。
+      "\u6bcf\u500b\u6ce2\u6b21\u756b\u4e2d\u4f4d\u6578\uff0c\u7dda\u6bb5\u662f P25 \u5230 P75\uff08kits_vertical()\uff09\u3002",
+      # 原文：波次的單位是月時，連結後同一個月齡各世代的點靠在一起，表示連結合理。
+      "\u6ce2\u6b21\u7684\u55ae\u4f4d\u662f\u6708\u6642\uff0c\u9023\u7d50\u5f8c\u540c\u4e00\u500b\u6708\u9f61\u5404\u4e16\u4ee3\u7684\u9ede\u9760\u5728\u4e00\u8d77\uff0c\u8868\u793a\u9023\u7d50\u5408\u7406\u3002",
+      # 原文：單位是年或波次序號時，同一波各世代的年齡不同，點不一定會靠在一起。
+      "\u55ae\u4f4d\u662f\u5e74\u6216\u6ce2\u6b21\u5e8f\u865f\u6642\uff0c\u540c\u4e00\u6ce2\u5404\u4e16\u4ee3\u7684\u5e74\u9f61\u4e0d\u540c\uff0c\u9ede\u4e0d\u4e00\u5b9a\u6703\u9760\u5728\u4e00\u8d77\u3002",
+      # 原文：之前回合的點來自固定檔裡的各波次摘要，照現在的連結換算。
+      "\u4e4b\u524d\u56de\u5408\u7684\u9ede\u4f86\u81ea\u56fa\u5b9a\u6a94\u88e1\u7684\u5404\u6ce2\u6b21\u6458\u8981\uff0c\u7167\u73fe\u5728\u7684\u9023\u7d50\u63db\u7b97\u3002",
+      # 原文：所以這一回合只有一個世代時，也看得到連結得怎樣。
+      "\u6240\u4ee5\u9019\u4e00\u56de\u5408\u53ea\u6709\u4e00\u500b\u4e16\u4ee3\u6642\uff0c\u4e5f\u770b\u5f97\u5230\u9023\u7d50\u5f97\u600e\u6a23\u3002",
+      # 原文：只有一個世代、也沒有之前回合的點時，只畫未連結的圖。
+      "\u53ea\u6709\u4e00\u500b\u4e16\u4ee3\u3001\u4e5f\u6c92\u6709\u4e4b\u524d\u56de\u5408\u7684\u9ede\u6642\uff0c\u53ea\u756b\u672a\u9023\u7d50\u7684\u5716\u3002"
     )
   )
 }
@@ -515,40 +574,50 @@ vertical_head_ui <- function() {
 #' @noRd
 link_result_ui <- function(ns, key, link, extra = NULL) {
   out <- \(x) ns(paste0(key, "_", x))
-  kind <- if (key == "d") "外部連結" else "內部連結"
+  # 原文：外部連結 | 內部連結
+  kind <- if (key == "d") "\u5916\u90e8\u9023\u7d50" else "\u5167\u90e8\u9023\u7d50"
   if (startsWith(key, "il_")) {
     # 其他已經建好的連結（收合區塊裡）：公式在標題上，這裡只放係數、圖與下載
     return(shiny::tagList(
       link_coef_table(kitsui_link_formula(link)$table),
-      link_plot_box(out("plot"), "正在畫連結圖…"),
+      # 原文：正在畫連結圖…
+      link_plot_box(out("plot"), "\u6b63\u5728\u756b\u9023\u7d50\u5716\u2026"),
       shiny::tags$div(class = "kit-downloads", ui_download(out("plot_dl")),
                       ui_download(out("points_dl"))),
-      kitDesign::kit_details_row(kitDesign::kit_detail(paste0(kind, "的檢查（kits_check）"),
+      # 原文：的檢查（kits_check）
+      kitDesign::kit_details_row(kitDesign::kit_detail(paste0(kind, "\u7684\u6aa2\u67e5\uff08kits_check\uff09"),
                                shiny::tags$div(class = "kit-table-scroll",
                                                shiny::tableOutput(out("checks")))))
     ))
   }
   f <- kitsui_link_formula(link)
   shiny::tagList(
-    shiny::h5(paste0(kind, "的公式")),
+    # 原文：的公式
+    shiny::h5(paste0(kind, "\u7684\u516c\u5f0f")),
     shiny::tags$p(shiny::tags$strong(f$formula)),
     shiny::tags$small(
       class = "kit-hint",
-      "新的值 = intercept + slope × 舊的值。", "linking_error 是連結本身的不確定性。"
+      # 原文：新的值 = intercept + slope × 舊的值。 | linking_error 是連結本身的不確定性。
+      "\u65b0\u7684\u503c = intercept + slope \u00d7 \u820a\u7684\u503c\u3002", "linking_error \u662f\u9023\u7d50\u672c\u8eab\u7684\u4e0d\u78ba\u5b9a\u6027\u3002"
     ),
     link_coef_table(f$table),
-    shiny::h5(paste0(kind, "圖")),
+    # 原文：圖
+    shiny::h5(paste0(kind, "\u5716")),
     shiny::tags$small(class = "kit-hint",
-                      "每個點是一個共同的題目步驟。", "點越貼近直線，連結越可靠。",
-                      "圖例：Kept 是留下的點，Dropped 是拿掉的點。"),
-    link_plot_box(out("plot"), "正在畫連結圖…"),
+                      # 原文：每個點是一個共同的題目步驟。 | 點越貼近直線，連結越可靠。
+                      "\u6bcf\u500b\u9ede\u662f\u4e00\u500b\u5171\u540c\u7684\u984c\u76ee\u6b65\u9a5f\u3002", "\u9ede\u8d8a\u8cbc\u8fd1\u76f4\u7dda\uff0c\u9023\u7d50\u8d8a\u53ef\u9760\u3002",
+                      # 原文：圖例：Kept 是留下的點，Dropped 是拿掉的點。
+                      "\u5716\u4f8b\uff1aKept \u662f\u7559\u4e0b\u7684\u9ede\uff0cDropped \u662f\u62ff\u6389\u7684\u9ede\u3002"),
+    # 原文：正在畫連結圖…
+    link_plot_box(out("plot"), "\u6b63\u5728\u756b\u9023\u7d50\u5716\u2026"),
     shiny::tags$div(
       class = "kit-downloads",
       ui_download(out("plot_dl")),
       ui_download(out("points_dl"))
     ),
     kitDesign::kit_details_row(
-      kitDesign::kit_detail(paste0(kind, "的檢查（kits_check）"),
+      # 原文：的檢查（kits_check）
+      kitDesign::kit_detail(paste0(kind, "\u7684\u6aa2\u67e5\uff08kits_check\uff09"),
                             shiny::tags$div(class = "kit-table-scroll",
                                             shiny::tableOutput(out("checks")))),
       extra
@@ -569,13 +638,16 @@ link_list_ui <- function(ns, links) {
   blocks <- purrr::imap(links, \(link, name) {
     f <- kitsui_link_formula(link)
     kitDesign::kit_detail(
-      paste0(name, " → ", link$to_scale, "：", f$formula),
+      # 原文： →  | ：
+      paste0(name, " \u2192 ", link$to_scale, "\uff1a", f$formula),
       link_result_ui(ns, link_list_key(name), link)
     )
   })
   shiny::tagList(
-    shiny::h5(paste0("其他已經建好的內部連結（", kitDesign::kit_num(length(links)), " 條）")),
-    shiny::tags$small(class = "kit-hint", "每條一列；打開看係數、連結圖與檢查。"),
+    # 原文：其他已經建好的內部連結（ |  條）
+    shiny::h5(paste0("\u5176\u4ed6\u5df2\u7d93\u5efa\u597d\u7684\u5167\u90e8\u9023\u7d50\uff08", kitDesign::kit_num(length(links)), " \u689d\uff09")),
+    # 原文：每條一列；打開看係數、連結圖與檢查。
+    shiny::tags$small(class = "kit-hint", "\u6bcf\u689d\u4e00\u5217\uff1b\u6253\u958b\u770b\u4fc2\u6578\u3001\u9023\u7d50\u5716\u8207\u6aa2\u67e5\u3002"),
     kitDesign::kit_details_row(unname(blocks))
   )
 }
@@ -614,15 +686,19 @@ link_plot_box <- function(id, wait, height = "420px") {
 #' @noRd
 internal_check_ui <- function(ns, why) {
   kitDesign::kit_detail(
-    "內部連結的獨立檢核（kits_link_check）",
+    # 原文：內部連結的獨立檢核（kits_link_check）
+    "\u5167\u90e8\u9023\u7d50\u7684\u7368\u7acb\u6aa2\u6838\uff08kits_link_check\uff09",
     shiny::tags$small(
       class = "kit-hint",
-      "用不靠共同題目的兩種方法再算一次：同年齡組比較、兩個世代一起校準。",
-      "結果和連結差不多，表示連結可信。"
+      # 原文：用不靠共同題目的兩種方法再算一次：同年齡組比較、兩個世代一起校準。
+      "\u7528\u4e0d\u9760\u5171\u540c\u984c\u76ee\u7684\u5169\u7a2e\u65b9\u6cd5\u518d\u7b97\u4e00\u6b21\uff1a\u540c\u5e74\u9f61\u7d44\u6bd4\u8f03\u3001\u5169\u500b\u4e16\u4ee3\u4e00\u8d77\u6821\u6e96\u3002",
+      # 原文：結果和連結差不多，表示連結可信。
+      "\u7d50\u679c\u548c\u9023\u7d50\u5dee\u4e0d\u591a\uff0c\u8868\u793a\u9023\u7d50\u53ef\u4fe1\u3002"
     ),
     if (is.null(why)) {
       shiny::tagList(
-        kitDesign::kit_button(ns("run_check"), "做獨立檢核"),
+        # 原文：做獨立檢核
+        kitDesign::kit_button(ns("run_check"), "\u505a\u7368\u7acb\u6aa2\u6838"),
         shiny::uiOutput(ns("check_result"))
       )
     } else {
@@ -636,20 +712,25 @@ internal_check_ui <- function(ns, why) {
 check_result_ui <- function(ns, chk) {
   if (is.null(chk)) return(NULL)
   if (inherits(chk, "error")) {
-    return(kitDesign::kit_status_ui(kitDesign::kit_status("stop", "獨立檢核停下來了，沒有結果。"),
-                     shiny::tags$p(kitsui_error_ui(kit_error_text(chk, "獨立檢核")))))
+    # 原文：獨立檢核停下來了，沒有結果。
+    return(kitDesign::kit_status_ui(kitDesign::kit_status("stop", "\u7368\u7acb\u6aa2\u6838\u505c\u4e0b\u4f86\u4e86\uff0c\u6c92\u6709\u7d50\u679c\u3002"),
+                     # 原文：獨立檢核
+                     shiny::tags$p(kitsui_error_ui(kit_error_text(chk, "\u7368\u7acb\u6aa2\u6838")))))
   }
   tab <- kitsui_link_check_table(chk)
   shiny::tagList(
     shiny::tags$small(
       class = "kit-hint kit-tab-caption",
-      "max_diff 是在幾個能力值上，這個方法和連結換算結果的最大差距（目標量尺的單位）。",
-      if ("max_z" %in% names(tab)) "max_z 是這個差距除以標準誤。",
+      # 原文：max_diff 是在幾個能力值上，這個方法和連結換算結果的最大差距（目標量尺的單位）。
+      "max_diff \u662f\u5728\u5e7e\u500b\u80fd\u529b\u503c\u4e0a\uff0c\u9019\u500b\u65b9\u6cd5\u548c\u9023\u7d50\u63db\u7b97\u7d50\u679c\u7684\u6700\u5927\u5dee\u8ddd\uff08\u76ee\u6a19\u91cf\u5c3a\u7684\u55ae\u4f4d\uff09\u3002",
+      # 原文：max_z 是這個差距除以標準誤。
+      if ("max_z" %in% names(tab)) "max_z \u662f\u9019\u500b\u5dee\u8ddd\u9664\u4ee5\u6a19\u6e96\u8aa4\u3002",
       attr(tab, "rule")
     ),
     shiny::tableOutput(ns("check_table")),
     shiny::tags$details(
-      shiny::tags$summary("kits 的完整輸出"),
+      # 原文：kits 的完整輸出
+      shiny::tags$summary("kits \u7684\u5b8c\u6574\u8f38\u51fa"),
       shiny::verbatimTextOutput(ns("check_print"))
     ),
     shiny::tags$div(class = "kit-downloads",
@@ -663,15 +744,21 @@ check_result_ui <- function(ns, chk) {
 link_anchor_ui <- function(anchors, table_id, ref = KITSUI_REF_COHORT) {
   if (nrow(anchors) == 0) return(NULL)
   kitDesign::kit_details_row(kitDesign::kit_detail(
-    "錨題數與外部連結涵蓋的量尺",
-    shiny::tags$p("參照世代各量尺在題庫裡的錨題數（kits_anchors()），與外部連結涵蓋哪些量尺："),
+    # 原文：錨題數與外部連結涵蓋的量尺
+    "\u9328\u984c\u6578\u8207\u5916\u90e8\u9023\u7d50\u6db5\u84cb\u7684\u91cf\u5c3a",
+    # 原文：參照世代各量尺在題庫裡的錨題數（kits_anchors()），與外部連結涵蓋哪些量尺：
+    shiny::tags$p("\u53c3\u7167\u4e16\u4ee3\u5404\u91cf\u5c3a\u5728\u984c\u5eab\u88e1\u7684\u9328\u984c\u6578\uff08kits_anchors()\uff09\uff0c\u8207\u5916\u90e8\u9023\u7d50\u6db5\u84cb\u54ea\u4e9b\u91cf\u5c3a\uff1a"),
     shiny::tags$div(class = "kit-table-scroll", shiny::tableOutput(table_id)),
     shiny::tags$small(
       class = "kit-hint",
-      "外部連結是各領域共用的一條線。",
-      paste0("沒有錨題、或之後才進題庫的 ", ref, " 量尺，沿用同一條外部連結，不重新估計。"),
-      "之後各回合題庫裡的錨題數可能變多。",
-      "但外部連結凍結後，不會用新的錨題重新估計。"
+      # 原文：外部連結是各領域共用的一條線。
+      "\u5916\u90e8\u9023\u7d50\u662f\u5404\u9818\u57df\u5171\u7528\u7684\u4e00\u689d\u7dda\u3002",
+      # 原文：沒有錨題、或之後才進題庫的  |  量尺，沿用同一條外部連結，不重新估計。
+      paste0("\u6c92\u6709\u9328\u984c\u3001\u6216\u4e4b\u5f8c\u624d\u9032\u984c\u5eab\u7684 ", ref, " \u91cf\u5c3a\uff0c\u6cbf\u7528\u540c\u4e00\u689d\u5916\u90e8\u9023\u7d50\uff0c\u4e0d\u91cd\u65b0\u4f30\u8a08\u3002"),
+      # 原文：之後各回合題庫裡的錨題數可能變多。
+      "\u4e4b\u5f8c\u5404\u56de\u5408\u984c\u5eab\u88e1\u7684\u9328\u984c\u6578\u53ef\u80fd\u8b8a\u591a\u3002",
+      # 原文：但外部連結凍結後，不會用新的錨題重新估計。
+      "\u4f46\u5916\u90e8\u9023\u7d50\u51cd\u7d50\u5f8c\uff0c\u4e0d\u6703\u7528\u65b0\u7684\u9328\u984c\u91cd\u65b0\u4f30\u8a08\u3002"
     )
   ))
 }
@@ -680,11 +767,13 @@ link_anchor_ui <- function(anchors, table_id, ref = KITSUI_REF_COHORT) {
 #' @noRd
 vertical_pick_ui <- function(ns, domains, pick, why = NULL) {
   if (length(domains) == 0) {
-    return(kitDesign::kit_callout(why %||% "這一回合沒有校準好的領域，所以沒有垂直連結圖。"))
+    # 原文：這一回合沒有校準好的領域，所以沒有垂直連結圖。
+    return(kitDesign::kit_callout(why %||% "\u9019\u4e00\u56de\u5408\u6c92\u6709\u6821\u6e96\u597d\u7684\u9818\u57df\uff0c\u6240\u4ee5\u6c92\u6709\u5782\u76f4\u9023\u7d50\u5716\u3002"))
   }
   if (!isTRUE(pick %in% domains)) pick <- domains[1]
   shiny::tagList(
-    shiny::selectInput(ns("vertical_domain"), "哪一個領域？", domains, pick),
+    # 原文：哪一個領域？
+    shiny::selectInput(ns("vertical_domain"), "\u54ea\u4e00\u500b\u9818\u57df\uff1f", domains, pick),
     shiny::uiOutput(ns("vertical_body"))
   )
 }
@@ -721,9 +810,12 @@ vertical_tab_ui <- function(ns, stage, v) {
   if (isTRUE(v$error)) {
     return(kitDesign::kit_status_ui(kitDesign::kit_status(
       "stop", v$why,
-      action = shiny::tags$p("怎麼辦：連結本身不受影響，可以照常到「④ 受試者評分」。",
-                             "請把這個領域與下面的原文告訴維護 kitsUI 的人。"),
-      details = v$raw[1], details_title = "R 的原文"
+      # 原文：怎麼辦：連結本身不受影響，可以照常到「④ 受試者評分」。
+      action = shiny::tags$p("\u600e\u9ebc\u8fa6\uff1a\u9023\u7d50\u672c\u8eab\u4e0d\u53d7\u5f71\u97ff\uff0c\u53ef\u4ee5\u7167\u5e38\u5230\u300c\u2463 \u53d7\u8a66\u8005\u8a55\u5206\u300d\u3002",
+                             # 原文：請把這個領域與下面的原文告訴維護 kitsUI 的人。
+                             "\u8acb\u628a\u9019\u500b\u9818\u57df\u8207\u4e0b\u9762\u7684\u539f\u6587\u544a\u8a34\u7dad\u8b77 kitsUI \u7684\u4eba\u3002"),
+      # 原文：R 的原文
+      details = v$raw[1], details_title = "R \u7684\u539f\u6587"
     )))
   }
   # 外部連結不適用（na）不是錯誤，不用橘色
@@ -731,7 +823,8 @@ vertical_tab_ui <- function(ns, stage, v) {
   id <- \(x) ns(paste0("vertical_", stage, "_", x))
   shiny::tagList(
     shiny::tags$p(class = "kit-hint kit-tab-caption", vertical_caption(stage, v)),
-    link_plot_box(id("plot"), "正在畫垂直連結圖…", "460px"),
+    # 原文：正在畫垂直連結圖…
+    link_plot_box(id("plot"), "\u6b63\u5728\u756b\u5782\u76f4\u9023\u7d50\u5716\u2026", "460px"),
     if (!is.null(v$note)) kitDesign::kit_callout(v$note, warn = TRUE),
     if (!is.null(kitsui_vertical_dropped_note(v$vertical, v$wave_unit %||% "months"))) {
       shiny::tags$p(class = "kit-hint",
@@ -750,46 +843,69 @@ vertical_caption <- function(stage, v) {
   text <- switch(
     stage,
     none = paste0(if (length(scales) == 1) {
-                    paste0("未連結：一個世代，在自己校準的量尺上（", scales, "）。")
+                    # 原文：未連結：一個世代，在自己校準的量尺上（ | ）。
+                    paste0("\u672a\u9023\u7d50\uff1a\u4e00\u500b\u4e16\u4ee3\uff0c\u5728\u81ea\u5df1\u6821\u6e96\u7684\u91cf\u5c3a\u4e0a\uff08", scales, "\uff09\u3002")
                   } else {
-                    paste0("未連結：各世代在自己校準的量尺上（", paste(scales, collapse = "、"),
-                           "），數字不能直接比。")
+                    # 原文：未連結：各世代在自己校準的量尺上（ | 、
+                    paste0("\u672a\u9023\u7d50\uff1a\u5404\u4e16\u4ee3\u5728\u81ea\u5df1\u6821\u6e96\u7684\u91cf\u5c3a\u4e0a\uff08", paste(scales, collapse = "\u3001"),
+                           # 原文：），數字不能直接比。
+                           "\uff09\uff0c\u6578\u5b57\u4e0d\u80fd\u76f4\u63a5\u6bd4\u3002")
                   },
                   if (any(kitsui_vertical_borrowed(v$table$cohort))) {
-                    paste0("借用另一世代題庫的波次在那個題庫的量尺上，另成一條線，",
-                           "不和自己量尺的波次連在一起。")
+                    # 原文：借用另一世代題庫的波次在那個題庫的量尺上，另成一條線，
+                    paste0("\u501f\u7528\u53e6\u4e00\u4e16\u4ee3\u984c\u5eab\u7684\u6ce2\u6b21\u5728\u90a3\u500b\u984c\u5eab\u7684\u91cf\u5c3a\u4e0a\uff0c\u53e6\u6210\u4e00\u689d\u7dda\uff0c",
+                           # 原文：不和自己量尺的波次連在一起。
+                           "\u4e0d\u548c\u81ea\u5df1\u91cf\u5c3a\u7684\u6ce2\u6b21\u9023\u5728\u4e00\u8d77\u3002")
                   }),
-    internal = paste0("內部連結後：", paste(setdiff(scales, v$scale), collapse = "、"), " 換到 ",
-                      v$scale, " 的量尺，",
+    # 原文：內部連結後： | 、 |  換到 
+    internal = paste0("\u5167\u90e8\u9023\u7d50\u5f8c\uff1a", paste(setdiff(scales, v$scale), collapse = "\u3001"), " \u63db\u5230 ",
+                      # 原文： 的量尺，
+                      v$scale, " \u7684\u91cf\u5c3a\uff0c",
                       if (unit == "months") {
-                        paste0("同一個月齡", if (length(scales) > 2) "各世代" else "兩個世代",
-                               "的點應該靠在一起。")
+                        # 原文：同一個月齡 | 各世代 | 兩個世代
+                        paste0("\u540c\u4e00\u500b\u6708\u9f61", if (length(scales) > 2) "\u5404\u4e16\u4ee3" else "\u5169\u500b\u4e16\u4ee3",
+                               # 原文：的點應該靠在一起。
+                               "\u7684\u9ede\u61c9\u8a72\u9760\u5728\u4e00\u8d77\u3002")
                       } else {
-                        paste0("可以直接比。x 軸是", kitsui_wave_word(unit), "，同一",
-                               if (unit == "years") "年" else "波", "各世代的年齡不同，",
-                               "所以點不一定會靠在一起（例如年紀較大的世代分數本來就可能比較高）。",
-                               "連結合不合理，請看上面的內部連結圖與檢查，或比較年齡相同的點。")
+                        # 原文：可以直接比。x 軸是 | ，同一
+                        paste0("\u53ef\u4ee5\u76f4\u63a5\u6bd4\u3002x \u8ef8\u662f", kitsui_wave_word(unit), "\uff0c\u540c\u4e00",
+                               # 原文：年 | 波 | 各世代的年齡不同，
+                               if (unit == "years") "\u5e74" else "\u6ce2", "\u5404\u4e16\u4ee3\u7684\u5e74\u9f61\u4e0d\u540c\uff0c",
+                               # 原文：所以點不一定會靠在一起（例如年紀較大的世代分數本來就可能比較高）。
+                               "\u6240\u4ee5\u9ede\u4e0d\u4e00\u5b9a\u6703\u9760\u5728\u4e00\u8d77\uff08\u4f8b\u5982\u5e74\u7d00\u8f03\u5927\u7684\u4e16\u4ee3\u5206\u6578\u672c\u4f86\u5c31\u53ef\u80fd\u6bd4\u8f03\u9ad8\uff09\u3002",
+                               # 原文：連結合不合理，請看上面的內部連結圖與檢查，或比較年齡相同的點。
+                               "\u9023\u7d50\u5408\u4e0d\u5408\u7406\uff0c\u8acb\u770b\u4e0a\u9762\u7684\u5167\u90e8\u9023\u7d50\u5716\u8207\u6aa2\u67e5\uff0c\u6216\u6bd4\u8f03\u5e74\u9f61\u76f8\u540c\u7684\u9ede\u3002")
                       }),
-    external = "外部連結後：各世代都換到 D，相對位置和內部連結後相同。"
+    # 原文：外部連結後：各世代都換到 D，相對位置和內部連結後相同。
+    external = "\u5916\u90e8\u9023\u7d50\u5f8c\uff1a\u5404\u4e16\u4ee3\u90fd\u63db\u5230 D\uff0c\u76f8\u5c0d\u4f4d\u7f6e\u548c\u5167\u90e8\u9023\u7d50\u5f8c\u76f8\u540c\u3002"
   )
   if (!any(v$table$source == "earlier")) return(text)
   rounds <- unique(v$table$round[v$table$source == "earlier"])
   where <- if (unit != "months") {
-    paste0("x 軸是波次（單位：", kitsui_wave_word(unit), "）。")
+    # 原文：x 軸是波次（單位： | ）。
+    paste0("x \u8ef8\u662f\u6ce2\u6b21\uff08\u55ae\u4f4d\uff1a", kitsui_wave_word(unit), "\uff09\u3002")
   } else if (kitsui_vertical_actual(v$table)) {
-    "x 軸是實際月齡：點畫在各波次實際月齡的中位數。"
+    # 原文：x 軸是實際月齡：點畫在各波次實際月齡的中位數。
+    "x \u8ef8\u662f\u5be6\u969b\u6708\u9f61\uff1a\u9ede\u756b\u5728\u5404\u6ce2\u6b21\u5be6\u969b\u6708\u9f61\u7684\u4e2d\u4f4d\u6578\u3002"
   } else {
     age <- as.numeric(v$table$age_med %||% NA_real_)
     old <- unique(v$table$round[v$table$source == "earlier" & !is.finite(age)])
     if (length(old) > 0) {
-      paste0("x 軸是名義月齡（波次）：之前回合 ", paste(old, collapse = "、"),
-             " 的固定檔沒有實際月齡（kitsUI 0.3.11 以前做的），一張圖不混用兩種月齡。",
-             "要畫在實際月齡，用 kitsUI 0.3.11 以後重做那一回合，再用新的固定檔做這一回合。")
+      # 原文：x 軸是名義月齡（波次）：之前回合  | 、
+      paste0("x \u8ef8\u662f\u540d\u7fa9\u6708\u9f61\uff08\u6ce2\u6b21\uff09\uff1a\u4e4b\u524d\u56de\u5408 ", paste(old, collapse = "\u3001"),
+             # 原文： 的固定檔沒有實際月齡（kitsUI 0.3.11 以前做的），一張圖不混用兩種月齡。
+             " \u7684\u56fa\u5b9a\u6a94\u6c92\u6709\u5be6\u969b\u6708\u9f61\uff08kitsUI 0.3.11 \u4ee5\u524d\u505a\u7684\uff09\uff0c\u4e00\u5f35\u5716\u4e0d\u6df7\u7528\u5169\u7a2e\u6708\u9f61\u3002",
+             # 原文：要畫在實際月齡，用 kitsUI 0.3.11 以後重做那一回合，再用新的固定檔做這一回合。
+             "\u8981\u756b\u5728\u5be6\u969b\u6708\u9f61\uff0c\u7528 kitsUI 0.3.11 \u4ee5\u5f8c\u91cd\u505a\u90a3\u4e00\u56de\u5408\uff0c\u518d\u7528\u65b0\u7684\u56fa\u5b9a\u6a94\u505a\u9019\u4e00\u56de\u5408\u3002")
     } else {
-      "x 軸是名義月齡（波次）：這一回合的資料沒有實際月齡（age_m）。"
+      # 原文：x 軸是名義月齡（波次）：這一回合的資料沒有實際月齡（age_m）。
+      "x \u8ef8\u662f\u540d\u7fa9\u6708\u9f61\uff08\u6ce2\u6b21\uff09\uff1a\u9019\u4e00\u56de\u5408\u7684\u8cc7\u6599\u6c92\u6709\u5be6\u969b\u6708\u9f61\uff08age_m\uff09\u3002"
     }
   }
-  paste0(text, "實心的點是這一回合。",
-         "空心、較淡的點是之前的回合（", paste(rounds, collapse = "、"), "），來自固定檔。",
-         "滑鼠移到點上，可以看是哪一回合。", where)
+  # 原文：實心的點是這一回合。
+  paste0(text, "\u5be6\u5fc3\u7684\u9ede\u662f\u9019\u4e00\u56de\u5408\u3002",
+         # 原文：空心、較淡的點是之前的回合（ | 、 | ），來自固定檔。
+         "\u7a7a\u5fc3\u3001\u8f03\u6de1\u7684\u9ede\u662f\u4e4b\u524d\u7684\u56de\u5408\uff08", paste(rounds, collapse = "\u3001"), "\uff09\uff0c\u4f86\u81ea\u56fa\u5b9a\u6a94\u3002",
+         # 原文：滑鼠移到點上，可以看是哪一回合。
+         "\u6ed1\u9f20\u79fb\u5230\u9ede\u4e0a\uff0c\u53ef\u4ee5\u770b\u662f\u54ea\u4e00\u56de\u5408\u3002", where)
 }

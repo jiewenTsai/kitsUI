@@ -83,16 +83,20 @@ kitsui_version <- function() {
 kitsui_write_fixed <- function(fixed, zip_path) {
   stopped <- attr(fixed, "stopped")
   if (length(stopped) > 0) {
-    kitDesign::kit_abort("這一回合有量尺停下來（", paste(stopped, collapse = "、"), "），不產生新的固定檔。",
-                         "請看檢查表的原因，處理後重跑這一回合；",
-                         "或在 ② 把它們選成「這一回合不做」再校準一次，其他量尺就可以產生固定檔。")
+    # 原文：這一回合有量尺停下來（ | 、 | ），不產生新的固定檔。
+    kitDesign::kit_abort("\u9019\u4e00\u56de\u5408\u6709\u91cf\u5c3a\u505c\u4e0b\u4f86\uff08", paste(stopped, collapse = "\u3001"), "\uff09\uff0c\u4e0d\u7522\u751f\u65b0\u7684\u56fa\u5b9a\u6a94\u3002",
+                         # 原文：請看檢查表的原因，處理後重跑這一回合；
+                         "\u8acb\u770b\u6aa2\u67e5\u8868\u7684\u539f\u56e0\uff0c\u8655\u7406\u5f8c\u91cd\u8dd1\u9019\u4e00\u56de\u5408\uff1b",
+                         # 原文：或在 ② 把它們選成「這一回合不做」再校準一次，其他量尺就可以產生固定檔。
+                         "\u6216\u5728 \u2461 \u628a\u5b83\u5011\u9078\u6210\u300c\u9019\u4e00\u56de\u5408\u4e0d\u505a\u300d\u518d\u6821\u6e96\u4e00\u6b21\uff0c\u5176\u4ed6\u91cf\u5c3a\u5c31\u53ef\u4ee5\u7522\u751f\u56fa\u5b9a\u6a94\u3002")
   }
   dir <- file.path(tempfile("fixed"), "fixed_set")
   dir.create(dir, recursive = TRUE)
   # 給人看的說明（每個檔案是什麼、下一回合怎麼用）；讀固定檔時不讀它
   # 說明是英文；使用者給的名稱有中文時加 UTF-8 BOM，記事本打開才不會是亂碼
   readme <- enc2utf8(kitsui_fixed_readme(fixed))
-  bom <- if (all(utf8ToInt(readme) < 128)) "" else "﻿"
+  # 原文：﻿
+  bom <- if (all(utf8ToInt(readme) < 128)) "" else "\ufeff"
   writeLines(paste0(bom, readme), file.path(dir, "README.txt"), useBytes = TRUE)
   csvs <- paste0(names(KITSUI_FIXED_COLS), ".csv")
   for (name in names(KITSUI_FIXED_COLS)) {
@@ -184,7 +188,8 @@ kitsui_zip_junk <- function(names) {
 kitsui_open_fixed <- function(zip_path) {
   listed <- tryCatch(suppressWarnings(zip::zip_list(zip_path))$filename, error = \(e) NULL)
   if (length(listed) == 0) {
-    kitDesign::kit_abort("這不是固定檔（zip）。請上傳 kitsUI 在 ④ 下載的固定檔（kitsui_fixed_…zip）。")
+    # 原文：這不是固定檔（zip）。請上傳 kitsUI 在 ④ 下載的固定檔（kitsui_fixed_…zip）。
+    kitDesign::kit_abort("\u9019\u4e0d\u662f\u56fa\u5b9a\u6a94\uff08zip\uff09\u3002\u8acb\u4e0a\u50b3 kitsUI \u5728 \u2463 \u4e0b\u8f09\u7684\u56fa\u5b9a\u6a94\uff08kitsui_fixed_\u2026zip\uff09\u3002")
   }
   names <- listed[!kitsui_zip_junk(listed)]
   # 根目錄沒有檔案、只有一層資料夾時，讀那個資料夾
@@ -200,17 +205,22 @@ kitsui_open_fixed <- function(zip_path) {
   extra <- names[!root]
   twice <- extra[basename(extra) %in% c(known, "README.txt")]
   if (length(twice) > 0) {
-    kitDesign::kit_abort("這個 zip 裡除了固定檔，還有同名的檔案：", paste(twice, collapse = "、"), "。",
-                         "不知道哪一個才是真的，所以不讀。",
-                         "請上傳 kitsUI 在 ④ 下載的原始固定檔，不要解壓縮後再壓縮。")
+    # 原文：這個 zip 裡除了固定檔，還有同名的檔案： | 、 | 。
+    kitDesign::kit_abort("\u9019\u500b zip \u88e1\u9664\u4e86\u56fa\u5b9a\u6a94\uff0c\u9084\u6709\u540c\u540d\u7684\u6a94\u6848\uff1a", paste(twice, collapse = "\u3001"), "\u3002",
+                         # 原文：不知道哪一個才是真的，所以不讀。
+                         "\u4e0d\u77e5\u9053\u54ea\u4e00\u500b\u624d\u662f\u771f\u7684\uff0c\u6240\u4ee5\u4e0d\u8b80\u3002",
+                         # 原文：請上傳 kitsUI 在 ④ 下載的原始固定檔，不要解壓縮後再壓縮。
+                         "\u8acb\u4e0a\u50b3 kitsUI \u5728 \u2463 \u4e0b\u8f09\u7684\u539f\u59cb\u56fa\u5b9a\u6a94\uff0c\u4e0d\u8981\u89e3\u58d3\u7e2e\u5f8c\u518d\u58d3\u7e2e\u3002")
   }
   read <- rel[root & rel %in% known]
   ignored <- c(extra, names[root & !rel %in% c(known, "README.txt")])
   need <- c("VERSION", paste0(setdiff(names(KITSUI_FIXED_COLS), KITSUI_FIXED_OPTIONAL), ".csv"))
   miss <- setdiff(need, read)
   if (length(miss) > 0) {
-    kitDesign::kit_abort("這個 zip 不是完整的固定檔：缺少 ", paste(miss, collapse = "、"), "。",
-                         "請上傳 kitsUI 在 ④ 下載的固定檔。")
+    # 原文：這個 zip 不是完整的固定檔：缺少  | 、 | 。
+    kitDesign::kit_abort("\u9019\u500b zip \u4e0d\u662f\u5b8c\u6574\u7684\u56fa\u5b9a\u6a94\uff1a\u7f3a\u5c11 ", paste(miss, collapse = "\u3001"), "\u3002",
+                         # 原文：請上傳 kitsUI 在 ④ 下載的固定檔。
+                         "\u8acb\u4e0a\u50b3 kitsUI \u5728 \u2463 \u4e0b\u8f09\u7684\u56fa\u5b9a\u6a94\u3002")
   }
   dir <- tempfile("fixed")
   utils::unzip(zip_path, files = paste0(prefix, read), exdir = dir)
@@ -228,8 +238,10 @@ kitsui_check_sums <- function(dir, read, ignored = character()) {
     list(status = status, text = text, files = files, ignored = ignored)
   }
   if (length(sums) == 0) {
-    return(out("none", paste0("這個固定檔是 kitsUI 0.3.12 以前做的，沒有核對碼，",
-                              "不能確認有沒有被改過。")))
+    # 原文：這個固定檔是 kitsUI 0.3.12 以前做的，沒有核對碼，
+    return(out("none", paste0("\u9019\u500b\u56fa\u5b9a\u6a94\u662f kitsUI 0.3.12 \u4ee5\u524d\u505a\u7684\uff0c\u6c92\u6709\u6838\u5c0d\u78bc\uff0c",
+                              # 原文：不能確認有沒有被改過。
+                              "\u4e0d\u80fd\u78ba\u8a8d\u6709\u6c92\u6709\u88ab\u6539\u904e\u3002")))
   }
   csvs <- setdiff(read, "VERSION")
   now <- c(VERSION = kitsui_version_sha256(dcf),
@@ -238,13 +250,18 @@ kitsui_check_sums <- function(dir, read, ignored = character()) {
   bad <- files[is.na(sums[files]) | is.na(now[files]) | sums[files] != now[files]]
   if (length(bad) > 0) {
     return(out("modified", paste0(
-      "這個固定檔被改過：", paste(bad, collapse = "、"), " 和 kitsUI 寫出時的核對碼（SHA-256）不同。",
-      "改過的題庫或連結會讓舊題的參數、早先的分數對不上，",
-      "②「核對」比對的也會是改過以後的值。",
-      "請用 kitsUI 在 ④ 下載的原始固定檔。"
+      # 原文：這個固定檔被改過： | 、 |  和 kitsUI 寫出時的核對碼（SHA-256）不同。
+      "\u9019\u500b\u56fa\u5b9a\u6a94\u88ab\u6539\u904e\uff1a", paste(bad, collapse = "\u3001"), " \u548c kitsUI \u5beb\u51fa\u6642\u7684\u6838\u5c0d\u78bc\uff08SHA-256\uff09\u4e0d\u540c\u3002",
+      # 原文：改過的題庫或連結會讓舊題的參數、早先的分數對不上，
+      "\u6539\u904e\u7684\u984c\u5eab\u6216\u9023\u7d50\u6703\u8b93\u820a\u984c\u7684\u53c3\u6578\u3001\u65e9\u5148\u7684\u5206\u6578\u5c0d\u4e0d\u4e0a\uff0c",
+      # 原文：②「核對」比對的也會是改過以後的值。
+      "\u2461\u300c\u6838\u5c0d\u300d\u6bd4\u5c0d\u7684\u4e5f\u6703\u662f\u6539\u904e\u4ee5\u5f8c\u7684\u503c\u3002",
+      # 原文：請用 kitsUI 在 ④ 下載的原始固定檔。
+      "\u8acb\u7528 kitsUI \u5728 \u2463 \u4e0b\u8f09\u7684\u539f\u59cb\u56fa\u5b9a\u6a94\u3002"
     ), bad))
   }
-  out("ok", paste0("核對過：", length(now), " 個檔案和 kitsUI 寫出時完全相同（SHA-256）。"))
+  # 原文：核對過： |  個檔案和 kitsUI 寫出時完全相同（SHA-256）。
+  out("ok", paste0("\u6838\u5c0d\u904e\uff1a", length(now), " \u500b\u6a94\u6848\u548c kitsUI \u5beb\u51fa\u6642\u5b8c\u5168\u76f8\u540c\uff08SHA-256\uff09\u3002"))
 }
 
 # VERSION 的欄位裡保留空白與換行的（一行一個檔案）

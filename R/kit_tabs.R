@@ -30,10 +30,14 @@ kitsui_tab_states <- function(data_ok, items = NULL, link_done = FALSE, score = 
     link = if (no_items) "locked" else if (items_done && isTRUE(link_done)) "done" else "ready",
     score = if (no_items || none_ok) "locked" else if (!is.null(score)) "done" else "ready"
   )
-  why <- c(data = "", items = "先在「① 資料」選好這一回合的資料",
-           link = "先做「② 題目校準」",
-           score = if (none_ok) "② 沒有一個量尺校準好，先處理「② 題目校準」停下來的量尺" else {
-             "先做「② 題目校準」"
+  # 原文：先在「① 資料」選好這一回合的資料
+  why <- c(data = "", items = "\u5148\u5728\u300c\u2460 \u8cc7\u6599\u300d\u9078\u597d\u9019\u4e00\u56de\u5408\u7684\u8cc7\u6599",
+           # 原文：先做「② 題目校準」
+           link = "\u5148\u505a\u300c\u2461 \u984c\u76ee\u6821\u6e96\u300d",
+           # 原文：② 沒有一個量尺校準好，先處理「② 題目校準」停下來的量尺
+           score = if (none_ok) "\u2461 \u6c92\u6709\u4e00\u500b\u91cf\u5c3a\u6821\u6e96\u597d\uff0c\u5148\u8655\u7406\u300c\u2461 \u984c\u76ee\u6821\u6e96\u300d\u505c\u4e0b\u4f86\u7684\u91cf\u5c3a" else {
+             # 原文：先做「② 題目校準」
+             "\u5148\u505a\u300c\u2461 \u984c\u76ee\u6821\u6e96\u300d"
            })
   why[state != "locked"] <- ""
   data.frame(tab = KIT_STEP_TABS, state = unname(state[KIT_STEP_TABS]),

@@ -14,13 +14,17 @@ kitsui_link_internal <- function(fixed, domain, cohort = NULL, n_boot = 2000, se
     others <- kitsui_internal_scales(fixed)
     cohort <- scale_cohort(others[scale_domain(others) == domain])
     if (length(cohort) == 0) {
-      text <- paste0("題庫裡還沒有 ", domain, " 參照世代（", fixed$version$reference,
-                     "）以外的量尺。")
+      # 原文：題庫裡還沒有  |  參照世代（
+      text <- paste0("\u984c\u5eab\u88e1\u9084\u6c92\u6709 ", domain, " \u53c3\u7167\u4e16\u4ee3\uff08", fixed$version$reference,
+                     # 原文：）以外的量尺。
+                     "\uff09\u4ee5\u5916\u7684\u91cf\u5c3a\u3002")
       return(list(fixed = fixed, link = NULL, new = FALSE, message = text))
     }
     if (length(cohort) > 1) {
-      kitDesign::kit_abort(domain, " 有好幾個世代可以做內部連結（", paste(cohort, collapse = "、"), "），",
-                           "請指定是哪一個世代。")
+      # 原文： 有好幾個世代可以做內部連結（ | 、 | ），
+      kitDesign::kit_abort(domain, " \u6709\u597d\u5e7e\u500b\u4e16\u4ee3\u53ef\u4ee5\u505a\u5167\u90e8\u9023\u7d50\uff08", paste(cohort, collapse = "\u3001"), "\uff09\uff0c",
+                           # 原文：請指定是哪一個世代。
+                           "\u8acb\u6307\u5b9a\u662f\u54ea\u4e00\u500b\u4e16\u4ee3\u3002")
     }
   }
   from <- scale_key(domain, cohort)
@@ -55,7 +59,8 @@ kitsui_bank_thr <- function(fixed, scale) {
   b <- fixed$bank |>
     dplyr::filter(.data$scale == !!scale) |>
     dplyr::arrange(.data$item_id, .data$item_score)
-  if (nrow(b) == 0) kitDesign::kit_abort("固定檔裡沒有 ", scale, " 的題目參數，請先做這個量尺的題目校準。")
+  # 原文：固定檔裡沒有  |  的題目參數，請先做這個量尺的題目校準。
+  if (nrow(b) == 0) kitDesign::kit_abort("\u56fa\u5b9a\u6a94\u88e1\u6c92\u6709 ", scale, " \u7684\u984c\u76ee\u53c3\u6578\uff0c\u8acb\u5148\u505a\u9019\u500b\u91cf\u5c3a\u7684\u984c\u76ee\u6821\u6e96\u3002")
   coef <- data.frame(item_id = b$item_id, item_score = b$item_score, beta = b$beta, se = b$beta_se)
   thr <- kits::algo_thresholds(list(coef = coef, vcov = diag(b$beta_se^2, nrow(b))))
   structure(thr, scale = scale)
@@ -67,7 +72,8 @@ kitsui_bank_thr <- function(fixed, scale) {
 kitsui_link_once <- function(fixed, name, kind, make) {
   if (name %in% kitsui_link_names(fixed)) {
     old <- kitsui_links(fixed, name)[[name]]
-    return(list(fixed = fixed, link = old, new = FALSE, message = "沿用固定檔裡的連結。"))
+    # 原文：沿用固定檔裡的連結。
+    return(list(fixed = fixed, link = old, new = FALSE, message = "\u6cbf\u7528\u56fa\u5b9a\u6a94\u88e1\u7684\u9023\u7d50\u3002"))
   }
   link <- tryCatch(make(), error = function(e) e)
   if (inherits(link, "error")) {
@@ -75,7 +81,8 @@ kitsui_link_once <- function(fixed, name, kind, make) {
   }
   round <- utils::tail(fixed$version$rounds, 1)
   fixed$links <- dplyr::bind_rows(fixed$links, kitsui_link_rows(link, kind, round))
-  list(fixed = fixed, link = link, new = TRUE, message = "已建立連結，存進固定檔。")
+  # 原文：已建立連結，存進固定檔。
+  list(fixed = fixed, link = link, new = TRUE, message = "\u5df2\u5efa\u7acb\u9023\u7d50\uff0c\u5b58\u9032\u56fa\u5b9a\u6a94\u3002")
 }
 
 # 一條連結的點與設定（links.csv 的列）；from_scale 多個時以 ", " 接起來
@@ -173,7 +180,8 @@ kitsui_link_D_extend <- function(fixed, round) {
   fixed$links$from_scale[d] <- paste(c(from, new), collapse = ", ")
   log <- tibble::tibble(
     round = round, scale = new, item_id = NA_character_, check = "D extended",
-    detail = paste0("外部連結延伸到 ", new, "：同一條線（截距、斜率、點都不變），沒有重新估計"),
+    # 原文：外部連結延伸到  | ：同一條線（截距、斜率、點都不變），沒有重新估計
+    detail = paste0("\u5916\u90e8\u9023\u7d50\u5ef6\u4f38\u5230 ", new, "\uff1a\u540c\u4e00\u689d\u7dda\uff08\u622a\u8ddd\u3001\u659c\u7387\u3001\u9ede\u90fd\u4e0d\u8b8a\uff09\uff0c\u6c92\u6709\u91cd\u65b0\u4f30\u8a08"),
     detail_en = paste0("external link extended to ", new,
                        ": same line (intercept, slope and points unchanged), not re-estimated")
   )
@@ -191,10 +199,13 @@ kitsui_d_coverage <- function(fixed, anchors) {
   d <- fixed$links[fixed$links$kind == "D", ]
   ext <- dplyr::filter(fixed$checks, .data$check == "D extended")
   to_d <- dplyr::case_when(
-    nrow(d) == 0 ~ "還沒有外部連結",
+    # 原文：還沒有外部連結
+    nrow(d) == 0 ~ "\u9084\u6c92\u6709\u5916\u90e8\u9023\u7d50",
     anchors$scale %in% ext$scale ~
-      paste0("第 ", ext$round[match(anchors$scale, ext$scale)], " 回合延伸（同一條線）"),
-    TRUE ~ paste0("建立外部連結時（第 ", d$round[1], " 回合）")
+      # 原文：第  |  回合延伸（同一條線）
+      paste0("\u7b2c ", ext$round[match(anchors$scale, ext$scale)], " \u56de\u5408\u5ef6\u4f38\uff08\u540c\u4e00\u689d\u7dda\uff09"),
+    # 原文：建立外部連結時（第  |  回合）
+    TRUE ~ paste0("\u5efa\u7acb\u5916\u90e8\u9023\u7d50\u6642\uff08\u7b2c ", d$round[1], " \u56de\u5408\uff09")
   )
   dplyr::mutate(anchors, external_link = to_d)
 }
@@ -228,7 +239,8 @@ kitsui_internal_scales <- function(fixed) {
 #' @noRd
 kitsui_internal_overview <- function(fixed, links, earlier) {
   scales <- kitsui_internal_scales(fixed)
-  words <- c(frozen = "已凍結", ready = "可以建立", missing = "還不能做（題庫缺一邊）")
+  # 原文：已凍結 | 可以建立 | 還不能做（題庫缺一邊）
+  words <- c(frozen = "\u5df2\u51cd\u7d50", ready = "\u53ef\u4ee5\u5efa\u7acb", missing = "\u9084\u4e0d\u80fd\u505a\uff08\u984c\u5eab\u7f3a\u4e00\u908a\uff09")
   state <- purrr::map_chr(scales, \(s) kitsui_internal_state(fixed, s, links, earlier)$state)
   tibble::tibble(from = scales, to = scale_key(scale_domain(scales), fixed$version$reference),
                  state = unname(words[state]))
@@ -243,16 +255,21 @@ kitsui_internal_overview <- function(fixed, links, earlier) {
 #' @noRd
 kitsui_internal_summary <- function(fixed, ov) {
   if (NROW(ov) == 0) return("")
-  words <- c("已凍結", "可以建立", "還不能做（題庫缺一邊）")
+  # 原文：已凍結 | 可以建立 | 還不能做（題庫缺一邊）
+  words <- c("\u5df2\u51cd\u7d50", "\u53ef\u4ee5\u5efa\u7acb", "\u9084\u4e0d\u80fd\u505a\uff08\u984c\u5eab\u7f3a\u4e00\u908a\uff09")
   n <- purrr::map_int(words, \(w) sum(ov$state == w))
-  parts <- paste0(c("已凍結 ", "可以建立 ", "還不能做 "), kitDesign::kit_num(n), " 條")[n > 0]
+  # 原文：已凍結  | 可以建立  | 還不能做  |  條
+  parts <- paste0(c("\u5df2\u51cd\u7d50 ", "\u53ef\u4ee5\u5efa\u7acb ", "\u9084\u4e0d\u80fd\u505a "), kitDesign::kit_num(n), " \u689d")[n > 0]
   miss <- ov[ov$state == words[3], ]
   why <- if (nrow(miss) > 0) {
     lack <- unique(setdiff(c(miss$from, miss$to), fixed$bank$scale))
-    paste0("（題庫裡還沒有 ", kitsui_first(lack, 6), " 的題目參數，兩邊都校準過才能建立）")
+    # 原文：（題庫裡還沒有  |  的題目參數，兩邊都校準過才能建立）
+    paste0("\uff08\u984c\u5eab\u88e1\u9084\u6c92\u6709 ", kitsui_first(lack, 6), " \u7684\u984c\u76ee\u53c3\u6578\uff0c\u5169\u908a\u90fd\u6821\u6e96\u904e\u624d\u80fd\u5efa\u7acb\uff09")
   }
-  paste0("內部連結共 ", kitDesign::kit_num(nrow(ov)), " 條：", paste(parts, collapse = "、"),
-         why %||% "", "。")
+  # 原文：內部連結共  |  條： | 、
+  paste0("\u5167\u90e8\u9023\u7d50\u5171 ", kitDesign::kit_num(nrow(ov)), " \u689d\uff1a", paste(parts, collapse = "\u3001"),
+         # 原文：。
+         why %||% "", "\u3002")
 }
 
 #' 參照世代，與題庫裡（含這一回合的量尺）其他的世代
@@ -268,25 +285,32 @@ kitsui_link_cohorts <- function(fixed) {
 #' @noRd
 kitsui_internal_title <- function(fixed) {
   co <- kitsui_link_cohorts(fixed)
-  from <- if (length(co$others) == 0) "其他世代" else paste(co$others, collapse = "、")
-  paste0("1. 內部連結：", from, " → ", co$ref)
+  # 原文：其他世代 | 、
+  from <- if (length(co$others) == 0) "\u5176\u4ed6\u4e16\u4ee3" else paste(co$others, collapse = "\u3001")
+  # 原文：1. 內部連結： |  → 
+  paste0("1. \u5167\u90e8\u9023\u7d50\uff1a", from, " \u2192 ", co$ref)
 }
 
 #' 內部連結的說明（一段話）
 #' @noRd
 kitsui_internal_hint <- function(fixed) {
   co <- kitsui_link_cohorts(fixed)
-  from <- if (length(co$others) == 0) "參照世代以外的世代" else paste(co$others, collapse = "、")
-  each <- if (length(co$others) > 1) "每個世代、每個領域各一條。" else "每個領域一條。"
-  paste0("各世代的題目參數各自在自己的量尺上。",
-         "內部連結用兩邊共同的題目，把 ", from, " 的量尺換到參照世代 ", co$ref, " 的量尺。", each)
+  # 原文：參照世代以外的世代 | 、
+  from <- if (length(co$others) == 0) "\u53c3\u7167\u4e16\u4ee3\u4ee5\u5916\u7684\u4e16\u4ee3" else paste(co$others, collapse = "\u3001")
+  # 原文：每個世代、每個領域各一條。 | 每個領域一條。
+  each <- if (length(co$others) > 1) "\u6bcf\u500b\u4e16\u4ee3\u3001\u6bcf\u500b\u9818\u57df\u5404\u4e00\u689d\u3002" else "\u6bcf\u500b\u9818\u57df\u4e00\u689d\u3002"
+  # 原文：各世代的題目參數各自在自己的量尺上。
+  paste0("\u5404\u4e16\u4ee3\u7684\u984c\u76ee\u53c3\u6578\u5404\u81ea\u5728\u81ea\u5df1\u7684\u91cf\u5c3a\u4e0a\u3002",
+         # 原文：內部連結用兩邊共同的題目，把  |  的量尺換到參照世代  |  的量尺。
+         "\u5167\u90e8\u9023\u7d50\u7528\u5169\u908a\u5171\u540c\u7684\u984c\u76ee\uff0c\u628a ", from, " \u7684\u91cf\u5c3a\u63db\u5230\u53c3\u7167\u4e16\u4ee3 ", co$ref, " \u7684\u91cf\u5c3a\u3002", each)
 }
 
 #' 外部連結的標題，例如「2. 外部連結：M03 → D」；不適用時加「（不適用）」
 #' @param applicable kitsui_d_applicable()
 #' @noRd
 kitsui_d_title <- function(fixed, applicable = TRUE) {
-  paste0("2. 外部連結：", kitsui_link_cohorts(fixed)$ref, " → D", if (!applicable) "（不適用）")
+  # 原文：2. 外部連結： |  → D | （不適用）
+  paste0("2. \u5916\u90e8\u9023\u7d50\uff1a", kitsui_link_cohorts(fixed)$ref, " \u2192 D", if (!applicable) "\uff08\u4e0d\u9069\u7528\uff09")
 }
 
 #' 外部連結的說明（一段話）
@@ -294,14 +318,21 @@ kitsui_d_title <- function(fixed, applicable = TRUE) {
 kitsui_d_hint <- function(fixed, applicable = TRUE) {
   ref <- kitsui_link_cohorts(fixed)$ref
   if (!applicable) {
-    return(paste0("D 分數是嬰幼兒發展的國際量尺（GSED），錨題只有 lan、motor、cog 的題目。",
-                  "參照世代（", ref, "）的題目裡沒有錨題，所以這份資料不做外部連結。",
-                  "分數留在參照世代（", ref, "）的量尺上。這不是錯誤。"))
+    # 原文：D 分數是嬰幼兒發展的國際量尺（GSED），錨題只有 lan、motor、cog 的題目。
+    return(paste0("D \u5206\u6578\u662f\u5b30\u5e7c\u5152\u767c\u5c55\u7684\u570b\u969b\u91cf\u5c3a\uff08GSED\uff09\uff0c\u9328\u984c\u53ea\u6709 lan\u3001motor\u3001cog \u7684\u984c\u76ee\u3002",
+                  # 原文：參照世代（ | ）的題目裡沒有錨題，所以這份資料不做外部連結。
+                  "\u53c3\u7167\u4e16\u4ee3\uff08", ref, "\uff09\u7684\u984c\u76ee\u88e1\u6c92\u6709\u9328\u984c\uff0c\u6240\u4ee5\u9019\u4efd\u8cc7\u6599\u4e0d\u505a\u5916\u90e8\u9023\u7d50\u3002",
+                  # 原文：分數留在參照世代（ | ）的量尺上。這不是錯誤。
+                  "\u5206\u6578\u7559\u5728\u53c3\u7167\u4e16\u4ee3\uff08", ref, "\uff09\u7684\u91cf\u5c3a\u4e0a\u3002\u9019\u4e0d\u662f\u932f\u8aa4\u3002"))
   }
-  paste0("D 分數是國際共用的發展量尺。",
-         "參照世代（", ref, "）的題目裡，有些是錨題：它們在 D 量尺上的位置已知。",
-         "外部連結用錨題把 ", ref, " 的量尺換到 D。所有領域共用一條。",
-         "之後才進題庫的 ", ref, " 量尺，沿用同一條外部連結。")
+  # 原文：D 分數是國際共用的發展量尺。
+  paste0("D \u5206\u6578\u662f\u570b\u969b\u5171\u7528\u7684\u767c\u5c55\u91cf\u5c3a\u3002",
+         # 原文：參照世代（ | ）的題目裡，有些是錨題：它們在 D 量尺上的位置已知。
+         "\u53c3\u7167\u4e16\u4ee3\uff08", ref, "\uff09\u7684\u984c\u76ee\u88e1\uff0c\u6709\u4e9b\u662f\u9328\u984c\uff1a\u5b83\u5011\u5728 D \u91cf\u5c3a\u4e0a\u7684\u4f4d\u7f6e\u5df2\u77e5\u3002",
+         # 原文：外部連結用錨題把  |  的量尺換到 D。所有領域共用一條。
+         "\u5916\u90e8\u9023\u7d50\u7528\u9328\u984c\u628a ", ref, " \u7684\u91cf\u5c3a\u63db\u5230 D\u3002\u6240\u6709\u9818\u57df\u5171\u7528\u4e00\u689d\u3002",
+         # 原文：之後才進題庫的  |  量尺，沿用同一條外部連結。
+         "\u4e4b\u5f8c\u624d\u9032\u984c\u5eab\u7684 ", ref, " \u91cf\u5c3a\uff0c\u6cbf\u7528\u540c\u4e00\u689d\u5916\u90e8\u9023\u7d50\u3002")
 }
 
 #' 外部連結（到 D）適不適用
@@ -339,17 +370,22 @@ kitsui_internal_state <- function(fixed, scale, links, earlier) {
   }
   miss <- setdiff(c(scale, to), fixed$bank$scale)
   if (length(miss) > 0) {
-    text <- paste0("題庫裡還沒有 ", paste(miss, collapse = "、"), " 的題目參數。",
-                   "兩個世代都做過題目校準後，才能建立這條連結。")
+    # 原文：題庫裡還沒有  | 、 |  的題目參數。
+    text <- paste0("\u984c\u5eab\u88e1\u9084\u6c92\u6709 ", paste(miss, collapse = "\u3001"), " \u7684\u984c\u76ee\u53c3\u6578\u3002",
+                   # 原文：兩個世代都做過題目校準後，才能建立這條連結。
+                   "\u5169\u500b\u4e16\u4ee3\u90fd\u505a\u904e\u984c\u76ee\u6821\u6e96\u5f8c\uff0c\u624d\u80fd\u5efa\u7acb\u9019\u689d\u9023\u7d50\u3002")
     return(list(state = "missing", link = NULL, text = text))
   }
   list(state = "ready", link = NULL,
-       text = paste0("題庫裡 ", scale, " 與 ", to, " 都有了，可以建立連結。"))
+       # 原文：題庫裡  |  與  |  都有了，可以建立連結。
+       text = paste0("\u984c\u5eab\u88e1 ", scale, " \u8207 ", to, " \u90fd\u6709\u4e86\uff0c\u53ef\u4ee5\u5efa\u7acb\u9023\u7d50\u3002"))
 }
 
 kitsui_frozen_text <- function(from_earlier) {
-  when <- if (from_earlier) "之前的回合就做好了（在這一回合開始時的固定檔裡）" else "這一回合剛做好"
-  paste0("這條連結", when, "，已經凍結。這一回合直接沿用，不會重做。")
+  # 原文：之前的回合就做好了（在這一回合開始時的固定檔裡） | 這一回合剛做好
+  when <- if (from_earlier) "\u4e4b\u524d\u7684\u56de\u5408\u5c31\u505a\u597d\u4e86\uff08\u5728\u9019\u4e00\u56de\u5408\u958b\u59cb\u6642\u7684\u56fa\u5b9a\u6a94\u88e1\uff09" else "\u9019\u4e00\u56de\u5408\u525b\u505a\u597d"
+  # 原文：這條連結 | ，已經凍結。這一回合直接沿用，不會重做。
+  paste0("\u9019\u689d\u9023\u7d50", when, "\uff0c\u5df2\u7d93\u51cd\u7d50\u3002\u9019\u4e00\u56de\u5408\u76f4\u63a5\u6cbf\u7528\uff0c\u4e0d\u6703\u91cd\u505a\u3002")
 }
 
 #' 參照世代各量尺的錨題數（kits_anchors() 的題號出現在題庫裡的）
@@ -376,24 +412,34 @@ kitsui_d_state <- function(fixed, links, earlier, anchors) {
   }
   if (!kitsui_d_applicable(fixed, anchors)) {
     ref <- fixed$version$reference
-    text <- paste0("不適用：參照世代（", ref, "）的量尺（", paste(anchors$scale, collapse = "、"),
-                   "）沒有 D 分數的錨題（kits_anchors()），所以不做外部連結。",
-                   "分數留在參照世代（", ref, "）的量尺上；這一回合照常完成。")
+    # 原文：不適用：參照世代（ | ）的量尺（ | 、
+    text <- paste0("\u4e0d\u9069\u7528\uff1a\u53c3\u7167\u4e16\u4ee3\uff08", ref, "\uff09\u7684\u91cf\u5c3a\uff08", paste(anchors$scale, collapse = "\u3001"),
+                   # 原文：）沒有 D 分數的錨題（kits_anchors()），所以不做外部連結。
+                   "\uff09\u6c92\u6709 D \u5206\u6578\u7684\u9328\u984c\uff08kits_anchors()\uff09\uff0c\u6240\u4ee5\u4e0d\u505a\u5916\u90e8\u9023\u7d50\u3002",
+                   # 原文：分數留在參照世代（ | ）的量尺上；這一回合照常完成。
+                   "\u5206\u6578\u7559\u5728\u53c3\u7167\u4e16\u4ee3\uff08", ref, "\uff09\u7684\u91cf\u5c3a\u4e0a\uff1b\u9019\u4e00\u56de\u5408\u7167\u5e38\u5b8c\u6210\u3002")
     return(list(state = "na", link = NULL, text = text))
   }
   if (nrow(anchors) == 0) {
-    text <- paste0("題庫裡還沒有參照世代（", fixed$version$reference, "）的量尺。",
-                   "先做參照世代的題目校準。")
+    # 原文：題庫裡還沒有參照世代（ | ）的量尺。
+    text <- paste0("\u984c\u5eab\u88e1\u9084\u6c92\u6709\u53c3\u7167\u4e16\u4ee3\uff08", fixed$version$reference, "\uff09\u7684\u91cf\u5c3a\u3002",
+                   # 原文：先做參照世代的題目校準。
+                   "\u5148\u505a\u53c3\u7167\u4e16\u4ee3\u7684\u984c\u76ee\u6821\u6e96\u3002")
     return(list(state = "missing", link = NULL, text = text))
   }
   if (n < 3) {
-    text <- paste0("錨題只有 ", n, " 個，kits 至少要 3 個，所以還不能做外部連結。",
-                   "kits 的訊息：", kitsui_link_D(fixed)$message)
+    # 原文：錨題只有  |  個，kits 至少要 3 個，所以還不能做外部連結。
+    text <- paste0("\u9328\u984c\u53ea\u6709 ", n, " \u500b\uff0ckits \u81f3\u5c11\u8981 3 \u500b\uff0c\u6240\u4ee5\u9084\u4e0d\u80fd\u505a\u5916\u90e8\u9023\u7d50\u3002",
+                   # 原文：kits 的訊息：
+                   "kits \u7684\u8a0a\u606f\uff1a", kitsui_link_D(fixed)$message)
     return(list(state = "missing", link = NULL, text = text))
   }
-  text <- paste0("錨題共 ", n, " 個，可以建立外部連結。",
-                 "外部連結會用上面所有量尺：", paste(anchors$scale, collapse = "、"), "。",
-                 "之後才進題庫的參照世代量尺，會沿用同一條外部連結，不重新估計。")
+  # 原文：錨題共  |  個，可以建立外部連結。
+  text <- paste0("\u9328\u984c\u5171 ", n, " \u500b\uff0c\u53ef\u4ee5\u5efa\u7acb\u5916\u90e8\u9023\u7d50\u3002",
+                 # 原文：外部連結會用上面所有量尺： | 、 | 。
+                 "\u5916\u90e8\u9023\u7d50\u6703\u7528\u4e0a\u9762\u6240\u6709\u91cf\u5c3a\uff1a", paste(anchors$scale, collapse = "\u3001"), "\u3002",
+                 # 原文：之後才進題庫的參照世代量尺，會沿用同一條外部連結，不重新估計。
+                 "\u4e4b\u5f8c\u624d\u9032\u984c\u5eab\u7684\u53c3\u7167\u4e16\u4ee3\u91cf\u5c3a\uff0c\u6703\u6cbf\u7528\u540c\u4e00\u689d\u5916\u90e8\u9023\u7d50\uff0c\u4e0d\u91cd\u65b0\u4f30\u8a08\u3002")
   list(state = "ready", link = NULL, text = text)
 }
 
@@ -403,9 +449,12 @@ kitsui_link_check_why <- function(round, link) {
   scales <- c(link$from_scale, link$to_scale)
   have <- scales %in% names(round$items) & scales %in% names(round$data)
   if (all(have)) return(NULL)
-  paste0("這一回合的題目校準沒有 ", paste(scales[!have], collapse = "、"), "。",
-         "獨立檢核要用兩個世代這一回合的作答，所以這次不能做。",
-         "下次兩個世代的資料一起進來時就能做。")
+  # 原文：這一回合的題目校準沒有  | 、 | 。
+  paste0("\u9019\u4e00\u56de\u5408\u7684\u984c\u76ee\u6821\u6e96\u6c92\u6709 ", paste(scales[!have], collapse = "\u3001"), "\u3002",
+         # 原文：獨立檢核要用兩個世代這一回合的作答，所以這次不能做。
+         "\u7368\u7acb\u6aa2\u6838\u8981\u7528\u5169\u500b\u4e16\u4ee3\u9019\u4e00\u56de\u5408\u7684\u4f5c\u7b54\uff0c\u6240\u4ee5\u9019\u6b21\u4e0d\u80fd\u505a\u3002",
+         # 原文：下次兩個世代的資料一起進來時就能做。
+         "\u4e0b\u6b21\u5169\u500b\u4e16\u4ee3\u7684\u8cc7\u6599\u4e00\u8d77\u9032\u4f86\u6642\u5c31\u80fd\u505a\u3002")
 }
 
 #' 獨立檢核：kits_link_check()，兩個世代這一回合的校準與作答
@@ -433,10 +482,13 @@ kitsui_link_table <- function(fixed, links, earlier) {
   purrr::imap(links, \(l, n) {
     co <- stats::coef(l)
     tibble::tibble(
-      link = n, kind = if (n == "D") "外部連結" else "內部連結",
-      from = paste(l$from_scale, collapse = "、"), to = l$to_scale,
+      # 原文：外部連結 | 內部連結
+      link = n, kind = if (n == "D") "\u5916\u90e8\u9023\u7d50" else "\u5167\u90e8\u9023\u7d50",
+      # 原文：、
+      from = paste(l$from_scale, collapse = "\u3001"), to = l$to_scale,
       intercept = co[["intercept"]], slope = co[["slope"]],
-      made = if (n %in% earlier) "之前的回合" else "這一回合"
+      # 原文：之前的回合 | 這一回合
+      made = if (n %in% earlier) "\u4e4b\u524d\u7684\u56de\u5408" else "\u9019\u4e00\u56de\u5408"
     )
   }) |>
     purrr::list_rbind() |>
@@ -447,8 +499,10 @@ kitsui_link_table <- function(fixed, links, earlier) {
 #' @return list(formula = 一行文字, table = tibble（term、estimate、linking_error）)
 #' @noRd
 kitsui_link_formula <- function(link) {
-  from <- paste(unique(link$from_scale), collapse = " 或 ")
-  formula <- sprintf("%s = %.2f + %.2f × %s", link$to_scale, link$intercept, link$slope, from)
+  # 原文： 或 
+  from <- paste(unique(link$from_scale), collapse = " \u6216 ")
+  # 原文：%s = %.2f + %.2f × %s
+  formula <- sprintf("%s = %.2f + %.2f \u00d7 %s", link$to_scale, link$intercept, link$slope, from)
   table <- tibble::tibble(
     term = c("intercept", "slope"),
     estimate = c(link$intercept, link$slope),
@@ -478,16 +532,21 @@ kitsui_link_check_table <- function(chk) {
   ok <- if (draws) tab$max_z <= 2 else tab$max_diff <= tol
   main <- grepl("^common items", tab$method)
   tab$judgement <- dplyr::case_when(
-    main ~ "這就是連結本身（比較的基準）",
-    ok ~ "一致：差距在誤差範圍內",
-    TRUE ~ "不一致：差距比誤差大"
+    # 原文：這就是連結本身（比較的基準）
+    main ~ "\u9019\u5c31\u662f\u9023\u7d50\u672c\u8eab\uff08\u6bd4\u8f03\u7684\u57fa\u6e96\uff09",
+    # 原文：一致：差距在誤差範圍內
+    ok ~ "\u4e00\u81f4\uff1a\u5dee\u8ddd\u5728\u8aa4\u5dee\u7bc4\u570d\u5167",
+    # 原文：不一致：差距比誤差大
+    TRUE ~ "\u4e0d\u4e00\u81f4\uff1a\u5dee\u8ddd\u6bd4\u8aa4\u5dee\u5927"
   )
   tab$method <- kitsui_check_method_zh(tab$method)
   if (!draws) tab$max_z <- NULL
   rule <- if (draws) {
-    "判斷規則：和連結的差距不超過 2 個標準誤（連結誤差加上這個方法的抽樣誤差）時，算一致。"
+    # 原文：判斷規則：和連結的差距不超過 2 個標準誤（連結誤差加上這個方法的抽樣誤差）時，算一致。
+    "\u5224\u65b7\u898f\u5247\uff1a\u548c\u9023\u7d50\u7684\u5dee\u8ddd\u4e0d\u8d85\u904e 2 \u500b\u6a19\u6e96\u8aa4\uff08\u9023\u7d50\u8aa4\u5dee\u52a0\u4e0a\u9019\u500b\u65b9\u6cd5\u7684\u62bd\u6a23\u8aa4\u5dee\uff09\u6642\uff0c\u7b97\u4e00\u81f4\u3002"
   } else {
-    paste0("判斷規則：這條連結沒有重抽，差距不超過 ", tol, "（目標量尺的單位）時，算一致。")
+    # 原文：判斷規則：這條連結沒有重抽，差距不超過  | （目標量尺的單位）時，算一致。
+    paste0("\u5224\u65b7\u898f\u5247\uff1a\u9019\u689d\u9023\u7d50\u6c92\u6709\u91cd\u62bd\uff0c\u5dee\u8ddd\u4e0d\u8d85\u904e ", tol, "\uff08\u76ee\u6a19\u91cf\u5c3a\u7684\u55ae\u4f4d\uff09\u6642\uff0c\u7b97\u4e00\u81f4\u3002")
   }
   structure(tab, rule = rule)
 }
@@ -496,36 +555,60 @@ kitsui_link_check_table <- function(chk) {
 kitsui_check_method_zh <- function(method) {
   waves <- sub("^same-age groups, waves? ", "", method)
   dplyr::case_when(
-    grepl("^common items", method) ~ "共同題目（連結本身）",
-    grepl("^same-age groups", method) ~ paste0("同年齡組（", waves, " 個月）"),
-    grepl("^concurrent CML", method) ~ "兩個世代一起校準（concurrent CML）",
+    # 原文：共同題目（連結本身）
+    grepl("^common items", method) ~ "\u5171\u540c\u984c\u76ee\uff08\u9023\u7d50\u672c\u8eab\uff09",
+    # 原文：同年齡組（ |  個月）
+    grepl("^same-age groups", method) ~ paste0("\u540c\u5e74\u9f61\u7d44\uff08", waves, " \u500b\u6708\uff09"),
+    # 原文：兩個世代一起校準（concurrent CML）
+    grepl("^concurrent CML", method) ~ "\u5169\u500b\u4e16\u4ee3\u4e00\u8d77\u6821\u6e96\uff08concurrent CML\uff09",
     TRUE ~ method
   )
 }
 
 # kits_check() 各項檢查的一句中文說明（照 check 的開頭比對；不認得的是 NA）
 KITSUI_CHECK_EXPLAIN <- c(
-  "^domain balance" = paste0("保留的錨題點超過三分之二來自同一個領域。",
-                             "這條共用的線主要由那個領域決定。"),
-  "^max \\|domain intercept" = paste0("有領域單獨算的截距，和共用的截距差超過 2 個連結誤差。",
-                                     "一條共用的線不一定適合每個領域。"),
-  "^share dropped" = "篩選拿掉的點超過一成。請在連結圖上看被拿掉的是哪些題。",
-  "^points kept" = "篩選後留下來的共同題目步驟數。",
-  "^correlation of kept points" = "留下來的點在兩把尺上的相關，越接近 1 越好。",
-  "^linking error" = "連結誤差：重抽時截距的標準差。",
-  "^same-age groups: assumption" = "同年齡組的檢核假設兩個世代同月齡的孩子來自同一個母群。",
-  "^same-age groups" = "同月齡的兩個世代對齊能力分布算出的線，和連結的差距。",
-  "^concurrent CML" = paste0("兩個世代一起校準算出的線，和連結差超過 2 個連結誤差。",
-                             "兩種方法不一致。"),
-  "^sd_true is 0" = paste0("這個波次的測量誤差至少和觀察到的變異一樣大。",
-                          "這個波次分不出孩子之間的差別。"),
-  "^cohorts at wave" = paste0("同月齡兩個世代的平均差。",
-                              "接近 0 表示連結後兩個世代對得上。"),
-  "^scale shrinkage" = paste0("最大波次的真分數標準差，除以之前波次最大的。",
-                              "明顯小於 1 時，量尺在高年齡被壓縮。"),
-  "^reliability" = paste0("信度低：這個波次的題目對孩子太容易或太難。",
-                           "很多孩子全對或全錯。"),
-  "^share of misfit" = "不適配的列次比例超過 5%。"
+  # 原文：保留的錨題點超過三分之二來自同一個領域。
+  "^domain balance" = paste0("\u4fdd\u7559\u7684\u9328\u984c\u9ede\u8d85\u904e\u4e09\u5206\u4e4b\u4e8c\u4f86\u81ea\u540c\u4e00\u500b\u9818\u57df\u3002",
+                             # 原文：這條共用的線主要由那個領域決定。
+                             "\u9019\u689d\u5171\u7528\u7684\u7dda\u4e3b\u8981\u7531\u90a3\u500b\u9818\u57df\u6c7a\u5b9a\u3002"),
+  # 原文：有領域單獨算的截距，和共用的截距差超過 2 個連結誤差。
+  "^max \\|domain intercept" = paste0("\u6709\u9818\u57df\u55ae\u7368\u7b97\u7684\u622a\u8ddd\uff0c\u548c\u5171\u7528\u7684\u622a\u8ddd\u5dee\u8d85\u904e 2 \u500b\u9023\u7d50\u8aa4\u5dee\u3002",
+                                     # 原文：一條共用的線不一定適合每個領域。
+                                     "\u4e00\u689d\u5171\u7528\u7684\u7dda\u4e0d\u4e00\u5b9a\u9069\u5408\u6bcf\u500b\u9818\u57df\u3002"),
+  # 原文：篩選拿掉的點超過一成。請在連結圖上看被拿掉的是哪些題。
+  "^share dropped" = "\u7be9\u9078\u62ff\u6389\u7684\u9ede\u8d85\u904e\u4e00\u6210\u3002\u8acb\u5728\u9023\u7d50\u5716\u4e0a\u770b\u88ab\u62ff\u6389\u7684\u662f\u54ea\u4e9b\u984c\u3002",
+  # 原文：篩選後留下來的共同題目步驟數。
+  "^points kept" = "\u7be9\u9078\u5f8c\u7559\u4e0b\u4f86\u7684\u5171\u540c\u984c\u76ee\u6b65\u9a5f\u6578\u3002",
+  # 原文：留下來的點在兩把尺上的相關，越接近 1 越好。
+  "^correlation of kept points" = "\u7559\u4e0b\u4f86\u7684\u9ede\u5728\u5169\u628a\u5c3a\u4e0a\u7684\u76f8\u95dc\uff0c\u8d8a\u63a5\u8fd1 1 \u8d8a\u597d\u3002",
+  # 原文：連結誤差：重抽時截距的標準差。
+  "^linking error" = "\u9023\u7d50\u8aa4\u5dee\uff1a\u91cd\u62bd\u6642\u622a\u8ddd\u7684\u6a19\u6e96\u5dee\u3002",
+  # 原文：同年齡組的檢核假設兩個世代同月齡的孩子來自同一個母群。
+  "^same-age groups: assumption" = "\u540c\u5e74\u9f61\u7d44\u7684\u6aa2\u6838\u5047\u8a2d\u5169\u500b\u4e16\u4ee3\u540c\u6708\u9f61\u7684\u5b69\u5b50\u4f86\u81ea\u540c\u4e00\u500b\u6bcd\u7fa4\u3002",
+  # 原文：同月齡的兩個世代對齊能力分布算出的線，和連結的差距。
+  "^same-age groups" = "\u540c\u6708\u9f61\u7684\u5169\u500b\u4e16\u4ee3\u5c0d\u9f4a\u80fd\u529b\u5206\u5e03\u7b97\u51fa\u7684\u7dda\uff0c\u548c\u9023\u7d50\u7684\u5dee\u8ddd\u3002",
+  # 原文：兩個世代一起校準算出的線，和連結差超過 2 個連結誤差。
+  "^concurrent CML" = paste0("\u5169\u500b\u4e16\u4ee3\u4e00\u8d77\u6821\u6e96\u7b97\u51fa\u7684\u7dda\uff0c\u548c\u9023\u7d50\u5dee\u8d85\u904e 2 \u500b\u9023\u7d50\u8aa4\u5dee\u3002",
+                             # 原文：兩種方法不一致。
+                             "\u5169\u7a2e\u65b9\u6cd5\u4e0d\u4e00\u81f4\u3002"),
+  # 原文：這個波次的測量誤差至少和觀察到的變異一樣大。
+  "^sd_true is 0" = paste0("\u9019\u500b\u6ce2\u6b21\u7684\u6e2c\u91cf\u8aa4\u5dee\u81f3\u5c11\u548c\u89c0\u5bdf\u5230\u7684\u8b8a\u7570\u4e00\u6a23\u5927\u3002",
+                          # 原文：這個波次分不出孩子之間的差別。
+                          "\u9019\u500b\u6ce2\u6b21\u5206\u4e0d\u51fa\u5b69\u5b50\u4e4b\u9593\u7684\u5dee\u5225\u3002"),
+  # 原文：同月齡兩個世代的平均差。
+  "^cohorts at wave" = paste0("\u540c\u6708\u9f61\u5169\u500b\u4e16\u4ee3\u7684\u5e73\u5747\u5dee\u3002",
+                              # 原文：接近 0 表示連結後兩個世代對得上。
+                              "\u63a5\u8fd1 0 \u8868\u793a\u9023\u7d50\u5f8c\u5169\u500b\u4e16\u4ee3\u5c0d\u5f97\u4e0a\u3002"),
+  # 原文：最大波次的真分數標準差，除以之前波次最大的。
+  "^scale shrinkage" = paste0("\u6700\u5927\u6ce2\u6b21\u7684\u771f\u5206\u6578\u6a19\u6e96\u5dee\uff0c\u9664\u4ee5\u4e4b\u524d\u6ce2\u6b21\u6700\u5927\u7684\u3002",
+                              # 原文：明顯小於 1 時，量尺在高年齡被壓縮。
+                              "\u660e\u986f\u5c0f\u65bc 1 \u6642\uff0c\u91cf\u5c3a\u5728\u9ad8\u5e74\u9f61\u88ab\u58d3\u7e2e\u3002"),
+  # 原文：信度低：這個波次的題目對孩子太容易或太難。
+  "^reliability" = paste0("\u4fe1\u5ea6\u4f4e\uff1a\u9019\u500b\u6ce2\u6b21\u7684\u984c\u76ee\u5c0d\u5b69\u5b50\u592a\u5bb9\u6613\u6216\u592a\u96e3\u3002",
+                           # 原文：很多孩子全對或全錯。
+                           "\u5f88\u591a\u5b69\u5b50\u5168\u5c0d\u6216\u5168\u932f\u3002"),
+  # 原文：不適配的列次比例超過 5%。
+  "^share of misfit" = "\u4e0d\u9069\u914d\u7684\u5217\u6b21\u6bd4\u4f8b\u8d85\u904e 5%\u3002"
 )
 
 #' 檢查表加上一欄中文說明（explain）；沒有 check 欄時原樣回傳

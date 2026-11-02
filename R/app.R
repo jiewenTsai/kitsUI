@@ -34,8 +34,10 @@ kit_ui <- function(request) {
   # 主題、樣式、頁首：kitDesign；版本行是 kitsUI 的版本、日期與 kits 的版本
   ver <- kitDesign::kit_app_description("kitsUI")
   kitDesign::kit_page(
-    "KIT 量尺建構工具", "臺灣幼兒發展調查資料庫",
-    tagline = "量尺：校準、連結、計分",
+    # 原文：KIT 量尺建構工具 | 臺灣幼兒發展調查資料庫
+    "KIT \u91cf\u5c3a\u5efa\u69cb\u5de5\u5177", "\u81fa\u7063\u5e7c\u5152\u767c\u5c55\u8abf\u67e5\u8cc7\u6599\u5eab",
+    # 原文：量尺：校準、連結、計分
+    tagline = "\u91cf\u5c3a\uff1a\u6821\u6e96\u3001\u9023\u7d50\u3001\u8a08\u5206",
     version = ver$version, date = ver$date, package = "kitsUI",
     meta_extra = paste0("kits v", utils::packageVersion("kits")),
     shiny::tags$head(shiny::tags$style(KITSUI_CSS)),
@@ -44,11 +46,16 @@ kit_ui <- function(request) {
     # 「使用手冊」不是流程的一步：放最右邊、虛線框
     kitDesign::kit_flow_tabs(
       id = "tabs", aside = "manual",
-      shiny::tabPanel("① 資料", value = "data", mod_data_ui("data")),
-      shiny::tabPanel("② 題目校準", value = "items", mod_items_ui("items")),
-      shiny::tabPanel("③ 連結", value = "link", mod_link_ui("link")),
-      shiny::tabPanel("④ 受試者評分", value = "score", mod_score_ui("score")),
-      shiny::tabPanel("使用手冊", value = "manual", kit_manual_ui())
+      # 原文：① 資料
+      shiny::tabPanel("\u2460 \u8cc7\u6599", value = "data", mod_data_ui("data")),
+      # 原文：② 題目校準
+      shiny::tabPanel("\u2461 \u984c\u76ee\u6821\u6e96", value = "items", mod_items_ui("items")),
+      # 原文：③ 連結
+      shiny::tabPanel("\u2462 \u9023\u7d50", value = "link", mod_link_ui("link")),
+      # 原文：④ 受試者評分
+      shiny::tabPanel("\u2463 \u53d7\u8a66\u8005\u8a55\u5206", value = "score", mod_score_ui("score")),
+      # 原文：使用手冊
+      shiny::tabPanel("\u4f7f\u7528\u624b\u518a", value = "manual", kit_manual_ui())
     ),
     if (kitDesign::kit_is_cloud()) kitsui_cloud_footer()
   )

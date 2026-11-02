@@ -8,7 +8,8 @@ KITSUI_REF_COHORT <- "M03"
 # 波次（wave_m）的單位：第一回合在 ① 選，寫進固定檔的 VERSION（WaveUnit），之後的回合沿用。
 # 之前的固定檔沒有 WaveUnit：當成月（KIT 的 wave_m 是施測月齡）。
 # 借題庫的規則（比對同一個月齡）與 age50 只在單位是月時用
-KITSUI_WAVE_UNITS <- c("月（施測月齡）" = "months", "年" = "years", "波次序號" = "waves")
+# 原文：月（施測月齡） | 年 | 波次序號
+KITSUI_WAVE_UNITS <- c("\u6708\uff08\u65bd\u6e2c\u6708\u9f61\uff09" = "months", "\u5e74" = "years", "\u6ce2\u6b21\u5e8f\u865f" = "waves")
 
 #' 固定檔的波次單位："months"、"years" 或 "waves"（沒有寫時是 "months"）
 #' @noRd
@@ -21,20 +22,24 @@ kitsui_wave_unit <- function(fixed) {
 #' @noRd
 kitsui_wave_text <- function(w, unit = "months") {
   w <- format(w, trim = TRUE)
-  switch(unit, years = paste0(w, " 年"), waves = paste0("第 ", w, " 波"), paste0(w, " 個月"))
+  # 原文： 年 | 第  |  波 |  個月
+  switch(unit, years = paste0(w, " \u5e74"), waves = paste0("\u7b2c ", w, " \u6ce2"), paste0(w, " \u500b\u6708"))
 }
 
 #' 好幾個波次一起寫：「3、6 個月」「2009、2011 年」「第 1、2 波」
 #' @noRd
 kitsui_waves_text <- function(w, unit = "months") {
-  w <- paste(format(w, trim = TRUE), collapse = "、")
-  switch(unit, years = paste0(w, " 年"), waves = paste0("第 ", w, " 波"), paste0(w, " 個月"))
+  # 原文：、
+  w <- paste(format(w, trim = TRUE), collapse = "\u3001")
+  # 原文： 年 | 第  |  波 |  個月
+  switch(unit, years = paste0(w, " \u5e74"), waves = paste0("\u7b2c ", w, " \u6ce2"), paste0(w, " \u500b\u6708"))
 }
 
 #' 句子裡的「月齡」：月是「月齡」，年是「年」，波次序號是「波次」
 #' @noRd
 kitsui_wave_word <- function(unit = "months") {
-  switch(unit, years = "年", waves = "波次", "月齡")
+  # 原文：年 | 波次 | 月齡
+  switch(unit, years = "\u5e74", waves = "\u6ce2\u6b21", "\u6708\u9f61")
 }
 
 #' 圖上 x 軸（英文）的波次：月是 "months"，年是 "years"，波次序號是 "wave number"
@@ -64,15 +69,24 @@ KITSUI_REQUIRED <- c("visit_id", "cohort", "wave_m", "item_id", "item_score", "d
 # 資料約定的欄位：讀檔時的型別（readr 的縮寫：c 文字、d 數字）、一定要有嗎、意思
 KITSUI_COLUMNS <- tibble::tribble(
   ~column, ~type, ~meaning,
-  "visit_id", "c", "列次編號：一個孩子的一個波次一個編號。不同世代也不能重複。",
-  "subj_id", "c", "孩子編號：同一個孩子的各波次相同。",
-  "cohort", "c", "世代，例如 M03、M36。參照世代在第一回合選（有 M03 時預設 M03）。",
-  "sex", "c", "性別，例如 boy、girl。",
-  "wave_m", "d", "波次，例如施測月齡 3、6、12。也可以是年或波次序號（在 ① 選單位）。",
-  "age_m", "d", "實際月齡。題目表的通過年齡要用它。",
-  "item_id", "c", "題號，例如 lana01。",
-  "item_score", "d", "得分：0、1、2…。沒有作答的題不用放。",
-  "domain", "c", "領域，例如 lan、motor、cog。外部連結的錨題用 lan、motor、cog 這三個名稱。"
+  # 原文：列次編號：一個孩子的一個波次一個編號。不同世代也不能重複。
+  "visit_id", "c", "\u5217\u6b21\u7de8\u865f\uff1a\u4e00\u500b\u5b69\u5b50\u7684\u4e00\u500b\u6ce2\u6b21\u4e00\u500b\u7de8\u865f\u3002\u4e0d\u540c\u4e16\u4ee3\u4e5f\u4e0d\u80fd\u91cd\u8907\u3002",
+  # 原文：孩子編號：同一個孩子的各波次相同。
+  "subj_id", "c", "\u5b69\u5b50\u7de8\u865f\uff1a\u540c\u4e00\u500b\u5b69\u5b50\u7684\u5404\u6ce2\u6b21\u76f8\u540c\u3002",
+  # 原文：世代，例如 M03、M36。參照世代在第一回合選（有 M03 時預設 M03）。
+  "cohort", "c", "\u4e16\u4ee3\uff0c\u4f8b\u5982 M03\u3001M36\u3002\u53c3\u7167\u4e16\u4ee3\u5728\u7b2c\u4e00\u56de\u5408\u9078\uff08\u6709 M03 \u6642\u9810\u8a2d M03\uff09\u3002",
+  # 原文：性別，例如 boy、girl。
+  "sex", "c", "\u6027\u5225\uff0c\u4f8b\u5982 boy\u3001girl\u3002",
+  # 原文：波次，例如施測月齡 3、6、12。也可以是年或波次序號（在 ① 選單位）。
+  "wave_m", "d", "\u6ce2\u6b21\uff0c\u4f8b\u5982\u65bd\u6e2c\u6708\u9f61 3\u30016\u300112\u3002\u4e5f\u53ef\u4ee5\u662f\u5e74\u6216\u6ce2\u6b21\u5e8f\u865f\uff08\u5728 \u2460 \u9078\u55ae\u4f4d\uff09\u3002",
+  # 原文：實際月齡。題目表的通過年齡要用它。
+  "age_m", "d", "\u5be6\u969b\u6708\u9f61\u3002\u984c\u76ee\u8868\u7684\u901a\u904e\u5e74\u9f61\u8981\u7528\u5b83\u3002",
+  # 原文：題號，例如 lana01。
+  "item_id", "c", "\u984c\u865f\uff0c\u4f8b\u5982 lana01\u3002",
+  # 原文：得分：0、1、2…。沒有作答的題不用放。
+  "item_score", "d", "\u5f97\u5206\uff1a0\u30011\u30012\u2026\u3002\u6c92\u6709\u4f5c\u7b54\u7684\u984c\u4e0d\u7528\u653e\u3002",
+  # 原文：領域，例如 lan、motor、cog。外部連結的錨題用 lan、motor、cog 這三個名稱。
+  "domain", "c", "\u9818\u57df\uff0c\u4f8b\u5982 lan\u3001motor\u3001cog\u3002\u5916\u90e8\u9023\u7d50\u7684\u9328\u984c\u7528 lan\u3001motor\u3001cog \u9019\u4e09\u500b\u540d\u7a31\u3002"
 ) |>
   dplyr::mutate(required = .data$column %in% KITSUI_REQUIRED, .after = "type")
 
@@ -102,11 +116,13 @@ kitsui_demo <- function(cohorts = c("M03", "M36"), waves = NULL, domains = c("la
 kitsui_check_data <- function(df) {
   miss <- setdiff(c("domain", "cohort"), names(df))
   if (length(miss) > 0) {
-    kitDesign::kit_abort("資料缺少 ", paste(miss, collapse = "、"), " 欄位。請加上後再上傳。")
+    # 原文：資料缺少  | 、 |  欄位。請加上後再上傳。
+    kitDesign::kit_abort("\u8cc7\u6599\u7f3a\u5c11 ", paste(miss, collapse = "\u3001"), " \u6b04\u4f4d\u3002\u8acb\u52a0\u4e0a\u5f8c\u518d\u4e0a\u50b3\u3002")
   }
   blank <- \(x) anyNA(x) || any(!nzchar(trimws(x)))
   if (blank(df$domain) || blank(df$cohort)) {
-    kitDesign::kit_abort("domain 或 cohort 有空白。每一列都要填領域與世代。")
+    # 原文：domain 或 cohort 有空白。每一列都要填領域與世代。
+    kitDesign::kit_abort("domain \u6216 cohort \u6709\u7a7a\u767d\u3002\u6bcf\u4e00\u5217\u90fd\u8981\u586b\u9818\u57df\u8207\u4e16\u4ee3\u3002")
   }
   invisible(df)
 }
@@ -118,10 +134,12 @@ kitsui_check_data <- function(df) {
 #' @noRd
 kitsui_label_problem <- function(label, rounds = character()) {
   if (!grepl("^[A-Za-z0-9]+$", label)) {
-    return("這一回合的名稱只能用英文字母與數字，不能空白。")
+    # 原文：這一回合的名稱只能用英文字母與數字，不能空白。
+    return("\u9019\u4e00\u56de\u5408\u7684\u540d\u7a31\u53ea\u80fd\u7528\u82f1\u6587\u5b57\u6bcd\u8207\u6578\u5b57\uff0c\u4e0d\u80fd\u7a7a\u767d\u3002")
   }
   if (label %in% rounds) {
-    return(paste0("這一回合的名稱「", label, "」和固定檔裡之前的回合重複了。請換一個。"))
+    # 原文：這一回合的名稱「 | 」和固定檔裡之前的回合重複了。請換一個。
+    return(paste0("\u9019\u4e00\u56de\u5408\u7684\u540d\u7a31\u300c", label, "\u300d\u548c\u56fa\u5b9a\u6a94\u88e1\u4e4b\u524d\u7684\u56de\u5408\u91cd\u8907\u4e86\u3002\u8acb\u63db\u4e00\u500b\u3002"))
   }
   character()
 }
@@ -206,8 +224,10 @@ kitsui_check_ids <- function(df) {
   ids <- dplyr::distinct(df, .data$visit_id, .data$cohort)
   dup <- ids$visit_id[duplicated(ids$visit_id)]
   if (length(dup) > 0) {
-    kitDesign::kit_abort("兩個世代有相同的 visit_id（例如 ", dup[1], "），不能放進同一個作答矩陣。",
-                         "請讓每個列次的 visit_id 都不一樣，例如前面加上世代。")
+    # 原文：兩個世代有相同的 visit_id（例如  | ），不能放進同一個作答矩陣。
+    kitDesign::kit_abort("\u5169\u500b\u4e16\u4ee3\u6709\u76f8\u540c\u7684 visit_id\uff08\u4f8b\u5982 ", dup[1], "\uff09\uff0c\u4e0d\u80fd\u653e\u9032\u540c\u4e00\u500b\u4f5c\u7b54\u77e9\u9663\u3002",
+                         # 原文：請讓每個列次的 visit_id 都不一樣，例如前面加上世代。
+                         "\u8acb\u8b93\u6bcf\u500b\u5217\u6b21\u7684 visit_id \u90fd\u4e0d\u4e00\u6a23\uff0c\u4f8b\u5982\u524d\u9762\u52a0\u4e0a\u4e16\u4ee3\u3002")
   }
   invisible(df)
 }
@@ -276,15 +296,18 @@ kitsui_parse_picks <- function(picks, choices) {
 kitsui_data_select <- function(data, picks, choices = NULL, reference = KITSUI_REF_COHORT) {
   miss <- setdiff(KITSUI_REQUIRED, names(data))
   if (length(miss) > 0) {
-    return(list(problems = paste0("資料缺少這些欄位：", paste(miss, collapse = "、"),
-                                  "。請加上後再上傳。", kitsui_missing_hint(names(data)))))
+    # 原文：資料缺少這些欄位： | 、
+    return(list(problems = paste0("\u8cc7\u6599\u7f3a\u5c11\u9019\u4e9b\u6b04\u4f4d\uff1a", paste(miss, collapse = "\u3001"),
+                                  # 原文：。請加上後再上傳。
+                                  "\u3002\u8acb\u52a0\u4e0a\u5f8c\u518d\u4e0a\u50b3\u3002", kitsui_missing_hint(names(data)))))
   }
   # 約定以外的欄拿掉：kits_resp() 要一個列次裡每一欄都一樣，多的欄會讓每個量尺都停下來
   dropped <- setdiff(names(data), KITSUI_COLUMNS$column)
   if (length(dropped) > 0) data <- data[intersect(names(data), KITSUI_COLUMNS$column)]
   choices <- choices %||% kitsui_pick_choices(data)
   sel <- kitsui_parse_picks(picks, choices)
-  if (nrow(sel) == 0) return(list(problems = character(), hint = "請勾這一回合的世代與波次。"))
+  # 原文：請勾這一回合的世代與波次。
+  if (nrow(sel) == 0) return(list(problems = character(), hint = "\u8acb\u52fe\u9019\u4e00\u56de\u5408\u7684\u4e16\u4ee3\u8207\u6ce2\u6b21\u3002"))
   # wave_m 空白的列不知道是哪一個波次：勾選框沒有它們，全部都勾時也不放進來
   no_wave <- sum(is.na(data$wave_m))
   df <- if (nrow(sel) == nrow(choices) && no_wave == 0) data else {
@@ -293,12 +316,14 @@ kitsui_data_select <- function(data, picks, choices = NULL, reference = KITSUI_R
   problems <- tryCatch({
     kitsui_check_data(df)
     character()
-  }, error = \(e) kit_error_text(e, "檢查資料"))
+  # 原文：檢查資料
+  }, error = \(e) kit_error_text(e, "\u6aa2\u67e5\u8cc7\u6599"))
   if (length(problems) == 0) problems <- kitsui_quick_check(df)
   if (length(problems) > 0) return(list(problems = problems))
   notes <- c(
     if (no_wave > 0) {
-      sprintf("wave_m 有 %s 列是空白：不知道是哪一個波次，這些列不放進這一回合。",
+      # 原文：wave_m 有 %s 列是空白：不知道是哪一個波次，這些列不放進這一回合。
+      sprintf("wave_m \u6709 %s \u5217\u662f\u7a7a\u767d\uff1a\u4e0d\u77e5\u9053\u662f\u54ea\u4e00\u500b\u6ce2\u6b21\uff0c\u9019\u4e9b\u5217\u4e0d\u653e\u9032\u9019\u4e00\u56de\u5408\u3002",
               format(no_wave, big.mark = ","))
     },
     kitsui_note_codes(df)
@@ -311,7 +336,8 @@ kitsui_data_select <- function(data, picks, choices = NULL, reference = KITSUI_R
 #' 前 n 個，用「、」接起來；還有更多時加「…」
 #' @noRd
 kitsui_first <- function(x, n = 10) {
-  paste0(paste(utils::head(x, n), collapse = "、"), if (length(x) > n) "…")
+  # 原文：、 | …
+  paste0(paste(utils::head(x, n), collapse = "\u3001"), if (length(x) > n) "\u2026")
 }
 
 #' 缺欄位時多一句：看起來是分號或 Tab 分隔、欄名是大寫或前後有空白
@@ -319,17 +345,22 @@ kitsui_first <- function(x, n = 10) {
 #' @return 一句中文；看不出原因時 ""
 #' @noRd
 kitsui_missing_hint <- function(cols) {
-  save_as <- "請另存成逗號分隔的 CSV（Excel 的「CSV UTF-8（逗號分隔）」）再上傳。"
+  # 原文：請另存成逗號分隔的 CSV（Excel 的「CSV UTF-8（逗號分隔）」）再上傳。
+  save_as <- "\u8acb\u53e6\u5b58\u6210\u9017\u865f\u5206\u9694\u7684 CSV\uff08Excel \u7684\u300cCSV UTF-8\uff08\u9017\u865f\u5206\u9694\uff09\u300d\uff09\u518d\u4e0a\u50b3\u3002"
   if (length(cols) == 1 && grepl(";", cols)) {
-    return(paste0("看起來是用分號（;）分隔的檔案。", save_as))
+    # 原文：看起來是用分號（;）分隔的檔案。
+    return(paste0("\u770b\u8d77\u4f86\u662f\u7528\u5206\u865f\uff08;\uff09\u5206\u9694\u7684\u6a94\u6848\u3002", save_as))
   }
   if (length(cols) == 1 && grepl("\t", cols)) {
-    return(paste0("看起來是用 Tab 分隔的檔案。", save_as))
+    # 原文：看起來是用 Tab 分隔的檔案。
+    return(paste0("\u770b\u8d77\u4f86\u662f\u7528 Tab \u5206\u9694\u7684\u6a94\u6848\u3002", save_as))
   }
   near <- cols[!cols %in% KITSUI_COLUMNS$column & tolower(trimws(cols)) %in% KITSUI_COLUMNS$column]
   if (length(near) == 0) return("")
-  paste0("欄名要全部小寫、前後不能有空白：", kitsui_first(paste0("「", near, "」"), 4), " 要改成 ",
-         kitsui_first(tolower(trimws(near)), 4), "。")
+  # 原文：欄名要全部小寫、前後不能有空白： | 「 | 」 |  要改成 
+  paste0("\u6b04\u540d\u8981\u5168\u90e8\u5c0f\u5beb\u3001\u524d\u5f8c\u4e0d\u80fd\u6709\u7a7a\u767d\uff1a", kitsui_first(paste0("\u300c", near, "\u300d"), 4), " \u8981\u6539\u6210 ",
+         # 原文：。
+         kitsui_first(tolower(trimws(near)), 4), "\u3002")
 }
 
 #' 看起來是遺漏碼的分數：一題裡比其他分數大很多（差 50 以上）、而且是 90 以上的分數，
@@ -351,12 +382,17 @@ kitsui_note_codes <- function(df) {
     purrr::compact()
   if (length(hits) == 0) return(character())
   codes <- sort(unique(unlist(hits)))
-  each <- purrr::imap_chr(hits, \(x, id) paste0(id, "（", kitsui_first(format(x, trim = TRUE), 4), "）"))
+  # 原文：（ | ）
+  each <- purrr::imap_chr(hits, \(x, id) paste0(id, "\uff08", kitsui_first(format(x, trim = TRUE), 4), "\uff09"))
   paste0(
-    length(hits), " 題有看起來是遺漏碼的分數（比其他分數大很多）：",
-    kitsui_some(each, 3), "。這些值是：", kitsui_first(format(codes, trim = TRUE), 8), "。",
-    "kits 會把它們當成真的分數，這些題會分數不連續，量尺可能停下來。",
-    "請先在 kitJoin「", KITJOIN_MISSING_TAB, "」把遺漏碼改成空白，再上傳。"
+    # 原文： 題有看起來是遺漏碼的分數（比其他分數大很多）：
+    length(hits), " \u984c\u6709\u770b\u8d77\u4f86\u662f\u907a\u6f0f\u78bc\u7684\u5206\u6578\uff08\u6bd4\u5176\u4ed6\u5206\u6578\u5927\u5f88\u591a\uff09\uff1a",
+    # 原文：。這些值是： | 。
+    kitsui_some(each, 3), "\u3002\u9019\u4e9b\u503c\u662f\uff1a", kitsui_first(format(codes, trim = TRUE), 8), "\u3002",
+    # 原文：kits 會把它們當成真的分數，這些題會分數不連續，量尺可能停下來。
+    "kits \u6703\u628a\u5b83\u5011\u7576\u6210\u771f\u7684\u5206\u6578\uff0c\u9019\u4e9b\u984c\u6703\u5206\u6578\u4e0d\u9023\u7e8c\uff0c\u91cf\u5c3a\u53ef\u80fd\u505c\u4e0b\u4f86\u3002",
+    # 原文：請先在 kitJoin「 | 」把遺漏碼改成空白，再上傳。
+    "\u8acb\u5148\u5728 kitJoin\u300c", KITJOIN_MISSING_TAB, "\u300d\u628a\u907a\u6f0f\u78bc\u6539\u6210\u7a7a\u767d\uff0c\u518d\u4e0a\u50b3\u3002"
   )
 }
 
@@ -388,10 +424,14 @@ kitsui_note_waves <- function(plan, fixed) {
   hit <- dplyr::inner_join(dplyr::distinct(plan, .data$data_scale, .data$wave_m), done,
                            by = c(data_scale = "scale", "wave_m"))
   if (nrow(hit) == 0) return(character())
-  paste0("這些波次之前的回合已經校準過：",
-         paste(sprintf("%s 的 %s（第 %s 回合）", hit$data_scale, kitsui_wave_text(hit$wave_m, unit),
-                       hit$round), collapse = "、"),
-         "。再校準一次，同一批孩子會有兩份分數。")
+  # 原文：這些波次之前的回合已經校準過：
+  paste0("\u9019\u4e9b\u6ce2\u6b21\u4e4b\u524d\u7684\u56de\u5408\u5df2\u7d93\u6821\u6e96\u904e\uff1a",
+         # 原文：%s 的 %s（第 %s 回合）
+         paste(sprintf("%s \u7684 %s\uff08\u7b2c %s \u56de\u5408\uff09", hit$data_scale, kitsui_wave_text(hit$wave_m, unit),
+                       # 原文：、
+                       hit$round), collapse = "\u3001"),
+         # 原文：。再校準一次，同一批孩子會有兩份分數。
+         "\u3002\u518d\u6821\u6e96\u4e00\u6b21\uff0c\u540c\u4e00\u6279\u5b69\u5b50\u6703\u6709\u5169\u4efd\u5206\u6578\u3002")
 }
 
 #' 要用題庫固定校準，但這一回合的題沒有一題在那個題庫裡（題號都不一樣）：② 一定停下來
@@ -411,8 +451,10 @@ kitsui_note_no_common <- function(df, plan, fixed) {
     !any(items %in% c(bank, vers))
   })
   if (!any(bad)) return(character())
-  sprintf(paste0("%s：%s 的題庫裡沒有這一回合的任何一題（題號都不一樣），② 會停下來。",
-                 "請確認題號和之前的回合相同；或在 ② 把它選成「這一回合不做」。"),
+  # 原文：%s：%s 的題庫裡沒有這一回合的任何一題（題號都不一樣），② 會停下來。
+  sprintf(paste0("%s\uff1a%s \u7684\u984c\u5eab\u88e1\u6c92\u6709\u9019\u4e00\u56de\u5408\u7684\u4efb\u4f55\u4e00\u984c\uff08\u984c\u865f\u90fd\u4e0d\u4e00\u6a23\uff09\uff0c\u2461 \u6703\u505c\u4e0b\u4f86\u3002",
+                 # 原文：請確認題號和之前的回合相同；或在 ② 把它選成「這一回合不做」。
+                 "\u8acb\u78ba\u8a8d\u984c\u865f\u548c\u4e4b\u524d\u7684\u56de\u5408\u76f8\u540c\uff1b\u6216\u5728 \u2461 \u628a\u5b83\u9078\u6210\u300c\u9019\u4e00\u56de\u5408\u4e0d\u505a\u300d\u3002"),
           use$data_scale[bad], use$scale[bad])
 }
 
@@ -494,11 +536,15 @@ kitsui_note_groups <- function(groups, unit = "months") {
     each <- purrr::map_chr(gs, \(g) {
       w <- kitsui_waves_text(g$wave_m, unit)
       if (one_cohort) w else paste(paste0(g$cohort, " ", kitsui_wave_text(g$wave_m, unit)),
-                                   collapse = "、")
+                                   # 原文：、
+                                   collapse = "\u3001")
     })
-    shown <- if (length(each) > 4) c(each[1:4], "…") else each
-    paste0(s, "：這個量尺的題目分成 ", kitDesign::kit_num(length(gs)), " 組（", paste(shown, collapse = "；"),
-           "），各組之間沒有共同題，不能放在同一把尺上。")
+    # 原文：…
+    shown <- if (length(each) > 4) c(each[1:4], "\u2026") else each
+    # 原文：：這個量尺的題目分成  |  組（ | ；
+    paste0(s, "\uff1a\u9019\u500b\u91cf\u5c3a\u7684\u984c\u76ee\u5206\u6210 ", kitDesign::kit_num(length(gs)), " \u7d44\uff08", paste(shown, collapse = "\uff1b"),
+           # 原文：），各組之間沒有共同題，不能放在同一把尺上。
+           "\uff09\uff0c\u5404\u7d44\u4e4b\u9593\u6c92\u6709\u5171\u540c\u984c\uff0c\u4e0d\u80fd\u653e\u5728\u540c\u4e00\u628a\u5c3a\u4e0a\u3002")
   })
 }
 
@@ -508,11 +554,15 @@ kitsui_note_groups <- function(groups, unit = "months") {
 #' @noRd
 kitsui_note_stale <- function(rounds, latest) {
   if (is.null(latest) || latest %in% rounds) return(character())
-  have <- if (length(rounds) == 0) "現在沒有用固定檔" else {
-    paste0("這個固定檔只到第 ", utils::tail(rounds, 1), " 回合")
+  # 原文：現在沒有用固定檔
+  have <- if (length(rounds) == 0) "\u73fe\u5728\u6c92\u6709\u7528\u56fa\u5b9a\u6a94" else {
+    # 原文：這個固定檔只到第  |  回合
+    paste0("\u9019\u500b\u56fa\u5b9a\u6a94\u53ea\u5230\u7b2c ", utils::tail(rounds, 1), " \u56de\u5408")
   }
-  paste0(have, "，這次連線已經做到第 ", latest, " 回合。",
-         "要接著做，請用第 ", latest, " 回合的固定檔。")
+  # 原文：，這次連線已經做到第  |  回合。
+  paste0(have, "\uff0c\u9019\u6b21\u9023\u7dda\u5df2\u7d93\u505a\u5230\u7b2c ", latest, " \u56de\u5408\u3002",
+         # 原文：要接著做，請用第  |  回合的固定檔。
+         "\u8981\u63a5\u8457\u505a\uff0c\u8acb\u7528\u7b2c ", latest, " \u56de\u5408\u7684\u56fa\u5b9a\u6a94\u3002")
 }
 
 #' 資料檔之前的回合用過（md5 在固定檔的 sources 裡）
@@ -523,16 +573,20 @@ kitsui_note_sources <- function(files, fixed) {
   hit <- dplyr::inner_join(files[c("file", "md5")], fixed$sources[c("round", "md5")],
                            by = "md5", relationship = "many-to-many")
   if (nrow(hit) == 0) return(character())
-  hit <- dplyr::summarise(hit, round = paste(unique(.data$round), collapse = "、"), .by = "file")
-  sprintf("%s：這個檔案在第 %s 回合用過。", hit$file, hit$round)
+  # 原文：、
+  hit <- dplyr::summarise(hit, round = paste(unique(.data$round), collapse = "\u3001"), .by = "file")
+  # 原文：%s：這個檔案在第 %s 回合用過。
+  sprintf("%s\uff1a\u9019\u500b\u6a94\u6848\u5728\u7b2c %s \u56de\u5408\u7528\u904e\u3002", hit$file, hit$round)
 }
 
 #' 約定以外的欄（kitsui_read_uploads()、kitsui_data_select() 拿掉的）
 #' @noRd
 kitsui_note_dropped <- function(dropped) {
   if (length(dropped) == 0) return(character())
-  paste0("資料約定以外的欄不用，已經拿掉：", kitsui_first(dropped, 8), "。",
-         "kitsUI 只用「資料檔要有哪些欄位」表上的欄。")
+  # 原文：資料約定以外的欄不用，已經拿掉： | 。
+  paste0("\u8cc7\u6599\u7d04\u5b9a\u4ee5\u5916\u7684\u6b04\u4e0d\u7528\uff0c\u5df2\u7d93\u62ff\u6389\uff1a", kitsui_first(dropped, 8), "\u3002",
+         # 原文：kitsUI 只用「資料檔要有哪些欄位」表上的欄。
+         "kitsUI \u53ea\u7528\u300c\u8cc7\u6599\u6a94\u8981\u6709\u54ea\u4e9b\u6b04\u4f4d\u300d\u8868\u4e0a\u7684\u6b04\u3002")
 }
 
 #' 得分不完整的題（kitsui_category_problems()）：每題一句；太多時只列前 n 題
@@ -540,9 +594,11 @@ kitsui_note_dropped <- function(dropped) {
 #' @noRd
 kitsui_note_categories <- function(problems, n = 12) {
   if (is.null(problems) || nrow(problems) == 0) return(character())
-  out <- sprintf("%s：%s。", problems$scale, sub("。$", "", problems$detail_zh))
+  # 原文：%s：%s。 | 。$
+  out <- sprintf("%s\uff1a%s\u3002", problems$scale, sub("\u3002$", "", problems$detail_zh))
   if (length(out) <= n) return(out)
-  c(out[seq_len(n)], sprintf("……還有 %d 題。", length(out) - n))
+  # 原文：……還有 %d 題。
+  c(out[seq_len(n)], sprintf("\u2026\u2026\u9084\u6709 %d \u984c\u3002", length(out) - n))
 }
 
 #' 很快的作答檢查（幾百萬列也只要一兩秒）：同一列次同一題只能一列、分數是 0 以上的整數
@@ -555,17 +611,21 @@ kitsui_quick_check <- function(df) {
   dup <- vctrs::vec_duplicate_detect(df[c("visit_id", "item_id")])
   if (any(dup)) {
     i <- which(dup)[1]
-    out <- c(out, paste0("同一列次同一題有好幾列（共 ", sum(dup), " 列），例如 ",
-                         df$visit_id[i], " 的 ", df$item_id[i], "。每個列次每一題只能有一列。"))
+    # 原文：同一列次同一題有好幾列（共  |  列），例如 
+    out <- c(out, paste0("\u540c\u4e00\u5217\u6b21\u540c\u4e00\u984c\u6709\u597d\u5e7e\u5217\uff08\u5171 ", sum(dup), " \u5217\uff09\uff0c\u4f8b\u5982 ",
+                         # 原文： 的  | 。每個列次每一題只能有一列。
+                         df$visit_id[i], " \u7684 ", df$item_id[i], "\u3002\u6bcf\u500b\u5217\u6b21\u6bcf\u4e00\u984c\u53ea\u80fd\u6709\u4e00\u5217\u3002"))
   }
   x <- df$item_score[!is.na(df$item_score)]
   if (any(x < 0 | x != round(x))) {
-    out <- c(out, "item_score 要是 0 以上的整數（0、1、2…）。請檢查資料。")
+    # 原文：item_score 要是 0 以上的整數（0、1、2…）。請檢查資料。
+    out <- c(out, "item_score \u8981\u662f 0 \u4ee5\u4e0a\u7684\u6574\u6578\uff080\u30011\u30012\u2026\uff09\u3002\u8acb\u6aa2\u67e5\u8cc7\u6599\u3002")
   }
   ids <- tryCatch({
     kitsui_check_ids(df)
     character()
-  }, error = \(e) kit_error_text(e, "檢查資料"))
+  # 原文：檢查資料
+  }, error = \(e) kit_error_text(e, "\u6aa2\u67e5\u8cc7\u6599"))
   c(out, ids)
 }
 
@@ -581,7 +641,8 @@ kitsui_quick_check <- function(df) {
 #' @return list(data, files, dropped)：files 是 tibble（file、rows、md5）；dropped 是拿掉的欄
 #' @noRd
 kitsui_read_uploads <- function(files, progress = NULL) {
-  if (is.null(files) || nrow(files) == 0) kitDesign::kit_abort("請選擇資料檔（CSV、CSV.GZ 或 SAV）。")
+  # 原文：請選擇資料檔（CSV、CSV.GZ 或 SAV）。
+  if (is.null(files) || nrow(files) == 0) kitDesign::kit_abort("\u8acb\u9078\u64c7\u8cc7\u6599\u6a94\uff08CSV\u3001CSV.GZ \u6216 SAV\uff09\u3002")
   n <- nrow(files)
   # 用 for：purrr 會把錯誤包起來，使用者就看不到原來的中文訊息
   datas <- vector("list", n)
@@ -603,15 +664,21 @@ kitsui_read_uploads <- function(files, progress = NULL) {
 kitsui_read_upload <- function(path, name) {
   r <- suppressWarnings(read_data_file(path, name, col_types = KITSUI_TYPES))
   if (ncol(r$data) == 0 || nrow(r$data) == 0) {
-    kitDesign::kit_abort(name, if (ncol(r$data) == 0) " 是空的檔案" else " 只有欄名，沒有作答的列",
-                         "。請確認匯出的檔案有資料再上傳。")
+    # 原文： 是空的檔案 |  只有欄名，沒有作答的列
+    kitDesign::kit_abort(name, if (ncol(r$data) == 0) " \u662f\u7a7a\u7684\u6a94\u6848" else " \u53ea\u6709\u6b04\u540d\uff0c\u6c92\u6709\u4f5c\u7b54\u7684\u5217",
+                         # 原文：。請確認匯出的檔案有資料再上傳。
+                         "\u3002\u8acb\u78ba\u8a8d\u532f\u51fa\u7684\u6a94\u6848\u6709\u8cc7\u6599\u518d\u4e0a\u50b3\u3002")
   }
   if (r$n_problems > 0) {
     p <- r$problems[1, ]
-    kitDesign::kit_abort(name, " 有 ", r$n_problems, " 個值讀不懂。",
-                         "例如第 ", p$row, " 列的 ", names(r$data)[p$col], " 是「", p$actual, "」，",
-                         "應該是", if (grepl("double|number", p$expected)) "數字" else p$expected, "。",
-                         "請修正後再上傳。")
+    # 原文： 有  |  個值讀不懂。
+    kitDesign::kit_abort(name, " \u6709 ", r$n_problems, " \u500b\u503c\u8b80\u4e0d\u61c2\u3002",
+                         # 原文：例如第  |  列的  |  是「 | 」，
+                         "\u4f8b\u5982\u7b2c ", p$row, " \u5217\u7684 ", names(r$data)[p$col], " \u662f\u300c", p$actual, "\u300d\uff0c",
+                         # 原文：應該是 | 數字 | 。
+                         "\u61c9\u8a72\u662f", if (grepl("double|number", p$expected)) "\u6578\u5b57" else p$expected, "\u3002",
+                         # 原文：請修正後再上傳。
+                         "\u8acb\u4fee\u6b63\u5f8c\u518d\u4e0a\u50b3\u3002")
   }
   # 約定以外的欄拿掉（記在 attr(, "dropped")）；缺約定的欄時留著，① 才說得出缺什麼
   data <- r$data
@@ -634,24 +701,31 @@ kitsui_read_upload <- function(path, name) {
 kitsui_same_columns <- function(datas) {
   first <- names(datas)[1]
   ref <- datas[[1]]
-  kind <- \(x) if (all(is.na(x))) NA_character_ else if (is.numeric(x)) "數字" else "文字"
+  # 原文：數字 | 文字
+  kind <- \(x) if (all(is.na(x))) NA_character_ else if (is.numeric(x)) "\u6578\u5b57" else "\u6587\u5b57"
   for (name in names(datas)[-1]) {
     d <- datas[[name]]
     miss <- setdiff(names(ref), names(d))
     extra <- setdiff(names(d), names(ref))
     if (length(miss) + length(extra) > 0) {
-      kitDesign::kit_abort("檔案 ", name, " 的欄位和 ", first, " 不一樣。",
-                           if (length(miss) > 0) paste0("少了：", paste(miss, collapse = "、"), "。"),
-                           if (length(extra) > 0) paste0("多了：", paste(extra, collapse = "、"), "。"),
-                           "每個檔案的欄位要一樣。")
+      # 原文：檔案  |  的欄位和  |  不一樣。
+      kitDesign::kit_abort("\u6a94\u6848 ", name, " \u7684\u6b04\u4f4d\u548c ", first, " \u4e0d\u4e00\u6a23\u3002",
+                           # 原文：少了： | 、 | 。
+                           if (length(miss) > 0) paste0("\u5c11\u4e86\uff1a", paste(miss, collapse = "\u3001"), "\u3002"),
+                           # 原文：多了： | 、 | 。
+                           if (length(extra) > 0) paste0("\u591a\u4e86\uff1a", paste(extra, collapse = "\u3001"), "\u3002"),
+                           # 原文：每個檔案的欄位要一樣。
+                           "\u6bcf\u500b\u6a94\u6848\u7684\u6b04\u4f4d\u8981\u4e00\u6a23\u3002")
     }
     a <- purrr::map_chr(ref, kind)
     b <- purrr::map_chr(d[names(ref)], kind)
     bad <- which(a != b)
     if (length(bad) > 0) {
       col <- names(ref)[bad[1]]
-      kitDesign::kit_abort("檔案 ", name, " 的 ", col, " 欄是", b[[bad[1]]], "，", first, " 的是",
-                           a[[bad[1]]], "。每個檔案同一欄的型別要一樣。")
+      # 原文：檔案  |  的  |  欄是 | ， |  的是
+      kitDesign::kit_abort("\u6a94\u6848 ", name, " \u7684 ", col, " \u6b04\u662f", b[[bad[1]]], "\uff0c", first, " \u7684\u662f",
+                           # 原文：。每個檔案同一欄的型別要一樣。
+                           a[[bad[1]]], "\u3002\u6bcf\u500b\u6a94\u6848\u540c\u4e00\u6b04\u7684\u578b\u5225\u8981\u4e00\u6a23\u3002")
     }
   }
   invisible(datas)
@@ -670,6 +744,7 @@ kitsui_example_data <- function() {
 #' 資料約定的欄位表（欄名是英文）：column、required、meaning
 #' @noRd
 kitsui_columns_table <- function() {
-  dplyr::transmute(KITSUI_COLUMNS, .data$column, required = ifelse(.data$required, "是", "否"),
+  # 原文：是 | 否
+  dplyr::transmute(KITSUI_COLUMNS, .data$column, required = ifelse(.data$required, "\u662f", "\u5426"),
                    .data$meaning)
 }

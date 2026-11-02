@@ -4,7 +4,7 @@
 \alias{run_kitsui}
 \title{啟動 KIT 量尺建構工具}
 \usage{
-run_kitsui(launch.browser = kit_open_browser, ...)
+run_kitsui(launch.browser = kitDesign::kit_open_browser, ...)
 }
 \arguments{
 \item{launch.browser}{是否自動開啟瀏覽器；也可以傳入開啟網址的函式}

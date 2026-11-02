@@ -1,3 +1,12 @@
+# kitsUI 0.8.5
+
+`R CMD check` passes on every platform (r-universe showed 2 WARNINGs). Nothing changes on screen.
+
+* Chinese text in the R code is written as `\uXXXX`, with the original on a `# 原文：` line above
+  (`tools/escape_non_ascii.R`, the same tool as kitDesign and kitItemBank). R CMD check allows only
+  ASCII in R code.
+* `run_kitsui()`'s help page shows the default `launch.browser = kitDesign::kit_open_browser`, as in the code.
+
 # kitsUI 0.8.4
 
 * Uses kitDesign 0.7.1. The header's version line lists the packages first and the date last, each

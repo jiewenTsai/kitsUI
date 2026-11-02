@@ -4,7 +4,8 @@
 # 連結是斜率為正的直線，所以 P25、中位數、P75 換算後仍然是 P25、中位數、P75
 
 # 垂直連結的三個版本（③ 的分頁標籤）
-KITSUI_VERTICAL_STAGES <- c(none = "未連結", internal = "內部連結後", external = "外部連結後")
+# 原文：未連結 | 內部連結後 | 外部連結後
+KITSUI_VERTICAL_STAGES <- c(none = "\u672a\u9023\u7d50", internal = "\u5167\u90e8\u9023\u7d50\u5f8c", external = "\u5916\u90e8\u9023\u7d50\u5f8c")
 
 # 摘要從這一版開始存進固定檔（舊的固定檔沒有時的說明用）
 KITSUI_SUMMARY_SINCE <- "0.3.8"
@@ -104,20 +105,28 @@ kitsui_vertical_domains <- function(round, fixed = round$fixed) {
 kitsui_vertical_alone <- function(fixed) {
   label <- utils::tail(fixed$version$rounds, 1)
   ws <- fixed$wave_summary
-  head <- "這一回合這個領域只有一個世代。下面是未連結的圖（這個世代各波次的中位數與 P25、P75）。"
+  # 原文：這一回合這個領域只有一個世代。下面是未連結的圖（這個世代各波次的中位數與 P25、P75）。
+  head <- "\u9019\u4e00\u56de\u5408\u9019\u500b\u9818\u57df\u53ea\u6709\u4e00\u500b\u4e16\u4ee3\u3002\u4e0b\u9762\u662f\u672a\u9023\u7d50\u7684\u5716\uff08\u9019\u500b\u4e16\u4ee3\u5404\u6ce2\u6b21\u7684\u4e2d\u4f4d\u6578\u8207 P25\u3001P75\uff09\u3002"
   if (length(setdiff(fixed$version$rounds, label)) == 0) {
-    return(paste0(head, "這是第一個回合，固定檔裡還沒有之前回合的點。",
-                  "要看內部連結後、外部連結後的圖，要有另一個世代，或之前回合的點。"))
+    # 原文：這是第一個回合，固定檔裡還沒有之前回合的點。
+    return(paste0(head, "\u9019\u662f\u7b2c\u4e00\u500b\u56de\u5408\uff0c\u56fa\u5b9a\u6a94\u88e1\u9084\u6c92\u6709\u4e4b\u524d\u56de\u5408\u7684\u9ede\u3002",
+                  # 原文：要看內部連結後、外部連結後的圖，要有另一個世代，或之前回合的點。
+                  "\u8981\u770b\u5167\u90e8\u9023\u7d50\u5f8c\u3001\u5916\u90e8\u9023\u7d50\u5f8c\u7684\u5716\uff0c\u8981\u6709\u53e6\u4e00\u500b\u4e16\u4ee3\uff0c\u6216\u4e4b\u524d\u56de\u5408\u7684\u9ede\u3002"))
   }
   if (NROW(ws) == 0 || all(ws$round %in% label)) {
     return(paste0(
-      head, "上傳的固定檔裡沒有之前回合的各波次摘要（wave_summary.csv），所以畫不出之前回合的點，",
-      "也沒有內部連結後、外部連結後的圖。",
-      "各波次摘要從 kitsUI ", KITSUI_SUMMARY_SINCE, " 開始存進固定檔。",
-      "用新版本重跑之前的回合，產生新的固定檔，這裡就會畫出之前回合的點。"
+      # 原文：上傳的固定檔裡沒有之前回合的各波次摘要（wave_summary.csv），所以畫不出之前回合的點，
+      head, "\u4e0a\u50b3\u7684\u56fa\u5b9a\u6a94\u88e1\u6c92\u6709\u4e4b\u524d\u56de\u5408\u7684\u5404\u6ce2\u6b21\u6458\u8981\uff08wave_summary.csv\uff09\uff0c\u6240\u4ee5\u756b\u4e0d\u51fa\u4e4b\u524d\u56de\u5408\u7684\u9ede\uff0c",
+      # 原文：也沒有內部連結後、外部連結後的圖。
+      "\u4e5f\u6c92\u6709\u5167\u90e8\u9023\u7d50\u5f8c\u3001\u5916\u90e8\u9023\u7d50\u5f8c\u7684\u5716\u3002",
+      # 原文：各波次摘要從 kitsUI  |  開始存進固定檔。
+      "\u5404\u6ce2\u6b21\u6458\u8981\u5f9e kitsUI ", KITSUI_SUMMARY_SINCE, " \u958b\u59cb\u5b58\u9032\u56fa\u5b9a\u6a94\u3002",
+      # 原文：用新版本重跑之前的回合，產生新的固定檔，這裡就會畫出之前回合的點。
+      "\u7528\u65b0\u7248\u672c\u91cd\u8dd1\u4e4b\u524d\u7684\u56de\u5408\uff0c\u7522\u751f\u65b0\u7684\u56fa\u5b9a\u6a94\uff0c\u9019\u88e1\u5c31\u6703\u756b\u51fa\u4e4b\u524d\u56de\u5408\u7684\u9ede\u3002"
     ))
   }
-  paste0(head, "固定檔裡也沒有這個領域之前回合的點，所以沒有內部連結後、外部連結後的圖。")
+  # 原文：固定檔裡也沒有這個領域之前回合的點，所以沒有內部連結後、外部連結後的圖。
+  paste0(head, "\u56fa\u5b9a\u6a94\u88e1\u4e5f\u6c92\u6709\u9019\u500b\u9818\u57df\u4e4b\u524d\u56de\u5408\u7684\u9ede\uff0c\u6240\u4ee5\u6c92\u6709\u5167\u90e8\u9023\u7d50\u5f8c\u3001\u5916\u90e8\u9023\u7d50\u5f8c\u7684\u5716\u3002")
 }
 
 # 三個版本 ----
@@ -235,10 +244,14 @@ kitsui_vertical_dropped_note <- function(v, unit = "months") {
   dr <- attr(v, "dropped")
   if (NROW(dr) == 0) return(NULL)
   dr <- dr[order(dr$cohort, dr$wave_m), ]
-  cells <- paste0(dr$cohort, " 的 ", kitsui_wave_text(dr$wave_m, unit), "（",
-                  kitDesign::kit_num(dr$n), " 人）")
-  paste0("有 ", kitDesign::kit_num(nrow(dr)), " 個世代 × 波次只有 1 人，算不出分布，圖上不畫：",
-         kitsui_first(cells, 6), "。其他的點不受影響。")
+  # 原文： 的  | （
+  cells <- paste0(dr$cohort, " \u7684 ", kitsui_wave_text(dr$wave_m, unit), "\uff08",
+                  # 原文： 人）
+                  kitDesign::kit_num(dr$n), " \u4eba\uff09")
+  # 原文：有  |  個世代 × 波次只有 1 人，算不出分布，圖上不畫：
+  paste0("\u6709 ", kitDesign::kit_num(nrow(dr)), " \u500b\u4e16\u4ee3 \u00d7 \u6ce2\u6b21\u53ea\u6709 1 \u4eba\uff0c\u7b97\u4e0d\u51fa\u5206\u5e03\uff0c\u5716\u4e0a\u4e0d\u756b\uff1a",
+         # 原文：。其他的點不受影響。
+         kitsui_first(cells, 6), "\u3002\u5176\u4ed6\u7684\u9ede\u4e0d\u53d7\u5f71\u97ff\u3002")
 }
 
 # 畫不了的版本
@@ -300,21 +313,28 @@ kitsui_vertical_linked <- function(raw, earlier, fixed, links, stage, label) {
 kitsui_vertical_why <- function(fixed, scales, links, stage) {
   ref <- fixed$version$reference
   if (stage == "external" && !kitsui_d_applicable(fixed)) {
-    return(paste0("外部連結不適用：參照世代（", ref, "）沒有 D 分數的錨題，所以沒有換到 D 的圖。",
-                  "「內部連結後」那一頁就是最後的量尺（", ref, " 的量尺）。"))
+    # 原文：外部連結不適用：參照世代（ | ）沒有 D 分數的錨題，所以沒有換到 D 的圖。
+    return(paste0("\u5916\u90e8\u9023\u7d50\u4e0d\u9069\u7528\uff1a\u53c3\u7167\u4e16\u4ee3\uff08", ref, "\uff09\u6c92\u6709 D \u5206\u6578\u7684\u9328\u984c\uff0c\u6240\u4ee5\u6c92\u6709\u63db\u5230 D \u7684\u5716\u3002",
+                  # 原文：「內部連結後」那一頁就是最後的量尺（ |  的量尺）。
+                  "\u300c\u5167\u90e8\u9023\u7d50\u5f8c\u300d\u90a3\u4e00\u9801\u5c31\u662f\u6700\u5f8c\u7684\u91cf\u5c3a\uff08", ref, " \u7684\u91cf\u5c3a\uff09\u3002"))
   }
   off <- setdiff(scales[scale_cohort(scales) != ref], names(links))
   if (length(off) > 0) {
-    rest <- if (stage == "internal") "各世代不在同一把尺上。" else "所以換不到 D。"
+    # 原文：各世代不在同一把尺上。 | 所以換不到 D。
+    rest <- if (stage == "internal") "\u5404\u4e16\u4ee3\u4e0d\u5728\u540c\u4e00\u628a\u5c3a\u4e0a\u3002" else "\u6240\u4ee5\u63db\u4e0d\u5230 D\u3002"
     if (stage == "internal" && length(unique(scale_cohort(scales))) == 2) {
-      rest <- "兩個世代不在同一把尺上。"
+      # 原文：兩個世代不在同一把尺上。
+      rest <- "\u5169\u500b\u4e16\u4ee3\u4e0d\u5728\u540c\u4e00\u628a\u5c3a\u4e0a\u3002"
     }
-    return(paste0(paste(off, collapse = "、"), " 還沒有內部連結，", rest))
+    # 原文：、 |  還沒有內部連結，
+    return(paste0(paste(off, collapse = "\u3001"), " \u9084\u6c92\u6709\u5167\u90e8\u9023\u7d50\uff0c", rest))
   }
   if (is.null(links[["D"]])) {
-    return("還沒有外部連結（到 D）。在上面建立外部連結後，這裡會畫出各世代在 D 上的垂直連結。")
+    # 原文：還沒有外部連結（到 D）。在上面建立外部連結後，這裡會畫出各世代在 D 上的垂直連結。
+    return("\u9084\u6c92\u6709\u5916\u90e8\u9023\u7d50\uff08\u5230 D\uff09\u3002\u5728\u4e0a\u9762\u5efa\u7acb\u5916\u90e8\u9023\u7d50\u5f8c\uff0c\u9019\u88e1\u6703\u756b\u51fa\u5404\u4e16\u4ee3\u5728 D \u4e0a\u7684\u5782\u76f4\u9023\u7d50\u3002")
   }
-  paste0(paste(scales, collapse = "、"), " 還有量尺不在外部連結裡，換不到 D。")
+  # 原文：、 |  還有量尺不在外部連結裡，換不到 D。
+  paste0(paste(scales, collapse = "\u3001"), " \u9084\u6709\u91cf\u5c3a\u4e0d\u5728\u5916\u90e8\u9023\u7d50\u88e1\uff0c\u63db\u4e0d\u5230 D\u3002")
 }
 
 #' 這一回合任兩個世代都沒有共同的波次時，一句說明（有兩個世代有共同波次時是 NULL）
@@ -331,10 +351,14 @@ kitsui_vertical_no_common <- function(raw, unit = "months") {
     return(NULL)
   }
   word <- kitsui_wave_word(unit)
-  each <- purrr::imap_chr(waves, \(w, s) paste0(s, "：", kitsui_waves_text(w, unit)))
-  who <- if (length(waves) == 2) "兩個世代" else "各世代之間"
-  paste0("這一回合", who, "沒有共同的", word, "（", paste(each, collapse = "；"), "）。",
-         "所以圖上沒有同一個", word, "可以直接比的兩個點。")
+  # 原文：：
+  each <- purrr::imap_chr(waves, \(w, s) paste0(s, "\uff1a", kitsui_waves_text(w, unit)))
+  # 原文：兩個世代 | 各世代之間
+  who <- if (length(waves) == 2) "\u5169\u500b\u4e16\u4ee3" else "\u5404\u4e16\u4ee3\u4e4b\u9593"
+  # 原文：這一回合 | 沒有共同的 | （ | ； | ）。
+  paste0("\u9019\u4e00\u56de\u5408", who, "\u6c92\u6709\u5171\u540c\u7684", word, "\uff08", paste(each, collapse = "\uff1b"), "\uff09\u3002",
+         # 原文：所以圖上沒有同一個 | 可以直接比的兩個點。
+         "\u6240\u4ee5\u5716\u4e0a\u6c92\u6709\u540c\u4e00\u500b", word, "\u53ef\u4ee5\u76f4\u63a5\u6bd4\u7684\u5169\u500b\u9ede\u3002")
 }
 
 # 圖 ----

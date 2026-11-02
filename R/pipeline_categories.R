@@ -50,10 +50,12 @@ kitsui_problem_rows <- function(tab) {
 #' @return list(problem, detail, detail_en)：沒有問題時都是 NA；detail_en 是英文、不含題號
 #' @noRd
 kitsui_score_problem <- function(item_id, scores) {
-  seen <- paste0("（分數 ", paste(scores, collapse = "、"), "）")
+  # 原文：（分數  | 、 | ）
+  seen <- paste0("\uff08\u5206\u6578 ", paste(scores, collapse = "\u3001"), "\uff09")
   if (length(scores) == 1) {
     return(list(problem = "one score only",
-                detail = sprintf("%s 每個人都得 %s 分，只有一種分數", item_id, scores),
+                # 原文：%s 每個人都得 %s 分，只有一種分數
+                detail = sprintf("%s \u6bcf\u500b\u4eba\u90fd\u5f97 %s \u5206\uff0c\u53ea\u6709\u4e00\u7a2e\u5206\u6578", item_id, scores),
                 detail_en = sprintf("one score only: everyone has %s", scores)))
   }
   missing <- setdiff(seq(min(scores), max(scores)), scores)
@@ -62,13 +64,16 @@ kitsui_score_problem <- function(item_id, scores) {
   if (length(problem) == 0) {
     return(list(problem = NA_character_, detail = NA_character_, detail_en = NA_character_))
   }
-  gap <- sprintf("分數不連續，沒有人得 %s 分", kitsui_runs(missing, "、", "–"))
-  what <- c(if (no_zero) "沒有人得 0 分", if (length(missing) > 0) gap)
+  # 原文：分數不連續，沒有人得 %s 分 | 、 | –
+  gap <- sprintf("\u5206\u6578\u4e0d\u9023\u7e8c\uff0c\u6c92\u6709\u4eba\u5f97 %s \u5206", kitsui_runs(missing, "\u3001", "\u2013"))
+  # 原文：沒有人得 0 分
+  what <- c(if (no_zero) "\u6c92\u6709\u4eba\u5f97 0 \u5206", if (length(missing) > 0) gap)
   # 英文：例如 "no score 0; score gap: no score 2 (scores 1, 3)"
   gap_en <- paste("score gap: no score", kitsui_runs(missing, ", ", "-"))
   what_en <- c(if (no_zero) "no score 0", if (length(missing) > 0) gap_en)
   list(problem = paste(problem, collapse = ", "),
-       detail = paste0(item_id, " ", paste(what, collapse = "；"), seen),
+       # 原文：；
+       detail = paste0(item_id, " ", paste(what, collapse = "\uff1b"), seen),
        detail_en = paste0(paste(what_en, collapse = "; "), " (scores ",
                           paste(scores, collapse = ", "), ")"))
 }
@@ -77,7 +82,8 @@ kitsui_score_problem <- function(item_id, scores) {
 #' 寫成一段才不會列出 90 個數字）
 #' @param sep 段之間的符號；dash 是一段裡的符號
 #' @noRd
-kitsui_runs <- function(x, sep = "、", dash = "–") {
+# 原文：、 | –
+kitsui_runs <- function(x, sep = "\u3001", dash = "\u2013") {
   x <- sort(unique(x))
   if (length(x) == 0) return("")
   start <- x[c(TRUE, diff(x) != 1)]

@@ -95,13 +95,16 @@ kitsui_round_exclude <- function(df, exclude, round_label, info = NULL) {
   have <- scale_key(df$domain, df$cohort)
   extra <- setdiff(exclude, have)
   if (length(extra) > 0) {
-    kitDesign::kit_abort("這一回合的資料沒有 ", paste(extra, collapse = "、"), "，不能選它「這一回合不做」。")
+    # 原文：這一回合的資料沒有  | 、 | ，不能選它「這一回合不做」。
+    kitDesign::kit_abort("\u9019\u4e00\u56de\u5408\u7684\u8cc7\u6599\u6c92\u6709 ", paste(extra, collapse = "\u3001"), "\uff0c\u4e0d\u80fd\u9078\u5b83\u300c\u9019\u4e00\u56de\u5408\u4e0d\u505a\u300d\u3002")
   }
   keep <- !have %in% exclude
-  if (!any(keep)) kitDesign::kit_abort("每個量尺都選了「這一回合不做」，沒有量尺可以校準。")
+  # 原文：每個量尺都選了「這一回合不做」，沒有量尺可以校準。
+  if (!any(keep)) kitDesign::kit_abort("\u6bcf\u500b\u91cf\u5c3a\u90fd\u9078\u4e86\u300c\u9019\u4e00\u56de\u5408\u4e0d\u505a\u300d\uff0c\u6c92\u6709\u91cf\u5c3a\u53ef\u4ee5\u6821\u6e96\u3002")
   log <- tibble::tibble(
     round = round_label, scale = exclude, item_id = NA_character_, check = "excluded",
-    detail = "這一回合不做這個量尺（在 ② 選的）：作答沒有校準，題庫、版本、連結都不動",
+    # 原文：這一回合不做這個量尺（在 ② 選的）：作答沒有校準，題庫、版本、連結都不動
+    detail = "\u9019\u4e00\u56de\u5408\u4e0d\u505a\u9019\u500b\u91cf\u5c3a\uff08\u5728 \u2461 \u9078\u7684\uff09\uff1a\u4f5c\u7b54\u6c92\u6709\u6821\u6e96\uff0c\u984c\u5eab\u3001\u7248\u672c\u3001\u9023\u7d50\u90fd\u4e0d\u52d5",
     detail_en = "left out of this round by the user: not calibrated; bank, versions and links unchanged"
   )
   # 因為資訊不足而不做：寫出原因與 kits 的原文
@@ -109,7 +112,8 @@ kitsui_round_exclude <- function(df, exclude, round_label, info = NULL) {
   why <- purrr::map(msg, \(m) if (!is.na(m %||% NA)) kitsui_kits_no_info(m))
   at <- which(!purrr::map_lgl(why, is.null))
   log$detail[at] <- sprintf(
-    "%s：%s。這一回合不做（在 ② 選的），作答沒有校準，題庫、版本、連結都不動（kits 的原文：%s）",
+    # 原文：%s：%s。這一回合不做（在 ② 選的），作答沒有校準，題庫、版本、連結都不動（kits 的原文：%s）
+    "%s\uff1a%s\u3002\u9019\u4e00\u56de\u5408\u4e0d\u505a\uff08\u5728 \u2461 \u9078\u7684\uff09\uff0c\u4f5c\u7b54\u6c92\u6709\u6821\u6e96\uff0c\u984c\u5eab\u3001\u7248\u672c\u3001\u9023\u7d50\u90fd\u4e0d\u52d5\uff08kits \u7684\u539f\u6587\uff1a%s\uff09",
     KITSUI_NO_INFO_ZH, purrr::map_chr(why[at], "zh"), msg[at]
   )
   log$detail_en[at] <- sprintf(
@@ -127,7 +131,8 @@ kitsui_excluded_reasons <- function(log) {
   ex <- log[log$check %in% "excluded", ]
   if (is.null(ex) || nrow(ex) == 0) return(character())
   no_info <- startsWith(ex$detail, KITSUI_NO_INFO_ZH)
-  stats::setNames(ifelse(no_info, sub("。.*$", "", ex$detail), ""), ex$scale)
+  # 原文：。.*$
+  stats::setNames(ifelse(no_info, sub("\u3002.*$", "", ex$detail), ""), ex$scale)
 }
 
 #' 停下來、因為資訊不足的量尺：資料量尺 -> kits 的原文（給 kitsui_round(exclude_info = )）
@@ -209,17 +214,22 @@ kitsui_error_detail <- function(e, scale = NULL) {
   msg <- conditionMessage(e)
   no_info <- kitsui_kits_no_info(msg)
   if (!is.null(no_info)) {
-    return(paste0(if (!is.null(scale)) paste0(scale_label(scale), " "), "這一回合", KITSUI_NO_INFO_ZH, "（", no_info$zh,
-                  "）。按「這一回合不做」跳過這個量尺；題庫與連結不會改變。",
+    # 原文：這一回合 | （
+    return(paste0(if (!is.null(scale)) paste0(scale_label(scale), " "), "\u9019\u4e00\u56de\u5408", KITSUI_NO_INFO_ZH, "\uff08", no_info$zh,
+                  # 原文：）。按「這一回合不做」跳過這個量尺；題庫與連結不會改變。
+                  "\uff09\u3002\u6309\u300c\u9019\u4e00\u56de\u5408\u4e0d\u505a\u300d\u8df3\u904e\u9019\u500b\u91cf\u5c3a\uff1b\u984c\u5eab\u8207\u9023\u7d50\u4e0d\u6703\u6539\u8b8a\u3002",
                   KITSUI_KITS_SAYS, msg))
   }
-  paste0("kits 出錯，這個量尺停下來。", kitsui_kits_zh(msg), KITSUI_KITS_SAYS, msg)
+  # 原文：kits 出錯，這個量尺停下來。
+  paste0("kits \u51fa\u932f\uff0c\u9019\u500b\u91cf\u5c3a\u505c\u4e0b\u4f86\u3002", kitsui_kits_zh(msg), KITSUI_KITS_SAYS, msg)
 }
 # 資訊不足的說法（紅字、紀錄、checks.csv 都用同一句）
-KITSUI_NO_INFO_ZH <- "資訊不足，無法估計"
+# 原文：資訊不足，無法估計
+KITSUI_NO_INFO_ZH <- "\u8cc7\u8a0a\u4e0d\u8db3\uff0c\u7121\u6cd5\u4f30\u8a08"
 KITSUI_NO_INFO_EN <- "insufficient information to estimate"
 # 紀錄裡 kits 原文前面的字（kitsui_error_ui() 照它切開）
-KITSUI_KITS_SAYS <- "kits 的訊息："
+# 原文：kits 的訊息：
+KITSUI_KITS_SAYS <- "kits \u7684\u8a0a\u606f\uff1a"
 
 #' 停下來的原因（英文，寫進 checks.csv）：kits 的訊息原文（英文）；kitsui 自己的訊息是中文，
 #' 用它帶的 en，沒有時一句通用的英文
@@ -307,12 +317,14 @@ kitsui_round_scale <- function(X, scale, fixed, round_label, flag_share, flag_fi
   # 包括沒有判斷的步驟算的，不是判斷用的數字（kitsui_drift_detail()）
   why_moved <- kitsui_drift_detail(drift, moved)
   log <- dplyr::bind_rows(log, row(moved, "drift", why_moved$zh, why_moved$en))
-  counts <- sprintf("偏移 %d 題（已判斷 %d 題）；可固定 %d 題", length(moved), judged, n_fixed)
+  # 原文：偏移 %d 題（已判斷 %d 題）；可固定 %d 題
+  counts <- sprintf("\u504f\u79fb %d \u984c\uff08\u5df2\u5224\u65b7 %d \u984c\uff09\uff1b\u53ef\u56fa\u5b9a %d \u984c", length(moved), judged, n_fixed)
   counts_en <- sprintf("%d drifting items (%d judged); %d items can be fixed",
                        length(moved), judged, n_fixed)
   # 沒有可固定的題：量尺放不上題庫的尺，停下來
   if (n_fixed < 1) {
-    log <- dplyr::bind_rows(log, row(NA_character_, "stop", paste0(counts, "：沒有可固定的題"),
+    # 原文：：沒有可固定的題
+    log <- dplyr::bind_rows(log, row(NA_character_, "stop", paste0(counts, "\uff1a\u6c92\u6709\u53ef\u56fa\u5b9a\u7684\u984c"),
                                      paste0(counts_en, ": no item can be fixed")))
     return(list(stopped = TRUE, drift = drift, log = log))
   }
@@ -320,14 +332,17 @@ kitsui_round_scale <- function(X, scale, fixed, round_label, flag_share, flag_fi
   many <- length(moved) > max(1, flag_share * judged)
   few <- n_fixed < flag_fixed
   if (many || few || unjudged) {
-    why <- c(if (many) "偏移題太多", if (few) sprintf("可固定的題少於 %s 題", flag_fixed),
-             if (unjudged) "不能判斷偏移，題庫的題都固定在題庫的值")
+    # 原文：偏移題太多 | 可固定的題少於 %s 題
+    why <- c(if (many) "\u504f\u79fb\u984c\u592a\u591a", if (few) sprintf("\u53ef\u56fa\u5b9a\u7684\u984c\u5c11\u65bc %s \u984c", flag_fixed),
+             # 原文：不能判斷偏移，題庫的題都固定在題庫的值
+             if (unjudged) "\u4e0d\u80fd\u5224\u65b7\u504f\u79fb\uff0c\u984c\u5eab\u7684\u984c\u90fd\u56fa\u5b9a\u5728\u984c\u5eab\u7684\u503c")
     why_en <- c(if (many) "too many drifting items",
                 if (few) sprintf("fewer than %s items can be fixed", flag_fixed),
                 if (unjudged) "drift could not be judged; bank items kept at the bank values")
     log <- dplyr::bind_rows(log, row(
       NA_character_, "flag",
-      paste0(counts, "（", paste(why, collapse = "、"), "），照常校準"),
+      # 原文：（ | 、 | ），照常校準
+      paste0(counts, "\uff08", paste(why, collapse = "\u3001"), "\uff09\uff0c\u7167\u5e38\u6821\u6e96"),
       paste0(counts_en, " (", paste(why_en, collapse = ", "), "); calibrated as usual")
     ))
   }
@@ -337,10 +352,12 @@ kitsui_round_scale <- function(X, scale, fixed, round_label, flag_share, flag_fi
   new_ids <- dplyr::distinct(new, .data$item_id, .data$current_id)
   nv <- paste(fit$moved, "->", new_ids$current_id)
   log <- dplyr::bind_rows(log, ev_row(fit$events), row(new_ids$item_id, "new version", nv, nv))
-  detail <- sprintf("固定校準：固定 %d 題", n_fixed)
+  # 原文：固定校準：固定 %d 題
+  detail <- sprintf("\u56fa\u5b9a\u6821\u6e96\uff1a\u56fa\u5b9a %d \u984c", n_fixed)
   detail_en <- sprintf("fixed calibration: %d items fixed", n_fixed)
   if (length(borrowed) > 0) {
-    detail <- paste0(detail, "（", paste(borrowed, collapse = "、"), " 的資料借用另一世代題庫）")
+    # 原文：（ | 、 |  的資料借用另一世代題庫）
+    detail <- paste0(detail, "\uff08", paste(borrowed, collapse = "\u3001"), " \u7684\u8cc7\u6599\u501f\u7528\u53e6\u4e00\u4e16\u4ee3\u984c\u5eab\uff09")
     detail_en <- paste0(detail_en, " (", paste(borrowed, collapse = ", "),
                         " data use another cohort's bank)")
   }
@@ -366,20 +383,25 @@ kitsui_round_free <- function(X, scale, bank, row, ev_row) {
     left <- ncol(free$X)
     stop_row <- row(
       NA_character_, "stop",
-      sprintf("拿掉分數類別有問題的題以後只剩 %d 題，沒有題可以估計", left),
+      # 原文：拿掉分數類別有問題的題以後只剩 %d 題，沒有題可以估計
+      sprintf("\u62ff\u6389\u5206\u6578\u985e\u5225\u6709\u554f\u984c\u7684\u984c\u4ee5\u5f8c\u53ea\u5269 %d \u984c\uff0c\u6c92\u6709\u984c\u53ef\u4ee5\u4f30\u8a08", left),
       sprintf("only %d items left after leaving out score category problems; nothing to estimate",
               left)
     )
     return(list(stopped = TRUE, log = dplyr::bind_rows(log, stop_row)))
   }
-  log <- dplyr::bind_rows(log, row(NA_character_, "calibration", "自由校準", "free calibration"))
+  # 原文：自由校準
+  log <- dplyr::bind_rows(log, row(NA_character_, "calibration", "\u81ea\u7531\u6821\u6e96", "free calibration"))
   kitsui_scale_done(free$X, free$item, NULL, bank, NULL, log)
 }
 
 # 寫進紀錄的說明（接在分數類別的問題後面）；_EN 是寫進 checks.csv 的英文
-KITSUI_LEFT_OUT <- "：不在題庫裡，這一回合不放進來"
-KITSUI_KEPT_FIXED <- "：不判斷偏移，固定在題庫的值"
-KITSUI_NO_CML <- "這一回合的資料估不出有限的 CML 估計值（有資訊的人都通過或都沒通過）"
+# 原文：：不在題庫裡，這一回合不放進來
+KITSUI_LEFT_OUT <- "\uff1a\u4e0d\u5728\u984c\u5eab\u88e1\uff0c\u9019\u4e00\u56de\u5408\u4e0d\u653e\u9032\u4f86"
+# 原文：：不判斷偏移，固定在題庫的值
+KITSUI_KEPT_FIXED <- "\uff1a\u4e0d\u5224\u65b7\u504f\u79fb\uff0c\u56fa\u5b9a\u5728\u984c\u5eab\u7684\u503c"
+# 原文：這一回合的資料估不出有限的 CML 估計值（有資訊的人都通過或都沒通過）
+KITSUI_NO_CML <- "\u9019\u4e00\u56de\u5408\u7684\u8cc7\u6599\u4f30\u4e0d\u51fa\u6709\u9650\u7684 CML \u4f30\u8a08\u503c\uff08\u6709\u8cc7\u8a0a\u7684\u4eba\u90fd\u901a\u904e\u6216\u90fd\u6c92\u901a\u904e\uff09"
 KITSUI_LEFT_OUT_EN <- "; not in the bank, left out this round"
 KITSUI_KEPT_FIXED_EN <- "; not judged for drift, kept at the bank values"
 KITSUI_NO_CML_EN <- paste("no finite CML estimate in this round's data",
@@ -455,13 +477,15 @@ kitsui_error_items <- function(e, ids) {
 kitsui_error_events <- function(e, bad, in_bank) {
   no_cml <- length(kitsui_no_cml_items(e)) > 0
   why <- if (no_cml) KITSUI_NO_CML else {
-    paste0("kits 說分數類別有問題（kits 的訊息：", conditionMessage(e), "）")
+    # 原文：kits 說分數類別有問題（kits 的訊息： | ）
+    paste0("kits \u8aaa\u5206\u6578\u985e\u5225\u6709\u554f\u984c\uff08kits \u7684\u8a0a\u606f\uff1a", conditionMessage(e), "\uff09")
   }
   why_en <- if (no_cml) KITSUI_NO_CML_EN else {
     paste0("kits reports a score category problem (kits message: ", conditionMessage(e), ")")
   }
   kept_check <- if (no_cml) "no CML estimate, kept fixed" else "category problem, kept fixed"
-  kept_how <- if (no_cml) "，不換新版本，固定在題庫的值" else KITSUI_KEPT_FIXED
+  # 原文：，不換新版本，固定在題庫的值
+  kept_how <- if (no_cml) "\uff0c\u4e0d\u63db\u65b0\u7248\u672c\uff0c\u56fa\u5b9a\u5728\u984c\u5eab\u7684\u503c" else KITSUI_KEPT_FIXED
   kept_how_en <- if (no_cml) "; no new version, kept at the bank values" else KITSUI_KEPT_FIXED_EN
   kitsui_events(
     bad, dplyr::if_else(in_bank, kept_check, "category problem, left out"),
@@ -501,7 +525,8 @@ kitsui_drift_safe <- function(X, ref, kept = character()) {
       rest <- setdiff(intersect(colnames(X), ref$item_id), c(kept, out))
       events <- dplyr::bind_rows(events, kitsui_events(
         rest, rep("drift not judged, kept fixed", length(rest)),
-        rep(paste0(why$zh, "，不能判斷偏移：固定在題庫的值"), length(rest)),
+        # 原文：，不能判斷偏移：固定在題庫的值
+        rep(paste0(why$zh, "\uff0c\u4e0d\u80fd\u5224\u65b7\u504f\u79fb\uff1a\u56fa\u5b9a\u5728\u984c\u5eab\u7684\u503c"), length(rest)),
         rep(paste0(why$en, ", so drift cannot be judged; kept at the bank values"), length(rest))
       ))
       return(list(drift = NULL, kept = c(kept, rest), out = out, events = events))
@@ -523,12 +548,14 @@ kitsui_drift_safe <- function(X, ref, kept = character()) {
 kitsui_drift_unjudged <- function(e) {
   msg <- conditionMessage(e)
   if (grepl("Fewer than 2 items of the new data have a 0 score", msg, fixed = TRUE)) {
-    return(list(zh = "這一回合能自由校準的題不到 2 題（有 0 分、至少兩種分數）",
+    # 原文：這一回合能自由校準的題不到 2 題（有 0 分、至少兩種分數）
+    return(list(zh = "\u9019\u4e00\u56de\u5408\u80fd\u81ea\u7531\u6821\u6e96\u7684\u984c\u4e0d\u5230 2 \u984c\uff08\u6709 0 \u5206\u3001\u81f3\u5c11\u5169\u7a2e\u5206\u6578\uff09",
                 en = "fewer than 2 items of this round can be calibrated freely"))
   }
   hit <- regmatches(msg, regexec("^Only ([0-9]+) item step\\(s\\) have at least `min_n` = ([0-9]+)", msg))[[1]]
   if (length(hit) == 3) {
-    return(list(zh = sprintf("這一回合上下各有 %s 人的步驟只有 %s 個（要 3 個才畫得出連結線）", hit[3], hit[2]),
+    # 原文：這一回合上下各有 %s 人的步驟只有 %s 個（要 3 個才畫得出連結線）
+    return(list(zh = sprintf("\u9019\u4e00\u56de\u5408\u4e0a\u4e0b\u5404\u6709 %s \u4eba\u7684\u6b65\u9a5f\u53ea\u6709 %s \u500b\uff08\u8981 3 \u500b\u624d\u756b\u5f97\u51fa\u9023\u7d50\u7dda\uff09", hit[3], hit[2]),
                 en = sprintf("only %s item steps of this round have %s persons below and above (3 needed)",
                              hit[2], hit[3])))
   }
@@ -607,10 +634,12 @@ kitsui_cap <- function(X, bank, no_new = character()) {
     X[over, it] <- k[it]
   }
   hit <- n > 0
-  detail <- sprintf("%d 列次超過 %d 分，併為 %d 分", n[hit], k[hit], k[hit])
+  # 原文：%d 列次超過 %d 分，併為 %d 分
+  detail <- sprintf("%d \u5217\u6b21\u8d85\u904e %d \u5206\uff0c\u4f75\u70ba %d \u5206", n[hit], k[hit], k[hit])
   detail_en <- sprintf("%d visits above score %d, merged into %d", n[hit], k[hit], k[hit])
   stuck <- items[hit] %in% no_new
-  why <- dplyr::if_else(stuck, "（分數類別有問題，不加新的步驟）", "")
+  # 原文：（分數類別有問題，不加新的步驟）
+  why <- dplyr::if_else(stuck, "\uff08\u5206\u6578\u985e\u5225\u6709\u554f\u984c\uff0c\u4e0d\u52a0\u65b0\u7684\u6b65\u9a5f\uff09", "")
   why_en <- dplyr::if_else(stuck, " (score category problem, no new steps)", "")
   list(X = X, log = tibble::tibble(item_id = items[hit], detail = paste0(detail, why),
                                    detail_en = paste0(detail_en, why_en)))

@@ -35,7 +35,8 @@ kitsui_code_read <- function(data_file = NULL, waves = NULL, picks = NULL) {
 kitsui_code_picks <- function(picks) {
   picks <- dplyr::distinct(as.data.frame(picks)[c("cohort", "wave_m")])
   c(
-    "# 這一回合勾的世代 × 波次",
+    # 原文：# 這一回合勾的世代 × 波次
+    "# \u9019\u4e00\u56de\u5408\u52fe\u7684\u4e16\u4ee3 \u00d7 \u6ce2\u6b21",
     sprintf("picks <- tibble(cohort = %s,", kitsui_r(as.character(picks$cohort))),
     sprintf("                wave_m = %s)", kitsui_r(as.numeric(picks$wave_m))),
     'responses <- semi_join(responses, picks, by = c("cohort", "wave_m"))'
@@ -55,7 +56,8 @@ kitsui_code_data <- function(scale, data_file = NULL, waves = NULL, picks = NULL
   plot <- "plot(resp)"
   if (length(steps) > 0) {
     plot <- c(kitsui_code_steps(steps),
-              "# 作答設計圖畫通過比例：這些題換成通過（1）或沒通過（0）；檢查仍用原來的分數",
+              # 原文：# 作答設計圖畫通過比例：這些題換成通過（1）或沒通過（0）；檢查仍用原來的分數
+              "# \u4f5c\u7b54\u8a2d\u8a08\u5716\u756b\u901a\u904e\u6bd4\u4f8b\uff1a\u9019\u4e9b\u984c\u63db\u6210\u901a\u904e\uff081\uff09\u6216\u6c92\u901a\u904e\uff080\uff09\uff1b\u6aa2\u67e5\u4ecd\u7528\u539f\u4f86\u7684\u5206\u6578",
               "resp_pass <- resp |>",
               "  mutate(across(any_of(names(steps)),",
               "                \\(x) as.integer(x >= steps[[cur_column()]])))",
@@ -87,7 +89,8 @@ kitsui_code_round <- function(scale, round_label, fixed = NULL, fixed_file = "fi
               "rownames(X) <- resp$visit_id")
   if (is.null(fixed) || !scale %in% fixed$bank$scale) {
     free <- sprintf("item <- kits_item(X, scale = %s)", s)
-    return(paste(c(head, matrix, "# 沒有題庫：自由校準", free, "coef(item)"), collapse = "\n"))
+    # 原文：# 沒有題庫：自由校準
+    return(paste(c(head, matrix, "# \u6c92\u6709\u984c\u5eab\uff1a\u81ea\u7531\u6821\u6e96", free, "coef(item)"), collapse = "\n"))
   }
   paste(c(
     head,
@@ -95,32 +98,39 @@ kitsui_code_round <- function(scale, round_label, fixed = NULL, fixed_file = "fi
     sprintf('bank <- filter(read.csv("fixed_set/bank.csv"), scale == %s)', s),
     'versions <- read.csv("fixed_set/versions.csv", colClasses = "character")',
     sprintf("versions <- filter(versions, scale == %s)", s),
-    "# 1 題號改成目前的版本：只用同一個世代的資料做的版本",
+    # 原文：# 1 題號改成目前的版本：只用同一個世代的資料做的版本
+    "# 1 \u984c\u865f\u6539\u6210\u76ee\u524d\u7684\u7248\u672c\uff1a\u53ea\u7528\u540c\u4e00\u500b\u4e16\u4ee3\u7684\u8cc7\u6599\u505a\u7684\u7248\u672c",
     "responses <- responses |>",
     '  left_join(select(versions, cohort, item_id, current_id), by = c("cohort", "item_id")) |>',
     "  mutate(item_id = coalesce(current_id, item_id), .keep = \"unused\")",
     matrix,
-    "# 2 新步驟的缺口：超過「從題庫最高步往上連續」的分數，併為那個分數",
+    # 原文：# 2 新步驟的缺口：超過「從題庫最高步往上連續」的分數，併為那個分數
+    "# 2 \u65b0\u6b65\u9a5f\u7684\u7f3a\u53e3\uff1a\u8d85\u904e\u300c\u5f9e\u984c\u5eab\u6700\u9ad8\u6b65\u5f80\u4e0a\u9023\u7e8c\u300d\u7684\u5206\u6578\uff0c\u4f75\u70ba\u90a3\u500b\u5206\u6578",
     "for (it in intersect(colnames(X), bank$item_id)) {",
     "  k <- max(bank$item_score[bank$item_id == it])",
     "  while ((k + 1) %in% X[, it]) k <- k + 1",
     "  X[which(X[, it] > k), it] <- k",
     "}",
-    "# 3 偏移把關：題庫的 beta 當參照",
+    # 原文：# 3 偏移把關：題庫的 beta 當參照
+    "# 3 \u504f\u79fb\u628a\u95dc\uff1a\u984c\u5eab\u7684 beta \u7576\u53c3\u7167",
     'ref <- bank[c("item_id", "item_score", "beta")]',
     sprintf("drift <- kits_drift(X, structure(ref, scale = %s))", s),
     "moved <- drift$items$item_id[drift$items$drift %in% TRUE]",
     "judged <- sum(!is.na(drift$items$drift))",
     "n_fixed <- n_distinct(drift$fix$item_id)",
-    "stopifnot(n_fixed >= 1) # 沒有可固定的題時放不上題庫的尺",
-    "# flag（照常校準）：偏移題太多，或可固定的題太少",
+    # 原文：stopifnot(n_fixed >= 1) # 沒有可固定的題時放不上題庫的尺
+    "stopifnot(n_fixed >= 1) # \u6c92\u6709\u53ef\u56fa\u5b9a\u7684\u984c\u6642\u653e\u4e0d\u4e0a\u984c\u5eab\u7684\u5c3a",
+    # 原文：# flag（照常校準）：偏移題太多，或可固定的題太少
+    "# flag\uff08\u7167\u5e38\u6821\u6e96\uff09\uff1a\u504f\u79fb\u984c\u592a\u591a\uff0c\u6216\u53ef\u56fa\u5b9a\u7684\u984c\u592a\u5c11",
     sprintf("flag <- length(moved) > max(1, %s * judged) || n_fixed < %s", flag_share,
             flag_fixed),
-    "# 4 偏移的題換成新版本（從原來的題號做）",
+    # 原文：# 4 偏移的題換成新版本（從原來的題號做）
+    "# 4 \u504f\u79fb\u7684\u984c\u63db\u6210\u65b0\u7248\u672c\uff08\u5f9e\u539f\u4f86\u7684\u984c\u865f\u505a\uff09",
     "base <- coalesce(versions$item_id[match(moved, versions$current_id)], moved)",
     sprintf('new_id <- paste0(base, "_r", %s)', kitsui_r(round_label)),
     "colnames(X)[match(moved, colnames(X))] <- new_id",
-    "# 5 固定校準：舊的 beta 不動，只估新的步驟",
+    # 原文：# 5 固定校準：舊的 beta 不動，只估新的步驟
+    "# 5 \u56fa\u5b9a\u6821\u6e96\uff1a\u820a\u7684 beta \u4e0d\u52d5\uff0c\u53ea\u4f30\u65b0\u7684\u6b65\u9a5f",
     sprintf("item <- kits_item(X, fixed_params = drift$fix, scale = %s)", s),
     "coef(item)"
   ), collapse = "\n")
@@ -136,7 +146,8 @@ kitsui_code_pick <- function(scale, plan = NULL) {
                    kitsui_r(scale_label(scale))))
   }
   keys <- paste(scale_label(part$data_scale), part$wave_m)
-  c(sprintf("# 用 %s 的題庫校準的資料（借用另一世代題庫時人的 cohort 欄不變）", scale),
+  # 原文：# 用 %s 的題庫校準的資料（借用另一世代題庫時人的 cohort 欄不變）
+  c(sprintf("# \u7528 %s \u7684\u984c\u5eab\u6821\u6e96\u7684\u8cc7\u6599\uff08\u501f\u7528\u53e6\u4e00\u4e16\u4ee3\u984c\u5eab\u6642\u4eba\u7684 cohort \u6b04\u4e0d\u8b8a\uff09", scale),
     sprintf("keys <- %s", kitsui_r(keys)),
     "resp <- kits_resp(filter(responses, paste(domain, cohort, wave_m) %in% keys))")
 }
@@ -150,13 +161,16 @@ kitsui_code_link <- function(fixed, name, fixed_file = "fixed_set.zip") {
   cols <- c("id", "item", "from", "to", if (r$kind == "D") "domain")
   sel <- if (r$kind == "D") 'kind == "D"' else sprintf("from_scale == %s", kitsui_r(name))
   kind <- if (r$kind == "D") {
-    "# 外部連結：參照世代的各領域 -> D（錨題）"
+    # 原文：# 外部連結：參照世代的各領域 -> D（錨題）
+    "# \u5916\u90e8\u9023\u7d50\uff1a\u53c3\u7167\u4e16\u4ee3\u7684\u5404\u9818\u57df -> D\uff08\u9328\u984c\uff09"
   } else {
-    sprintf("# 內部連結：%s -> %s", name, r$to_scale)
+    # 原文：# 內部連結：%s -> %s
+    sprintf("# \u5167\u90e8\u9023\u7d50\uff1a%s -> %s", name, r$to_scale)
   }
   paste(c(
     kind,
-    "# 第一次用 kits_linking() 做（題庫的門檻）；點存在 links.csv，這裡從點重建",
+    # 原文：# 第一次用 kits_linking() 做（題庫的門檻）；點存在 links.csv，這裡從點重建
+    "# \u7b2c\u4e00\u6b21\u7528 kits_linking() \u505a\uff08\u984c\u5eab\u7684\u9580\u6abb\uff09\uff1b\u9ede\u5b58\u5728 links.csv\uff0c\u9019\u88e1\u5f9e\u9ede\u91cd\u5efa",
     sprintf('unzip(%s, exdir = "fixed_set")', kitsui_r(fixed_file)),
     sprintf('points <- filter(read.csv("fixed_set/links.csv"), %s)', sel),
     sprintf("%s <- points[%s] |>", kitsui_link_var(name), kitsui_r(cols)),
@@ -196,23 +210,28 @@ kitsui_code_score <- function(fixed, scale, cohorts = scale_cohort(scale), step 
   inner <- setdiff(path, kitsui_link_var("D"))
   table <- c(
     if (length(inner) > 0) {
-      sprintf("raw_theta <- kits_convert(raw_table, %s) # ability_linked：經過內部連結",
+      # 原文：raw_theta <- kits_convert(raw_table, %s) # ability_linked：經過內部連結
+      sprintf("raw_theta <- kits_convert(raw_table, %s) # ability_linked\uff1a\u7d93\u904e\u5167\u90e8\u9023\u7d50",
               paste(inner, collapse = ", "))
     } else {
-      "raw_theta <- raw_table # 參照世代自己的量尺，不用換"
+      # 原文：raw_theta <- raw_table # 參照世代自己的量尺，不用換
+      "raw_theta <- raw_table # \u53c3\u7167\u4e16\u4ee3\u81ea\u5df1\u7684\u91cf\u5c3a\uff0c\u4e0d\u7528\u63db"
     },
     "raw_theta",
     if (kitsui_link_var("D") %in% path) {
-      c(sprintf("raw_d <- kits_convert(raw_table, %s) # d_score：再經過外部連結", links), "raw_d")
+      # 原文：raw_d <- kits_convert(raw_table, %s) # d_score：再經過外部連結
+      c(sprintf("raw_d <- kits_convert(raw_table, %s) # d_score\uff1a\u518d\u7d93\u904e\u5916\u90e8\u9023\u7d50", links), "raw_d")
     }
   )
   paste(c(
     "persons <- distinct(responses, visit_id, subj_id, cohort, sex, wave_m, age_m)",
-    "scores <- kits_subj(X, item, persons = persons) # theta：各世代分開估計，沒有經過連結",
+    # 原文：scores <- kits_subj(X, item, persons = persons) # theta：各世代分開估計，沒有經過連結
+    "scores <- kits_subj(X, item, persons = persons) # theta\uff1a\u5404\u4e16\u4ee3\u5206\u958b\u4f30\u8a08\uff0c\u6c92\u6709\u7d93\u904e\u9023\u7d50",
     "raw_table <- kits_subj_table(scores)",
     table,
     convert,
-    "# 題目表：D 欄在校準的量尺上（ability_threshold）；通過年齡用這一回合的作答（沒有常模）",
+    # 原文：# 題目表：D 欄在校準的量尺上（ability_threshold）；通過年齡用這一回合的作答（沒有常模）
+    "# \u984c\u76ee\u8868\uff1aD \u6b04\u5728\u6821\u6e96\u7684\u91cf\u5c3a\u4e0a\uff08ability_threshold\uff09\uff1b\u901a\u904e\u5e74\u9f61\u7528\u9019\u4e00\u56de\u5408\u7684\u4f5c\u7b54\uff08\u6c92\u6709\u5e38\u6a21\uff09",
     sprintf("ages <- filter(persons, cohort %%in%% %s)", kitsui_r(cohorts)),
     'ages <- ages[match(rownames(X), ages$visit_id), c("visit_id", "age_m", "wave_m")]',
     kitsui_code_steps(step),
@@ -220,11 +239,13 @@ kitsui_code_score <- function(fixed, scale, cohorts = scale_cohort(scale), step 
     "item_table",
     # 同一題的門檻用分數的連結換到另外兩把尺
     if (length(inner) > 0) {
-      sprintf("kits_item_table(kits_convert(item, %s)%s) # D 欄：ability_linked_threshold",
+      # 原文：kits_item_table(kits_convert(item, %s)%s) # D 欄：ability_linked_threshold
+      sprintf("kits_item_table(kits_convert(item, %s)%s) # D \u6b04\uff1aability_linked_threshold",
               paste(inner, collapse = ", "), step_arg)
     },
     if (kitsui_link_var("D") %in% path) {
-      sprintf("kits_item_table(kits_convert(item, %s)%s) # D 欄：d_threshold", links, step_arg)
+      # 原文：kits_item_table(kits_convert(item, %s)%s) # D 欄：d_threshold
+      sprintf("kits_item_table(kits_convert(item, %s)%s) # D \u6b04\uff1ad_threshold", links, step_arg)
     }
   ), collapse = "\n")
 }
@@ -244,7 +265,8 @@ kitsui_code_steps <- function(step) {
     }
     now <- paste(now, p)
   }
-  c("# 通過步驟：得分至少 step 算通過（沒列的題用 1）", "steps <- c(", c(lines, now), ")")
+  # 原文：# 通過步驟：得分至少 step 算通過（沒列的題用 1）
+  c("# \u901a\u904e\u6b65\u9a5f\uff1a\u5f97\u5206\u81f3\u5c11 step \u7b97\u901a\u904e\uff08\u6c92\u5217\u7684\u984c\u7528 1\uff09", "steps <- c(", c(lines, now), ")")
 }
 
 #' 兩個世代的垂直連結（未連結、內部連結後、外部連結後）的程式碼
@@ -272,18 +294,23 @@ kitsui_code_vertical <- function(fixed, scales, stages = names(KITSUI_VERTICAL_S
   )
   code <- list(
     none = c(
-      "# 未連結：各世代留在自己校準的量尺上",
-      "# kits 的 rbind() 不讓不同量尺的分數合在一起，所以去掉 scale 屬性",
+      # 原文：# 未連結：各世代留在自己校準的量尺上
+      "# \u672a\u9023\u7d50\uff1a\u5404\u4e16\u4ee3\u7559\u5728\u81ea\u5df1\u6821\u6e96\u7684\u91cf\u5c3a\u4e0a",
+      # 原文：# kits 的 rbind() 不讓不同量尺的分數合在一起，所以去掉 scale 屬性
+      "# kits \u7684 rbind() \u4e0d\u8b93\u4e0d\u540c\u91cf\u5c3a\u7684\u5206\u6578\u5408\u5728\u4e00\u8d77\uff0c\u6240\u4ee5\u53bb\u6389 scale \u5c6c\u6027",
       sprintf("raw <- bind_rows(%s)", paste0("as_tibble(", vars, ")", collapse = ", ")),
       'attr(raw, "scale") <- NULL',
       "v_none <- kits_vertical(raw)",
-      "# age_ticks：每一個波次都有刻度（kits 預設的刻度只到 96 個月）",
+      # 原文：# age_ticks：每一個波次都有刻度（kits 預設的刻度只到 96 個月）
+      "# age_ticks\uff1a\u6bcf\u4e00\u500b\u6ce2\u6b21\u90fd\u6709\u523b\u5ea6\uff08kits \u9810\u8a2d\u7684\u523b\u5ea6\u53ea\u5230 96 \u500b\u6708\uff09",
       'plot(v_none, type = "median", age_ticks = sort(unique(v_none$wave_m)))'
     ),
     internal = linked("internal", kitsui_code_internal_title(fixed, scales)),
-    external = linked("external", "# 外部連結後：各世代都換到 D")
+    # 原文：# 外部連結後：各世代都換到 D
+    external = linked("external", "# \u5916\u90e8\u9023\u7d50\u5f8c\uff1a\u5404\u4e16\u4ee3\u90fd\u63db\u5230 D")
   )
-  head <- sprintf("# %s：%s 用 ④ 的程式算好的 kits_subj()（還沒換算）", vars, scales)
+  # 原文：# %s：%s 用 ④ 的程式算好的 kits_subj()（還沒換算）
+  head <- sprintf("# %s\uff1a%s \u7528 \u2463 \u7684\u7a0b\u5f0f\u7b97\u597d\u7684 kits_subj()\uff08\u9084\u6c92\u63db\u7b97\uff09", vars, scales)
   paste(c(head, unlist(purrr::map(code[stages], \(x) c("", x)))), collapse = "\n")
 }
 
@@ -291,8 +318,10 @@ kitsui_code_vertical <- function(fixed, scales, stages = names(KITSUI_VERTICAL_S
 kitsui_code_internal_title <- function(fixed, scales) {
   ref <- fixed$version$reference
   others <- setdiff(unique(scale_cohort(scales)), ref)
-  from <- if (length(others) == 0) "其他世代" else paste(others, collapse = "、")
-  sprintf("# 內部連結後：%s 換到參照世代 %s 的量尺", from, ref)
+  # 原文：其他世代 | 、
+  from <- if (length(others) == 0) "\u5176\u4ed6\u4e16\u4ee3" else paste(others, collapse = "\u3001")
+  # 原文：# 內部連結後：%s 換到參照世代 %s 的量尺
+  sprintf("# \u5167\u90e8\u9023\u7d50\u5f8c\uff1a%s \u63db\u5230\u53c3\u7167\u4e16\u4ee3 %s \u7684\u91cf\u5c3a", from, ref)
 }
 
 #' 垂直連結加上之前回合的點：讀固定檔的 wave_summary.csv，照現在的連結換算後一起畫
@@ -309,7 +338,8 @@ kitsui_code_vertical_earlier <- function(fixed, scales, stage, zip) {
     sprintf("  `%s` = list(%s)", s, paste(kitsui_link_var(path), collapse = ", "))
   })
   convert <- if (stage != "none") {
-    c("# 照現在的連結換算：連結是斜率為正的直線，換過去還是 P25、中位數、P75",
+    # 原文：# 照現在的連結換算：連結是斜率為正的直線，換過去還是 P25、中位數、P75
+    c("# \u7167\u73fe\u5728\u7684\u9023\u7d50\u63db\u7b97\uff1a\u9023\u7d50\u662f\u659c\u7387\u70ba\u6b63\u7684\u76f4\u7dda\uff0c\u63db\u904e\u53bb\u9084\u662f P25\u3001\u4e2d\u4f4d\u6578\u3001P75",
       "paths <- list(", paste0(paths, c(rep(",", length(paths) - 1), "")), ")",
       "to <- \\(x, s) {",
       "  if (length(paths[[s]]) == 0) return(x)",
@@ -318,16 +348,20 @@ kitsui_code_vertical_earlier <- function(fixed, scales, stage, zip) {
       "ws <- mutate(ws, across(c(p25, p50, p75), \\(x) to(x, scale[1])), .by = scale)")
   }
   paste(c(
-    "# 之前回合的點：固定檔的 wave_summary.csv（各波次的人數、P25、中位數、P75、實際月齡的中位數）",
+    # 原文：# 之前回合的點：固定檔的 wave_summary.csv（各波次的人數、P25、中位數、P75、實際月齡的中位數）
+    "# \u4e4b\u524d\u56de\u5408\u7684\u9ede\uff1a\u56fa\u5b9a\u6a94\u7684 wave_summary.csv\uff08\u5404\u6ce2\u6b21\u7684\u4eba\u6578\u3001P25\u3001\u4e2d\u4f4d\u6578\u3001P75\u3001\u5be6\u969b\u6708\u9f61\u7684\u4e2d\u4f4d\u6578\uff09",
     sprintf('unzip(%s, exdir = "fixed_set")', kitsui_r(zip)),
     'ws <- read.csv("fixed_set/wave_summary.csv", colClasses = c(round = "character")) |>',
     sprintf("  filter(scale %%in%% %s) |>", kitsui_r(scales)),
-    "  slice_tail(n = 1, by = c(scale, cohort, wave_m)) # 校準過兩次的波次：用最新的回合",
+    # 原文：  slice_tail(n = 1, by = c(scale, cohort, wave_m)) # 校準過兩次的波次：用最新的回合
+    "  slice_tail(n = 1, by = c(scale, cohort, wave_m)) # \u6821\u6e96\u904e\u5169\u6b21\u7684\u6ce2\u6b21\uff1a\u7528\u6700\u65b0\u7684\u56de\u5408",
     convert,
-    "# 點是中位數，線段是 P25 到 P75；空心的點是之前的回合",
+    # 原文：# 點是中位數，線段是 P25 到 P75；空心的點是之前的回合
+    "# \u9ede\u662f\u4e2d\u4f4d\u6578\uff0c\u7dda\u6bb5\u662f P25 \u5230 P75\uff1b\u7a7a\u5fc3\u7684\u9ede\u662f\u4e4b\u524d\u7684\u56de\u5408",
     sprintf('now <- if_else(ws$round == %s, "this round", "earlier round")', kitsui_r(label)),
     'ws$source <- factor(now, c("earlier round", "this round"))',
-    "# x 是實際月齡的中位數；舊的固定檔沒有 age_med 時用名義月齡",
+    # 原文：# x 是實際月齡的中位數；舊的固定檔沒有 age_med 時用名義月齡
+    "# x \u662f\u5be6\u969b\u6708\u9f61\u7684\u4e2d\u4f4d\u6578\uff1b\u820a\u7684\u56fa\u5b9a\u6a94\u6c92\u6709 age_med \u6642\u7528\u540d\u7fa9\u6708\u9f61",
     "if (is.null(ws$age_med)) ws$age_med <- NA_real_",
     "ws$age <- coalesce(ws$age_med, ws$wave_m)",
     "plotly::plot_ly(ws, x = ~age, y = ~p50, color = ~cohort, symbol = ~source,",
@@ -343,6 +377,7 @@ kitsui_code_drift_plot <- function(code) {
   lines <- strsplit(code, "\n", fixed = TRUE)[[1]]
   at <- grep("^drift <- kits_drift\\(", lines)
   if (length(at) == 0) return(code)
-  plot_line <- "plot(drift) # 偏移把關圖：這一回合的門檻對題庫的門檻，與判斷用的線"
+  # 原文：plot(drift) # 偏移把關圖：這一回合的門檻對題庫的門檻，與判斷用的線
+  plot_line <- "plot(drift) # \u504f\u79fb\u628a\u95dc\u5716\uff1a\u9019\u4e00\u56de\u5408\u7684\u9580\u6abb\u5c0d\u984c\u5eab\u7684\u9580\u6abb\uff0c\u8207\u5224\u65b7\u7528\u7684\u7dda"
   paste(append(lines, plot_line, after = at[1]), collapse = "\n")
 }

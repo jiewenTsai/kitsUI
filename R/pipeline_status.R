@@ -3,12 +3,18 @@
 
 # 每一題的狀態（kind -> 畫面上的字），照這個順序排：問題先
 KITSUI_STATUS <- c(
-  moved = "偏移 → 新版本",
-  out = "這一回合拿掉",
-  new = "新題（這一回合估計）",
-  kept = "固定（不判斷偏移，沿用題庫）",
-  fixed = "固定（沿用題庫）",
-  free = "自由校準"
+  # 原文：偏移 → 新版本
+  moved = "\u504f\u79fb \u2192 \u65b0\u7248\u672c",
+  # 原文：這一回合拿掉
+  out = "\u9019\u4e00\u56de\u5408\u62ff\u6389",
+  # 原文：新題（這一回合估計）
+  new = "\u65b0\u984c\uff08\u9019\u4e00\u56de\u5408\u4f30\u8a08\uff09",
+  # 原文：固定（不判斷偏移，沿用題庫）
+  kept = "\u56fa\u5b9a\uff08\u4e0d\u5224\u65b7\u504f\u79fb\uff0c\u6cbf\u7528\u984c\u5eab\uff09",
+  # 原文：固定（沿用題庫）
+  fixed = "\u56fa\u5b9a\uff08\u6cbf\u7528\u984c\u5eab\uff09",
+  # 原文：自由校準
+  free = "\u81ea\u7531\u6821\u6e96"
 )
 # 圖上的字（圖的標題、軸、圖例、滑鼠提示都用英文）
 KITSUI_STATUS_EN <- c(
@@ -60,12 +66,14 @@ kitsui_item_status <- function(item, drift, log, bank) {
   nv <- log$detail[log$check == "new version"]
   from <- sub(" -> .*$", "", nv)
   to <- sub("^.* -> ", "", nv)
-  moved <- row(from, paste(from, "→", to), rep("moved", length(from)), n_steps(to),
+  # 原文：→
+  moved <- row(from, paste(from, "\u2192", to), rep("moved", length(from)), n_steps(to),
                pick("drift", from))
   rest <- setdiff(ids, to)
   fresh <- rest[!rest %in% bank$item_id]
   new <- row(fresh, fresh, rep("new", length(fresh)), n_steps(fresh),
-             "不在題庫裡，這一回合第一次估計")
+             # 原文：不在題庫裡，這一回合第一次估計
+             "\u4e0d\u5728\u984c\u5eab\u88e1\uff0c\u9019\u4e00\u56de\u5408\u7b2c\u4e00\u6b21\u4f30\u8a08")
   dplyr::bind_rows(moved, out, new, kitsui_status_fixed(setdiff(rest, fresh), co, drift, log,
                                                          bank)) |>
     kitsui_status_sort()
@@ -87,13 +95,16 @@ kitsui_status_fixed <- function(ids, co, drift, log, bank) {
   reason <- unname(ITEMS_REASON_ZH[items$reason[at]])
   why <- dplyr::coalesce(logged, reason)
   # 偏移了，但新版本估不出來：固定在題庫的值（紀錄寫原因）
-  why <- dplyr::if_else(drifted %in% TRUE & !is.na(why), paste0("偏移了，但", why), why)
-  detail <- dplyr::if_else(judged, "已判斷，沒有偏移", dplyr::coalesce(why, ""))
+  # 原文：偏移了，但
+  why <- dplyr::if_else(drifted %in% TRUE & !is.na(why), paste0("\u504f\u79fb\u4e86\uff0c\u4f46", why), why)
+  # 原文：已判斷，沒有偏移
+  detail <- dplyr::if_else(judged, "\u5df2\u5224\u65b7\uff0c\u6c92\u6709\u504f\u79fb", dplyr::coalesce(why, ""))
   # 題庫沒有的步驟：這一回合另外估（例如這一回合有比題庫更高的分數）
   extra <- dplyr::anti_join(co[co$item_id %in% ids, ], bank, by = c("item_id", "item_score"))
   more <- purrr::map_chr(ids, \(id) {
     s <- extra$item_score[extra$item_id == id]
-    if (length(s) == 0) "" else paste0("（這一回合估的步驟：", paste(s, collapse = "、"), "）")
+    # 原文：（這一回合估的步驟： | 、 | ）
+    if (length(s) == 0) "" else paste0("\uff08\u9019\u4e00\u56de\u5408\u4f30\u7684\u6b65\u9a5f\uff1a", paste(s, collapse = "\u3001"), "\uff09")
   })
   tibble::tibble(
     key = ids, item_id = ids, kind = dplyr::if_else(judged, "fixed", "kept"),
@@ -138,21 +149,27 @@ kitsui_diff_text <- function(x) {
 #' @noRd
 kitsui_status_text <- function(status, check = NULL) {
   n <- \(kind) sum(status$kind == kind)
-  dropped <- if (n("out") > 0) sprintf("另外 %d 題這一回合拿掉。", n("out"))
+  # 原文：另外 %d 題這一回合拿掉。
+  dropped <- if (n("out") > 0) sprintf("\u53e6\u5916 %d \u984c\u9019\u4e00\u56de\u5408\u62ff\u6389\u3002", n("out"))
   if (n("free") > 0 || is.null(check)) {
-    main <- sprintf("沒有題庫，這個量尺是自由校準，沒有固定的題：%d 題都是這一回合估計的。",
+    # 原文：沒有題庫，這個量尺是自由校準，沒有固定的題：%d 題都是這一回合估計的。
+    main <- sprintf("\u6c92\u6709\u984c\u5eab\uff0c\u9019\u500b\u91cf\u5c3a\u662f\u81ea\u7531\u6821\u6e96\uff0c\u6c92\u6709\u56fa\u5b9a\u7684\u984c\uff1a%d \u984c\u90fd\u662f\u9019\u4e00\u56de\u5408\u4f30\u8a08\u7684\u3002",
                     n("free"))
     return(list(main = paste0(main, dropped), verify = NULL, ok = TRUE))
   }
   main <- sprintf(
-    "這一回合固定 %d 題（沿用題庫的參數），換成新版本 %d 題，新題 %d 題，拿掉 %d 題。",
+    # 原文：這一回合固定 %d 題（沿用題庫的參數），換成新版本 %d 題，新題 %d 題，拿掉 %d 題。
+    "\u9019\u4e00\u56de\u5408\u56fa\u5b9a %d \u984c\uff08\u6cbf\u7528\u984c\u5eab\u7684\u53c3\u6578\uff09\uff0c\u63db\u6210\u65b0\u7248\u672c %d \u984c\uff0c\u65b0\u984c %d \u984c\uff0c\u62ff\u6389 %d \u984c\u3002",
     n("fixed") + n("kept"), n("moved"), n("new"), n("out")
   )
-  same <- if (check$max_diff <= 1e-12) "完全相同" else "相同"
-  verify <- sprintf("固定的 %d 題、%d 個步驟，參數和題庫%s（最大差 %s）。", check$n_items,
+  # 原文：完全相同 | 相同
+  same <- if (check$max_diff <= 1e-12) "\u5b8c\u5168\u76f8\u540c" else "\u76f8\u540c"
+  # 原文：固定的 %d 題、%d 個步驟，參數和題庫%s（最大差 %s）。
+  verify <- sprintf("\u56fa\u5b9a\u7684 %d \u984c\u3001%d \u500b\u6b65\u9a5f\uff0c\u53c3\u6578\u548c\u984c\u5eab%s\uff08\u6700\u5927\u5dee %s\uff09\u3002", check$n_items,
                     check$n_steps, same, kitsui_diff_text(check$max_diff))
   if (nrow(check$bad) > 0) {
-    verify <- sprintf("固定的 %d 題、%d 個步驟裡，有 %d 個步驟和題庫不同（最大差 %s）。",
+    # 原文：固定的 %d 題、%d 個步驟裡，有 %d 個步驟和題庫不同（最大差 %s）。
+    verify <- sprintf("\u56fa\u5b9a\u7684 %d \u984c\u3001%d \u500b\u6b65\u9a5f\u88e1\uff0c\u6709 %d \u500b\u6b65\u9a5f\u548c\u984c\u5eab\u4e0d\u540c\uff08\u6700\u5927\u5dee %s\uff09\u3002",
                       check$n_items, check$n_steps, nrow(check$bad),
                       kitsui_diff_text(check$max_diff))
   }
@@ -162,7 +179,8 @@ kitsui_status_text <- function(status, check = NULL) {
 #' 和題庫不同的步驟，一步一句（紅框裡列出來）
 #' @noRd
 kitsui_fixed_bad_lines <- function(bad) {
-  sprintf("%s 步驟 %d：這一回合 %.4f，題庫 %.4f（差 %s）", bad$item_id, as.integer(bad$item_score),
+  # 原文：%s 步驟 %d：這一回合 %.4f，題庫 %.4f（差 %s）
+  sprintf("%s \u6b65\u9a5f %d\uff1a\u9019\u4e00\u56de\u5408 %.4f\uff0c\u984c\u5eab %.4f\uff08\u5dee %s\uff09", bad$item_id, as.integer(bad$item_score),
           bad$beta, bad$beta_bank, purrr::map_chr(bad$diff, kitsui_diff_text))
 }
 
@@ -335,11 +353,13 @@ kitsui_drift_detail <- function(drift, ids) {
   one <- \(id) {
     s <- pts[pts$item_id == id & pts$dropped %in% TRUE, ]
     steps <- as.integer(s$item_score)
-    zh_steps <- paste0("第 ", paste(steps, collapse = "、"), " 步")
+    # 原文：第  | 、 |  步
+    zh_steps <- paste0("\u7b2c ", paste(steps, collapse = "\u3001"), " \u6b65")
     en_steps <- paste0(if (length(steps) > 1) "steps " else "step ", paste(steps, collapse = ", "))
     if (is.null(jd)) {
       return(c(
-        sprintf("%s被拿掉：離判斷用的線（拿掉之前、用全部判斷的步驟畫的線）超過 %s 個殘差標準差",
+        # 原文：%s被拿掉：離判斷用的線（拿掉之前、用全部判斷的步驟畫的線）超過 %s 個殘差標準差
+        sprintf("%s\u88ab\u62ff\u6389\uff1a\u96e2\u5224\u65b7\u7528\u7684\u7dda\uff08\u62ff\u6389\u4e4b\u524d\u3001\u7528\u5168\u90e8\u5224\u65b7\u7684\u6b65\u9a5f\u756b\u7684\u7dda\uff09\u8d85\u904e %s \u500b\u6b98\u5dee\u6a19\u6e96\u5dee",
                 zh_steps, cut),
         sprintf("%s dropped: more than %s residual SD from the judging line (drawn through all judged steps before dropping)",
                 en_steps, cut)
@@ -352,8 +372,10 @@ kitsui_drift_detail <- function(drift, ids) {
     dist <- formatC(d, format = "f", digits = k)
     limit <- formatC(jd$limit, format = "f", digits = k)
     c(
-      sprintf("%s離判斷用的線 %s logit，超過界線 %s logit（%s 個殘差標準差，%d 個判斷的步驟算的）",
-              zh_steps, paste(dist, collapse = "、"), limit, cut, jd$n),
+      # 原文：%s離判斷用的線 %s logit，超過界線 %s logit（%s 個殘差標準差，%d 個判斷的步驟算的）
+      sprintf("%s\u96e2\u5224\u65b7\u7528\u7684\u7dda %s logit\uff0c\u8d85\u904e\u754c\u7dda %s logit\uff08%s \u500b\u6b98\u5dee\u6a19\u6e96\u5dee\uff0c%d \u500b\u5224\u65b7\u7684\u6b65\u9a5f\u7b97\u7684\uff09",
+              # 原文：、
+              zh_steps, paste(dist, collapse = "\u3001"), limit, cut, jd$n),
       sprintf("%s %s %s logit from the judging line, beyond the limit %s logit (%s residual SD of the %d judged steps)",
               en_steps, if (length(steps) > 1) "are" else "is", paste(dist, collapse = ", "),
               limit, cut, jd$n)

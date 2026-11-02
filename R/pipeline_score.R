@@ -154,7 +154,8 @@ kitsui_score_summary <- function(scores, ref = NULL) {
 #' @noRd
 kitsui_score_summary_display <- function(tab) {
   out <- data.frame(tab$scale, tab$cohort, tab$wave_m, tab$score_column, tab$n, tab$mean, tab$sd)
-  names(out) <- c("量尺", "世代", "波次", "分數欄", "人數", "平均", "標準差")
+  # 原文：量尺 | 世代 | 波次 | 分數欄 | 人數 | 平均 | 標準差
+  names(out) <- c("\u91cf\u5c3a", "\u4e16\u4ee3", "\u6ce2\u6b21", "\u5206\u6578\u6b04", "\u4eba\u6578", "\u5e73\u5747", "\u6a19\u6e96\u5dee")
   out
 }
 
@@ -165,51 +166,78 @@ kitsui_score_summary_display <- function(tab) {
 #' @noRd
 kitsui_score_column_text <- function(scores, ref = NULL) {
   final <- if (is.null(ref)) "d_score" else "ref_score"
-  where <- if (is.null(ref)) "D 量尺" else paste0("參照世代 ", ref, " 的量尺")
+  # 原文：D 量尺 | 參照世代  |  的量尺
+  where <- if (is.null(ref)) "D \u91cf\u5c3a" else paste0("\u53c3\u7167\u4e16\u4ee3 ", ref, " \u7684\u91cf\u5c3a")
   left <- if (NROW(scores) > 0 && final %in% names(scores)) {
     on <- tapply(!is.na(scores[[final]]), scores$bank, any)
     names(on)[!on]
   }
   paste0(
-    "分數欄：", final, "（", where, "）。",
+    # 原文：分數欄： | （ | ）。
+    "\u5206\u6578\u6b04\uff1a", final, "\uff08", where, "\uff09\u3002",
     if (length(left) > 0) {
-      paste0(kitsui_first(left, 4), " 還沒有換到這把尺，分數留在 ability（自己的量尺），", final, " 是空白。")
+      # 原文： 還沒有換到這把尺，分數留在 ability（自己的量尺）， |  是空白。
+      paste0(kitsui_first(left, 4), " \u9084\u6c92\u6709\u63db\u5230\u9019\u628a\u5c3a\uff0c\u5206\u6578\u7559\u5728 ability\uff08\u81ea\u5df1\u7684\u91cf\u5c3a\uff09\uff0c", final, " \u662f\u7a7a\u767d\u3002")
     }
   )
 }
 
 # 分數表各欄的一句說明（畫面上列在表的下面）
 KITSUI_SCORE_COLUMNS <- c(
-  visit_id = "列次的編號（一個孩子的一次施測）。",
-  subj_id = "孩子的編號。",
-  cohort = "孩子的世代（借用另一世代題庫時也不變）。",
-  wave_m = "波次（單位在 ① 選；KIT 是施測月齡）。",
-  age_m = "施測時的實際月齡。",
-  sex = "性別。",
-  domain = "領域。",
-  round = "這一回合的名稱。",
-  bank = "校準用的題庫（量尺）。借用另一世代題庫時，這裡是那個世代的量尺。",
-  scale = "分數最後在哪一把尺上。",
-  raw = "原始分數（答對或通過的步驟數）。",
-  ability = paste0("能力值（ability，kits 裡叫 theta；WLE，logit）：在 bank 那把尺上，",
-                   "各世代分開校準，沒有經過內部、外部連結。"),
-  ability_se = "ability 的標準誤（測量誤差）。",
-  d_score = "量尺分數（d_score）：經過內部、外部連結換到 D 之後的值；還沒換到 D 時是空白。",
-  d_score_se = "d_score 的標準誤（測量誤差，D 的單位）。",
-  se_link = "連結的誤差（換算本身的不確定性，D 的單位）。",
-  se_total = "d_score 的測量誤差與連結誤差合起來：sqrt(d_score_se² + se_link²)。"
+  # 原文：列次的編號（一個孩子的一次施測）。
+  visit_id = "\u5217\u6b21\u7684\u7de8\u865f\uff08\u4e00\u500b\u5b69\u5b50\u7684\u4e00\u6b21\u65bd\u6e2c\uff09\u3002",
+  # 原文：孩子的編號。
+  subj_id = "\u5b69\u5b50\u7684\u7de8\u865f\u3002",
+  # 原文：孩子的世代（借用另一世代題庫時也不變）。
+  cohort = "\u5b69\u5b50\u7684\u4e16\u4ee3\uff08\u501f\u7528\u53e6\u4e00\u4e16\u4ee3\u984c\u5eab\u6642\u4e5f\u4e0d\u8b8a\uff09\u3002",
+  # 原文：波次（單位在 ① 選；KIT 是施測月齡）。
+  wave_m = "\u6ce2\u6b21\uff08\u55ae\u4f4d\u5728 \u2460 \u9078\uff1bKIT \u662f\u65bd\u6e2c\u6708\u9f61\uff09\u3002",
+  # 原文：施測時的實際月齡。
+  age_m = "\u65bd\u6e2c\u6642\u7684\u5be6\u969b\u6708\u9f61\u3002",
+  # 原文：性別。
+  sex = "\u6027\u5225\u3002",
+  # 原文：領域。
+  domain = "\u9818\u57df\u3002",
+  # 原文：這一回合的名稱。
+  round = "\u9019\u4e00\u56de\u5408\u7684\u540d\u7a31\u3002",
+  # 原文：校準用的題庫（量尺）。借用另一世代題庫時，這裡是那個世代的量尺。
+  bank = "\u6821\u6e96\u7528\u7684\u984c\u5eab\uff08\u91cf\u5c3a\uff09\u3002\u501f\u7528\u53e6\u4e00\u4e16\u4ee3\u984c\u5eab\u6642\uff0c\u9019\u88e1\u662f\u90a3\u500b\u4e16\u4ee3\u7684\u91cf\u5c3a\u3002",
+  # 原文：分數最後在哪一把尺上。
+  scale = "\u5206\u6578\u6700\u5f8c\u5728\u54ea\u4e00\u628a\u5c3a\u4e0a\u3002",
+  # 原文：原始分數（答對或通過的步驟數）。
+  raw = "\u539f\u59cb\u5206\u6578\uff08\u7b54\u5c0d\u6216\u901a\u904e\u7684\u6b65\u9a5f\u6578\uff09\u3002",
+  # 原文：能力值（ability，kits 裡叫 theta；WLE，logit）：在 bank 那把尺上，
+  ability = paste0("\u80fd\u529b\u503c\uff08ability\uff0ckits \u88e1\u53eb theta\uff1bWLE\uff0clogit\uff09\uff1a\u5728 bank \u90a3\u628a\u5c3a\u4e0a\uff0c",
+                   # 原文：各世代分開校準，沒有經過內部、外部連結。
+                   "\u5404\u4e16\u4ee3\u5206\u958b\u6821\u6e96\uff0c\u6c92\u6709\u7d93\u904e\u5167\u90e8\u3001\u5916\u90e8\u9023\u7d50\u3002"),
+  # 原文：ability 的標準誤（測量誤差）。
+  ability_se = "ability \u7684\u6a19\u6e96\u8aa4\uff08\u6e2c\u91cf\u8aa4\u5dee\uff09\u3002",
+  # 原文：量尺分數（d_score）：經過內部、外部連結換到 D 之後的值；還沒換到 D 時是空白。
+  d_score = "\u91cf\u5c3a\u5206\u6578\uff08d_score\uff09\uff1a\u7d93\u904e\u5167\u90e8\u3001\u5916\u90e8\u9023\u7d50\u63db\u5230 D \u4e4b\u5f8c\u7684\u503c\uff1b\u9084\u6c92\u63db\u5230 D \u6642\u662f\u7a7a\u767d\u3002",
+  # 原文：d_score 的標準誤（測量誤差，D 的單位）。
+  d_score_se = "d_score \u7684\u6a19\u6e96\u8aa4\uff08\u6e2c\u91cf\u8aa4\u5dee\uff0cD \u7684\u55ae\u4f4d\uff09\u3002",
+  # 原文：連結的誤差（換算本身的不確定性，D 的單位）。
+  se_link = "\u9023\u7d50\u7684\u8aa4\u5dee\uff08\u63db\u7b97\u672c\u8eab\u7684\u4e0d\u78ba\u5b9a\u6027\uff0cD \u7684\u55ae\u4f4d\uff09\u3002",
+  # 原文：d_score 的測量誤差與連結誤差合起來：sqrt(d_score_se² + se_link²)。
+  se_total = "d_score \u7684\u6e2c\u91cf\u8aa4\u5dee\u8207\u9023\u7d50\u8aa4\u5dee\u5408\u8d77\u4f86\uff1asqrt(d_score_se\u00b2 + se_link\u00b2)\u3002"
 )
 
 #' 外部連結不適用時（參照世代沒有錨題）的欄：最後的分數在參照世代的量尺上
 #' @noRd
 kitsui_score_columns_ref <- function(ref) {
   c(
-    ref_score = paste0("參照世代（", ref, "）的量尺上的分數，也就是最後的分數：", ref,
-                       " 自己就是 ability；其他世代經過內部連結換過來；還沒有內部連結的世代是空白。",
-                       "這份資料沒有 D 分數的錨題，外部連結不適用，所以沒有 d_score。"),
-    ref_score_se = "ref_score 的標準誤（測量誤差，參照世代量尺的單位）。",
-    se_link = "內部連結的誤差（換算本身的不確定性）；參照世代自己沒有換算，是空白。",
-    se_total = "ref_score 的測量誤差與連結誤差合起來：sqrt(ref_score_se² + se_link²)。"
+    # 原文：參照世代（ | ）的量尺上的分數，也就是最後的分數：
+    ref_score = paste0("\u53c3\u7167\u4e16\u4ee3\uff08", ref, "\uff09\u7684\u91cf\u5c3a\u4e0a\u7684\u5206\u6578\uff0c\u4e5f\u5c31\u662f\u6700\u5f8c\u7684\u5206\u6578\uff1a", ref,
+                       # 原文： 自己就是 ability；其他世代經過內部連結換過來；還沒有內部連結的世代是空白。
+                       " \u81ea\u5df1\u5c31\u662f ability\uff1b\u5176\u4ed6\u4e16\u4ee3\u7d93\u904e\u5167\u90e8\u9023\u7d50\u63db\u904e\u4f86\uff1b\u9084\u6c92\u6709\u5167\u90e8\u9023\u7d50\u7684\u4e16\u4ee3\u662f\u7a7a\u767d\u3002",
+                       # 原文：這份資料沒有 D 分數的錨題，外部連結不適用，所以沒有 d_score。
+                       "\u9019\u4efd\u8cc7\u6599\u6c92\u6709 D \u5206\u6578\u7684\u9328\u984c\uff0c\u5916\u90e8\u9023\u7d50\u4e0d\u9069\u7528\uff0c\u6240\u4ee5\u6c92\u6709 d_score\u3002"),
+    # 原文：ref_score 的標準誤（測量誤差，參照世代量尺的單位）。
+    ref_score_se = "ref_score \u7684\u6a19\u6e96\u8aa4\uff08\u6e2c\u91cf\u8aa4\u5dee\uff0c\u53c3\u7167\u4e16\u4ee3\u91cf\u5c3a\u7684\u55ae\u4f4d\uff09\u3002",
+    # 原文：內部連結的誤差（換算本身的不確定性）；參照世代自己沒有換算，是空白。
+    se_link = "\u5167\u90e8\u9023\u7d50\u7684\u8aa4\u5dee\uff08\u63db\u7b97\u672c\u8eab\u7684\u4e0d\u78ba\u5b9a\u6027\uff09\uff1b\u53c3\u7167\u4e16\u4ee3\u81ea\u5df1\u6c92\u6709\u63db\u7b97\uff0c\u662f\u7a7a\u767d\u3002",
+    # 原文：ref_score 的測量誤差與連結誤差合起來：sqrt(ref_score_se² + se_link²)。
+    se_total = "ref_score \u7684\u6e2c\u91cf\u8aa4\u5dee\u8207\u9023\u7d50\u8aa4\u5dee\u5408\u8d77\u4f86\uff1asqrt(ref_score_se\u00b2 + se_link\u00b2)\u3002"
   )
 }
 
@@ -243,11 +271,15 @@ kitsui_score_routes <- function(fixed, subj, plan = NULL) {
     data <- kitsui_route_data(plan, s, kitsui_wave_unit(fixed))
     other <- setdiff(data$data_scale, s)
     note <- if (length(other) > 0) {
-      paste0(paste(scale_cohort(other), collapse = "、"), " 的資料，借用另一世代題庫（", s, "）。",
-             "孩子的世代（cohort）不變。")
+      # 原文：、 |  的資料，借用另一世代題庫（ | ）。
+      paste0(paste(scale_cohort(other), collapse = "\u3001"), " \u7684\u8cc7\u6599\uff0c\u501f\u7528\u53e6\u4e00\u4e16\u4ee3\u984c\u5eab\uff08", s, "\uff09\u3002",
+             # 原文：孩子的世代（cohort）不變。
+             "\u5b69\u5b50\u7684\u4e16\u4ee3\uff08cohort\uff09\u4e0d\u8b8a\u3002")
     }
-    tibble::tibble(bank = s, data = paste(data$text, collapse = "；"),
-                   route = paste(c(s, steps), collapse = " → "), final_scale = attr(x, "scale"),
+    # 原文：；
+    tibble::tibble(bank = s, data = paste(data$text, collapse = "\uff1b"),
+                   # 原文： → 
+                   route = paste(c(s, steps), collapse = " \u2192 "), final_scale = attr(x, "scale"),
                    n = nrow(x), note = note %||% NA_character_)
   }) |>
     purrr::list_rbind()
@@ -260,7 +292,8 @@ kitsui_route_data <- function(plan, scale, unit = "months") {
   part |>
     dplyr::summarise(waves = kitsui_waves_text(sort(unique(.data$wave_m)), unit),
                      .by = "data_scale") |>
-    dplyr::mutate(text = paste0(.data$data_scale, "（", .data$waves, "）"))
+    # 原文：（ | ）
+    dplyr::mutate(text = paste0(.data$data_scale, "\uff08", .data$waves, "\uff09"))
 }
 
 #' 這一回合 ② 的 flag（check = "flag"）：量尺與原因
@@ -300,7 +333,8 @@ kitsui_score_search <- function(scores, text) {
 kitsui_item_table <- function(round, df, fixed, scale, links = NULL, persons = NULL,
                               steps = NULL) {
   item <- round$items[[scale]]
-  if (is.null(item)) kitDesign::kit_abort("這一回合沒有 ", scale, " 的校準結果。")
+  # 原文：這一回合沒有  |  的校準結果。
+  if (is.null(item)) kitDesign::kit_abort("\u9019\u4e00\u56de\u5408\u6c92\u6709 ", scale, " \u7684\u6821\u6e96\u7d50\u679c\u3002")
   links <- links %||% kitsui_links(fixed, kitsui_link_path(fixed, scale))
   persons <- persons %||% kitsui_persons(df)
   steps <- steps %||% kitsui_steps_vec(fixed$pass_steps)
@@ -432,7 +466,8 @@ kitsui_read_steps <- function(path) {
                     lazy = FALSE, progress = FALSE),
     error = \(e) NULL
   )
-  if (is.null(out)) kitDesign::kit_abort("讀不進這個檔案。請上傳 CSV 檔（逗號分隔）。")
+  # 原文：讀不進這個檔案。請上傳 CSV 檔（逗號分隔）。
+  if (is.null(out)) kitDesign::kit_abort("\u8b80\u4e0d\u9032\u9019\u500b\u6a94\u6848\u3002\u8acb\u4e0a\u50b3 CSV \u6a94\uff08\u9017\u865f\u5206\u9694\uff09\u3002")
   tibble::as_tibble(out)
 }
 
@@ -449,23 +484,29 @@ kitsui_steps_check <- function(tab, known) {
   fail <- \(...) list(steps = NULL, errors = c(...), warnings = character())
   miss <- setdiff(c("item_id", "step"), names(tab))
   if (length(miss) > 0) {
-    return(fail(paste0("檔案要有 item_id 與 step 兩欄。這個檔案缺少：",
-                       paste(miss, collapse = "、"), "。")))
+    # 原文：檔案要有 item_id 與 step 兩欄。這個檔案缺少：
+    return(fail(paste0("\u6a94\u6848\u8981\u6709 item_id \u8207 step \u5169\u6b04\u3002\u9019\u500b\u6a94\u6848\u7f3a\u5c11\uff1a",
+                       # 原文：、 | 。
+                       paste(miss, collapse = "\u3001"), "\u3002")))
   }
   id <- trimws(as.character(tab$item_id))
   raw <- trimws(as.character(tab$step))
   keep <- !is.na(id) & nzchar(id)
   id <- id[keep]
   raw <- raw[keep]
-  if (length(id) == 0) return(fail("檔案裡沒有任何一題。"))
+  # 原文：檔案裡沒有任何一題。
+  if (length(id) == 0) return(fail("\u6a94\u6848\u88e1\u6c92\u6709\u4efb\u4f55\u4e00\u984c\u3002"))
   id <- dplyr::coalesce(known$item_id[match(id, known$current_id)], id)
   num <- suppressWarnings(as.numeric(raw))
   bad <- is.na(num) | num < 1 | num != round(num)
-  shown <- ifelse(is.na(raw) | raw == "", "空白", raw)
+  # 原文：空白
+  shown <- ifelse(is.na(raw) | raw == "", "\u7a7a\u767d", raw)
   errors <- c(
     if (any(bad)) {
-      paste0("step 要是 1 以上的整數。這幾題不是：",
-             kitsui_some(paste0(id[bad], "（", shown[bad], "）")), "。")
+      # 原文：step 要是 1 以上的整數。這幾題不是：
+      paste0("step \u8981\u662f 1 \u4ee5\u4e0a\u7684\u6574\u6578\u3002\u9019\u5e7e\u984c\u4e0d\u662f\uff1a",
+             # 原文：（ | ） | 。
+             kitsui_some(paste0(id[bad], "\uff08", shown[bad], "\uff09")), "\u3002")
     },
     kitsui_steps_twice(id[!bad], num[!bad])
   )
@@ -476,16 +517,21 @@ kitsui_steps_check <- function(tab, known) {
     dplyr::filter(.data$step > .data$top)
   if (nrow(over) > 0) {
     errors <- c(errors, paste0(
-      "這幾題在校準裡沒有這麼高的分數：",
-      kitsui_some(sprintf("%s（設定 %d，最高 %d 分）", over$item_id, over$step, over$top)), "。"
+      # 原文：這幾題在校準裡沒有這麼高的分數：
+      "\u9019\u5e7e\u984c\u5728\u6821\u6e96\u88e1\u6c92\u6709\u9019\u9ebc\u9ad8\u7684\u5206\u6578\uff1a",
+      # 原文：%s（設定 %d，最高 %d 分） | 。
+      kitsui_some(sprintf("%s\uff08\u8a2d\u5b9a %d\uff0c\u6700\u9ad8 %d \u5206\uff09", over$item_id, over$step, over$top)), "\u3002"
     ))
   }
   if (length(errors) > 0) return(fail(errors))
   unknown <- setdiff(ok$item_id, known$item_id)
   warnings <- if (length(unknown) > 0) {
-    c(paste0("這一回合的校準裡沒有這幾題：", kitsui_some(unknown), "。"),
-      "這些設定照樣存進固定檔，之後的回合用得到。",
-      "如果是打錯了，請改好再上傳。")
+    # 原文：這一回合的校準裡沒有這幾題： | 。
+    c(paste0("\u9019\u4e00\u56de\u5408\u7684\u6821\u6e96\u88e1\u6c92\u6709\u9019\u5e7e\u984c\uff1a", kitsui_some(unknown), "\u3002"),
+      # 原文：這些設定照樣存進固定檔，之後的回合用得到。
+      "\u9019\u4e9b\u8a2d\u5b9a\u7167\u6a23\u5b58\u9032\u56fa\u5b9a\u6a94\uff0c\u4e4b\u5f8c\u7684\u56de\u5408\u7528\u5f97\u5230\u3002",
+      # 原文：如果是打錯了，請改好再上傳。
+      "\u5982\u679c\u662f\u6253\u932f\u4e86\uff0c\u8acb\u6539\u597d\u518d\u4e0a\u50b3\u3002")
   }
   list(steps = stats::setNames(ok$step, ok$item_id), errors = character(),
        warnings = warnings %||% character())
@@ -496,13 +542,16 @@ kitsui_steps_twice <- function(id, step) {
   n <- tapply(step, id, \(x) length(unique(x)))
   twice <- names(n)[n > 1]
   if (length(twice) == 0) return(NULL)
-  paste0("同一題列了兩次以上，step 不一樣：", kitsui_some(twice), "。每一題只列一次。")
+  # 原文：同一題列了兩次以上，step 不一樣： | 。每一題只列一次。
+  paste0("\u540c\u4e00\u984c\u5217\u4e86\u5169\u6b21\u4ee5\u4e0a\uff0cstep \u4e0d\u4e00\u6a23\uff1a", kitsui_some(twice), "\u3002\u6bcf\u4e00\u984c\u53ea\u5217\u4e00\u6b21\u3002")
 }
 
 # 列出前幾個，太多時加「等 n 題」
 kitsui_some <- function(x, n = 10) {
-  more <- if (length(x) > n) paste0(" 等 ", length(x), " 題")
-  paste0(paste(utils::head(x, n), collapse = "、"), more)
+  # 原文： 等  |  題
+  more <- if (length(x) > n) paste0(" \u7b49 ", length(x), " \u984c")
+  # 原文：、
+  paste0(paste(utils::head(x, n), collapse = "\u3001"), more)
 }
 
 #' 套用新的設定：檔案裡列的題換成新的 step，沒列的題不變；只留不是 1 的題
@@ -527,7 +576,8 @@ kitsui_steps_template <- function(known, steps) {
 #' @return tibble：item_id、step、scale、max_score（這一回合的題在前，依題號排）
 #' @noRd
 kitsui_steps_shown <- function(known, steps) {
-  scales <- dplyr::summarise(known, scale = paste(unique(.data$scale), collapse = "、"),
+  # 原文：、
+  scales <- dplyr::summarise(known, scale = paste(unique(.data$scale), collapse = "\u3001"),
                              max_score = min(.data$top), .by = "item_id")
   tibble::tibble(item_id = names(steps), step = unname(steps)) |>
     dplyr::filter(.data$step != 1) |>
@@ -540,11 +590,16 @@ kitsui_steps_shown <- function(known, steps) {
 #' @noRd
 kitsui_steps_summary <- function(shown) {
   here <- shown[!is.na(shown$scale), ]
-  if (nrow(here) == 0) return("通過步驟（每題都是 1）")
-  some <- paste0(here$item_id, "＝", here$step)
-  more <- if (length(some) > 3) "、…"
-  paste0("通過步驟（", nrow(here), " 題不是 1：", paste(utils::head(some, 3), collapse = "、"),
-         more, "）")
+  # 原文：通過步驟（每題都是 1）
+  if (nrow(here) == 0) return("\u901a\u904e\u6b65\u9a5f\uff08\u6bcf\u984c\u90fd\u662f 1\uff09")
+  # 原文：＝
+  some <- paste0(here$item_id, "\uff1d", here$step)
+  # 原文：、…
+  more <- if (length(some) > 3) "\u3001\u2026"
+  # 原文：通過步驟（ |  題不是 1： | 、
+  paste0("\u901a\u904e\u6b65\u9a5f\uff08", nrow(here), " \u984c\u4e0d\u662f 1\uff1a", paste(utils::head(some, 3), collapse = "\u3001"),
+         # 原文：）
+         more, "\uff09")
 }
 
 #' 選題目的清單：這一回合的每一題（原來的題號），依量尺分組；標籤帶目前的 step 與最高分數
@@ -553,7 +608,8 @@ kitsui_steps_summary <- function(shown) {
 kitsui_steps_choices <- function(known, steps) {
   tpl <- kitsui_steps_template(known, steps)
   if (nrow(tpl) == 0) return(list())
-  label <- sprintf("%s（目前 %d，最高 %d 分）", tpl$item_id, tpl$step, tpl$max_score)
+  # 原文：%s（目前 %d，最高 %d 分）
+  label <- sprintf("%s\uff08\u76ee\u524d %d\uff0c\u6700\u9ad8 %d \u5206\uff09", tpl$item_id, tpl$step, tpl$max_score)
   split(stats::setNames(tpl$item_id, label), tpl$scale)
 }
 
@@ -566,11 +622,14 @@ kitsui_steps_choices <- function(known, steps) {
 #' @noRd
 kitsui_steps_pick <- function(ids, value, known) {
   fail <- \(...) list(steps = NULL, errors = c(...))
-  if (length(ids) == 0) return(fail("請先選題目。"))
+  # 原文：請先選題目。
+  if (length(ids) == 0) return(fail("\u8acb\u5148\u9078\u984c\u76ee\u3002"))
   num <- suppressWarnings(as.numeric(value))
-  if (length(num) != 1 || is.na(num)) return(fail("通過步驟是空白。請填 1 以上的整數。"))
+  # 原文：通過步驟是空白。請填 1 以上的整數。
+  if (length(num) != 1 || is.na(num)) return(fail("\u901a\u904e\u6b65\u9a5f\u662f\u7a7a\u767d\u3002\u8acb\u586b 1 \u4ee5\u4e0a\u7684\u6574\u6578\u3002"))
   if (num < 1 || num != round(num)) {
-    return(fail(paste0("通過步驟要是 1 以上的整數。現在是 ", format(num), "。")))
+    # 原文：通過步驟要是 1 以上的整數。現在是  | 。
+    return(fail(paste0("\u901a\u904e\u6b65\u9a5f\u8981\u662f 1 \u4ee5\u4e0a\u7684\u6574\u6578\u3002\u73fe\u5728\u662f ", format(num), "\u3002")))
   }
   tab <- tibble::tibble(item_id = ids, step = as.character(num))
   kitsui_steps_check(tab, known)[c("steps", "errors")]

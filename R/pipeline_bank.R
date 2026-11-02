@@ -36,35 +36,45 @@ kitsui_plan_wave <- function(fixed, scale, wave) {
   co <- scale_cohort(scale)
   unit <- kitsui_wave_unit(fixed)
   # 月時寫「60 月」（和以前一樣）；年、波次序號是「2013 年」「第 3 波」
-  w <- if (unit == "months") paste(format(wave), "月") else kitsui_wave_text(wave, unit)
+  # 原文：月
+  w <- if (unit == "months") paste(format(wave), "\u6708") else kitsui_wave_text(wave, unit)
   # tibble() 裡後面的欄會看到前面的欄，所以 borrowed 先算好
   out <- \(why, to = scale, detail = NA_character_) {
     borrowed <- to != scale
     tibble::tibble(data_scale = scale, wave_m = wave, scale = to, rule = to,
                    borrowed = borrowed, manual = FALSE, why = why, detail = detail)
   }
-  if (!scale %in% fixed$bank$scale) return(out("自己的題庫是空的：自由校準"))
+  # 原文：自己的題庫是空的：自由校準
+  if (!scale %in% fixed$bank$scale) return(out("\u81ea\u5df1\u7684\u984c\u5eab\u662f\u7a7a\u7684\uff1a\u81ea\u7531\u6821\u6e96"))
   own <- kitsui_covers(fixed, scale, wave)
   word <- kitsui_wave_word(unit)
-  if (is.na(own)) return(out(sprintf("不知道自己的題庫校準過哪些%s（舊的固定檔）：用自己的題庫", word)))
+  # 原文：不知道自己的題庫校準過哪些%s（舊的固定檔）：用自己的題庫
+  if (is.na(own)) return(out(sprintf("\u4e0d\u77e5\u9053\u81ea\u5df1\u7684\u984c\u5eab\u6821\u6e96\u904e\u54ea\u4e9b%s\uff08\u820a\u7684\u56fa\u5b9a\u6a94\uff09\uff1a\u7528\u81ea\u5df1\u7684\u984c\u5eab", word)))
   if (own) {
-    return(out(sprintf("%s 題庫有校準過這個%s（%s）", co, word,
+    # 原文：%s 題庫有校準過這個%s（%s）
+    return(out(sprintf("%s \u984c\u5eab\u6709\u6821\u6e96\u904e\u9019\u500b%s\uff08%s\uff09", co, word,
                        kitsui_wave_range_text(fixed, scale, unit))))
   }
   if (unit != "months") {
-    return(out(sprintf(paste0("自己的題庫沒有校準過%s；波次的單位是%s，",
-                              "借另一世代題庫的規則只用在月齡：用自己的題庫"), w, word)))
+    # 原文：自己的題庫沒有校準過%s；波次的單位是%s，
+    return(out(sprintf(paste0("\u81ea\u5df1\u7684\u984c\u5eab\u6c92\u6709\u6821\u6e96\u904e%s\uff1b\u6ce2\u6b21\u7684\u55ae\u4f4d\u662f%s\uff0c",
+                              # 原文：借另一世代題庫的規則只用在月齡：用自己的題庫
+                              "\u501f\u53e6\u4e00\u4e16\u4ee3\u984c\u5eab\u7684\u898f\u5247\u53ea\u7528\u5728\u6708\u9f61\uff1a\u7528\u81ea\u5df1\u7684\u984c\u5eab"), w, word)))
   }
   same <- unique(fixed$bank$scale[scale_domain(fixed$bank$scale) == scale_domain(scale)])
   covering <- same[same != scale & purrr::map_lgl(same, \(o) isTRUE(kitsui_covers(fixed, o, wave)))]
   hit <- intersect(kitsui_bank_candidates(fixed, scale), covering)
-  if (length(covering) == 0) return(out(sprintf("沒有題庫校準過 %s：用自己的題庫", w)))
+  # 原文：沒有題庫校準過 %s：用自己的題庫
+  if (length(covering) == 0) return(out(sprintf("\u6c92\u6709\u984c\u5eab\u6821\u6e96\u904e %s\uff1a\u7528\u81ea\u5df1\u7684\u984c\u5eab", w)))
   if (length(hit) == 0) {
-    return(out(sprintf("%s 題庫有校準過 %s，但還沒有到參照世代的內部連結：用自己的題庫",
-                       paste(scale_cohort(covering), collapse = "、"), w)))
+    # 原文：%s 題庫有校準過 %s，但還沒有到參照世代的內部連結：用自己的題庫
+    return(out(sprintf("%s \u984c\u5eab\u6709\u6821\u6e96\u904e %s\uff0c\u4f46\u9084\u6c92\u6709\u5230\u53c3\u7167\u4e16\u4ee3\u7684\u5167\u90e8\u9023\u7d50\uff1a\u7528\u81ea\u5df1\u7684\u984c\u5eab",
+                       # 原文：、
+                       paste(scale_cohort(covering), collapse = "\u3001"), w)))
   }
   to <- hit[1]
-  why <- sprintf("%s 題庫沒有校準過 %s；%s 題庫有（%s）", co, w, scale_cohort(to),
+  # 原文：%s 題庫沒有校準過 %s；%s 題庫有（%s）
+  why <- sprintf("%s \u984c\u5eab\u6c92\u6709\u6821\u6e96\u904e %s\uff1b%s \u984c\u5eab\u6709\uff08%s\uff09", co, w, scale_cohort(to),
                  kitsui_wave_range_text(fixed, to, unit))
   detail <- sprintf("%s %s months on %s bank (it covers %s months); rule default", co,
                     format(wave), to, kitsui_wave_range(fixed, to))
@@ -103,8 +113,10 @@ kitsui_wave_range <- function(fixed, scale, sep = "-") {
 #' 題庫校準過的波次範圍給使用者看的寫法，例如「36–96 月」「2009–2013 年」「第 1–3 波」
 #' @noRd
 kitsui_wave_range_text <- function(fixed, scale, unit = kitsui_wave_unit(fixed)) {
-  r <- kitsui_wave_range(fixed, scale, "–")
-  switch(unit, years = paste0(r, " 年"), waves = paste0("第 ", r, " 波"), paste0(r, " 月"))
+  # 原文：–
+  r <- kitsui_wave_range(fixed, scale, "\u2013")
+  # 原文： 年 | 第  |  波 |  月
+  switch(unit, years = paste0(r, " \u5e74"), waves = paste0("\u7b2c ", r, " \u6ce2"), paste0(r, " \u6708"))
 }
 
 #' 手動選的題庫：只能選自己的，或可以借的題庫；和規則不同時記下來
@@ -114,19 +126,22 @@ kitsui_apply_choice <- function(plan, fixed, bank_choice) {
   if (length(bank_choice) == 0) return(plan)
   extra <- setdiff(names(bank_choice), plan$data_scale)
   if (length(extra) > 0) {
-    kitDesign::kit_abort("這一回合的資料沒有 ", paste(extra, collapse = "、"), "，不能選它的題庫。")
+    # 原文：這一回合的資料沒有  | 、 | ，不能選它的題庫。
+    kitDesign::kit_abort("\u9019\u4e00\u56de\u5408\u7684\u8cc7\u6599\u6c92\u6709 ", paste(extra, collapse = "\u3001"), "\uff0c\u4e0d\u80fd\u9078\u5b83\u7684\u984c\u5eab\u3002")
   }
   for (s in names(bank_choice)) {
     to <- bank_choice[[s]]
     ok <- c(s, kitsui_bank_candidates(fixed, s))
     if (!to %in% ok) {
-      kitDesign::kit_abort(s, " 不能用 ", to, " 的題庫。可以選：", paste(ok, collapse = "、"), "。")
+      # 原文： 不能用  |  的題庫。可以選： | 、 | 。
+      kitDesign::kit_abort(s, " \u4e0d\u80fd\u7528 ", to, " \u7684\u984c\u5eab\u3002\u53ef\u4ee5\u9078\uff1a", paste(ok, collapse = "\u3001"), "\u3002")
     }
     i <- which(plan$data_scale == s & plan$rule != to)
     plan$scale[i] <- to
     plan$borrowed[i] <- to != s
     plan$manual[i] <- TRUE
-    plan$why[i] <- sprintf("手動選擇：用 %s 的題庫（規則是 %s）", to, plan$rule[i])
+    # 原文：手動選擇：用 %s 的題庫（規則是 %s）
+    plan$why[i] <- sprintf("\u624b\u52d5\u9078\u64c7\uff1a\u7528 %s \u7684\u984c\u5eab\uff08\u898f\u5247\u662f %s\uff09", to, plan$rule[i])
     plan$detail[i] <- sprintf("%s %s %s on %s bank; manual choice (rule: %s)",
                               scale_cohort(s), format(plan$wave_m[i]),
                               kitsui_wave_unit_en(kitsui_wave_unit(fixed)), to, plan$rule[i])
@@ -144,13 +159,17 @@ kitsui_bank_options <- function(plan, fixed) {
   purrr::map(unique(plan$data_scale), \(s) {
     rows <- plan[plan$data_scale == s, ]
     rule <- unique(rows$rule)
-    own <- if (s %in% fixed$bank$scale) paste0(s, "（自己的題庫）") else "自由校準（自己的題庫是空的）"
+    # 原文：（自己的題庫） | 自由校準（自己的題庫是空的）
+    own <- if (s %in% fixed$bank$scale) paste0(s, "\uff08\u81ea\u5df1\u7684\u984c\u5eab\uff09") else "\u81ea\u7531\u6821\u6e96\uff08\u81ea\u5df1\u7684\u984c\u5eab\u662f\u7a7a\u7684\uff09"
     other <- kitsui_bank_candidates(fixed, s)
-    choices <- stats::setNames(c(s, other), c(own, sprintf("%s（借用另一世代題庫）", other)))
-    if (length(rule) > 1) choices <- c("依月齡的規則（各波次不同）" = "", choices)
+    # 原文：%s（借用另一世代題庫）
+    choices <- stats::setNames(c(s, other), c(own, sprintf("%s\uff08\u501f\u7528\u53e6\u4e00\u4e16\u4ee3\u984c\u5eab\uff09", other)))
+    # 原文：依月齡的規則（各波次不同）
+    if (length(rule) > 1) choices <- c("\u4f9d\u6708\u9f61\u7684\u898f\u5247\uff08\u5404\u6ce2\u6b21\u4e0d\u540c\uff09" = "", choices)
     tibble::tibble(data_scale = s, waves = paste(format(rows$wave_m), collapse = ", "),
                    rule = if (length(rule) == 1) rule else "",
-                   why = paste(unique(rows$why), collapse = "；"), choices = list(choices))
+                   # 原文：；
+                   why = paste(unique(rows$why), collapse = "\uff1b"), choices = list(choices))
   }) |>
     purrr::list_rbind()
 }
@@ -164,10 +183,14 @@ kitsui_bank_options <- function(plan, fixed) {
 kitsui_bank_why <- function(b, pick) {
   pick <- dplyr::coalesce(pick, "")
   manual <- nzchar(pick) & pick != b$rule
-  rule <- dplyr::if_else(nzchar(b$rule), paste("規則是", b$rule), "規則依月齡，各波次不同")
+  # 原文：規則是 | 規則依月齡，各波次不同
+  rule <- dplyr::if_else(nzchar(b$rule), paste("\u898f\u5247\u662f", b$rule), "\u898f\u5247\u4f9d\u6708\u9f61\uff0c\u5404\u6ce2\u6b21\u4e0d\u540c")
   free <- purrr::map2_lgl(b$choices, pick, \(ch, p) startsWith(names(ch)[match(p, ch)] %||% "",
-                                                              "自由校準"))
-  text <- dplyr::if_else(free, sprintf("手動選擇：自由校準（%s）", rule),
-                         sprintf("手動選擇：用 %s 的題庫（%s）", pick, rule))
+                                                              # 原文：自由校準
+                                                              "\u81ea\u7531\u6821\u6e96"))
+  # 原文：手動選擇：自由校準（%s）
+  text <- dplyr::if_else(free, sprintf("\u624b\u52d5\u9078\u64c7\uff1a\u81ea\u7531\u6821\u6e96\uff08%s\uff09", rule),
+                         # 原文：手動選擇：用 %s 的題庫（%s）
+                         sprintf("\u624b\u52d5\u9078\u64c7\uff1a\u7528 %s \u7684\u984c\u5eab\uff08%s\uff09", pick, rule))
   dplyr::if_else(manual, text, b$why)
 }

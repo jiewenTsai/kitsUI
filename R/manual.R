@@ -32,7 +32,8 @@ kit_setup_manual <- function() {
 kit_manual_ui <- function() {
   dir <- kit_manual_dir()
   if (is.null(dir)) {
-    return(kitDesign::kit_callout(warn = TRUE, "找不到使用手冊（inst/manual/）。"))
+    # 原文：找不到使用手冊（inst/manual/）。
+    return(kitDesign::kit_callout(warn = TRUE, "\u627e\u4e0d\u5230\u4f7f\u7528\u624b\u518a\uff08inst/manual/\uff09\u3002"))
   }
   body <- readLines(file.path(dir, KIT_MANUAL_BODY), encoding = "UTF-8", warn = FALSE)
   src <- paste0(KIT_MANUAL_PREFIX, "/", KIT_MANUAL_FILE)
@@ -40,9 +41,12 @@ kit_manual_ui <- function() {
     shiny::tags$style(kit_manual_css()),
     shiny::tags$p(
       class = "kit-hint mt-3",
-      "要一邊看手冊一邊操作，可以",
-      shiny::tags$a(href = src, target = "_blank", rel = "noopener", "在新分頁開啟手冊"),
-      "。"
+      # 原文：要一邊看手冊一邊操作，可以
+      "\u8981\u4e00\u908a\u770b\u624b\u518a\u4e00\u908a\u64cd\u4f5c\uff0c\u53ef\u4ee5",
+      # 原文：在新分頁開啟手冊
+      shiny::tags$a(href = src, target = "_blank", rel = "noopener", "\u5728\u65b0\u5206\u9801\u958b\u555f\u624b\u518a"),
+      # 原文：。
+      "\u3002"
     ),
     shiny::tags$div(class = "kit-manual", shiny::HTML(paste(body, collapse = "\n")))
   )

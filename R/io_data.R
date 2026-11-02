@@ -26,8 +26,10 @@ read_data_file <- function(path, name, col_types = NULL) {
       haven::read_sav(path),
       error = function(e) {
         kitDesign::kit_abort(
-          "無法讀取 ", name, "：檔案可能已損壞，或不是 SPSS 檔。",
-          "請用 SPSS 開啟確認後重新存檔再上傳。"
+          # 原文：無法讀取  | ：檔案可能已損壞，或不是 SPSS 檔。
+          "\u7121\u6cd5\u8b80\u53d6 ", name, "\uff1a\u6a94\u6848\u53ef\u80fd\u5df2\u640d\u58de\uff0c\u6216\u4e0d\u662f SPSS \u6a94\u3002",
+          # 原文：請用 SPSS 開啟確認後重新存檔再上傳。
+          "\u8acb\u7528 SPSS \u958b\u555f\u78ba\u8a8d\u5f8c\u91cd\u65b0\u5b58\u6a94\u518d\u4e0a\u50b3\u3002"
         )
       }
     )
@@ -39,9 +41,11 @@ read_data_file <- function(path, name, col_types = NULL) {
     ))
   }
   kitDesign::kit_abort(
-    "無法讀取 ", name, "：目前只支援 CSV、壓縮過的 CSV（.csv.gz）與 SPSS（.sav）檔。",
+    # 原文：無法讀取  | ：目前只支援 CSV、壓縮過的 CSV（.csv.gz）與 SPSS（.sav）檔。
+    "\u7121\u6cd5\u8b80\u53d6 ", name, "\uff1a\u76ee\u524d\u53ea\u652f\u63f4 CSV\u3001\u58d3\u7e2e\u904e\u7684 CSV\uff08.csv.gz\uff09\u8207 SPSS\uff08.sav\uff09\u6a94\u3002",
     if (ext %in% c("xlsx", "xls")) {
-      "Excel 檔請先在 Excel 用「另存新檔 → CSV UTF-8（逗號分隔）」存成 CSV 再上傳。"
+      # 原文：Excel 檔請先在 Excel 用「另存新檔 → CSV UTF-8（逗號分隔）」存成 CSV 再上傳。
+      "Excel \u6a94\u8acb\u5148\u5728 Excel \u7528\u300c\u53e6\u5b58\u65b0\u6a94 \u2192 CSV UTF-8\uff08\u9017\u865f\u5206\u9694\uff09\u300d\u5b58\u6210 CSV \u518d\u4e0a\u50b3\u3002"
     }
   )
 }
@@ -103,9 +107,12 @@ read_csv_auto <- function(path, col_types = NULL) {
     if (!is.null(df) && kitDesign::kit_is_valid_utf8_df(df)) return(csv_result(df, "BIG5"))
   }
   kitDesign::kit_abort(
-    "無法讀取這個 CSV 檔：它的編碼不是 UTF-8，也不是繁體中文的 Big5（CP950），",
-    "可能是 Latin-1、簡體中文（GBK）或日文（Shift-JIS）的檔案，或不是文字格式的 CSV。",
-    "請用 Excel 開啟，另存為「CSV UTF-8（逗號分隔）」再上傳。"
+    # 原文：無法讀取這個 CSV 檔：它的編碼不是 UTF-8，也不是繁體中文的 Big5（CP950），
+    "\u7121\u6cd5\u8b80\u53d6\u9019\u500b CSV \u6a94\uff1a\u5b83\u7684\u7de8\u78bc\u4e0d\u662f UTF-8\uff0c\u4e5f\u4e0d\u662f\u7e41\u9ad4\u4e2d\u6587\u7684 Big5\uff08CP950\uff09\uff0c",
+    # 原文：可能是 Latin-1、簡體中文（GBK）或日文（Shift-JIS）的檔案，或不是文字格式的 CSV。
+    "\u53ef\u80fd\u662f Latin-1\u3001\u7c21\u9ad4\u4e2d\u6587\uff08GBK\uff09\u6216\u65e5\u6587\uff08Shift-JIS\uff09\u7684\u6a94\u6848\uff0c\u6216\u4e0d\u662f\u6587\u5b57\u683c\u5f0f\u7684 CSV\u3002",
+    # 原文：請用 Excel 開啟，另存為「CSV UTF-8（逗號分隔）」再上傳。
+    "\u8acb\u7528 Excel \u958b\u555f\uff0c\u53e6\u5b58\u70ba\u300cCSV UTF-8\uff08\u9017\u865f\u5206\u9694\uff09\u300d\u518d\u4e0a\u50b3\u3002"
   )
 }
 

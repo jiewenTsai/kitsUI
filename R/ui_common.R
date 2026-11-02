@@ -12,8 +12,10 @@ kit_pandoc_notice <- function() {
 #' @noRd
 ui_go_items <- function(ns) {
   kitDesign::kit_callout(
-    "還沒有這一回合的題目校準。請先到 ",
-    shiny::actionLink(ns("go_items"), "「② 題目校準」"), " 跑這一回合。",
+    # 原文：還沒有這一回合的題目校準。請先到 
+    "\u9084\u6c92\u6709\u9019\u4e00\u56de\u5408\u7684\u984c\u76ee\u6821\u6e96\u3002\u8acb\u5148\u5230 ",
+    # 原文：「② 題目校準」 |  跑這一回合。
+    shiny::actionLink(ns("go_items"), "\u300c\u2461 \u984c\u76ee\u6821\u6e96\u300d"), " \u8dd1\u9019\u4e00\u56de\u5408\u3002",
     warn = TRUE
   )
 }
@@ -29,19 +31,27 @@ kitsui_settings_text <- function(d) {
   waves <- sort(unique(stats::na.omit(picks$wave_m)))
   wave_text <- switch(
     unit,
-    years = paste0(paste(format(waves, trim = TRUE), collapse = "、"), " 年"),
-    waves = paste0("第 ", paste(format(waves, trim = TRUE), collapse = "、"), " 波"),
-    paste0(paste(format(waves, trim = TRUE), collapse = "、"), " 個月")
+    # 原文：、 |  年
+    years = paste0(paste(format(waves, trim = TRUE), collapse = "\u3001"), " \u5e74"),
+    # 原文：第  | 、 |  波
+    waves = paste0("\u7b2c ", paste(format(waves, trim = TRUE), collapse = "\u3001"), " \u6ce2"),
+    # 原文：、 |  個月
+    paste0(paste(format(waves, trim = TRUE), collapse = "\u3001"), " \u500b\u6708")
   )
   ref <- d$fixed$version$reference
   rounds <- d$fixed$version$rounds
-  fixed <- if (length(rounds) == 0) "沒有固定檔（第一回合）" else {
-    paste0("固定檔：", d$fixed_file %||% paste0("到第 ", utils::tail(rounds, 1), " 回合"))
+  # 原文：沒有固定檔（第一回合）
+  fixed <- if (length(rounds) == 0) "\u6c92\u6709\u56fa\u5b9a\u6a94\uff08\u7b2c\u4e00\u56de\u5408\uff09" else {
+    # 原文：固定檔： | 到第  |  回合
+    paste0("\u56fa\u5b9a\u6a94\uff1a", d$fixed_file %||% paste0("\u5230\u7b2c ", utils::tail(rounds, 1), " \u56de\u5408"))
   }
   paste0(
-    "本回合", if (length(d$round_label) == 1) paste0(" ", d$round_label), "：",
-    paste(c(paste(cohorts, collapse = "、"), if (length(waves) > 0) wave_text,
-            if (length(ref) == 1) paste0("參照世代 ", ref), fixed), collapse = " · ")
+    # 原文：本回合 | ：
+    "\u672c\u56de\u5408", if (length(d$round_label) == 1) paste0(" ", d$round_label), "\uff1a",
+    # 原文：、
+    paste(c(paste(cohorts, collapse = "\u3001"), if (length(waves) > 0) wave_text,
+            # 原文：參照世代  |  · 
+            if (length(ref) == 1) paste0("\u53c3\u7167\u4e16\u4ee3 ", ref), fixed), collapse = " \u00b7 ")
   )
 }
 
@@ -54,14 +64,18 @@ kitsui_settings_text <- function(d) {
 #' @param class 雲端版按鈕的 class（kitDesign::kit_btn_class()）
 #' @param cloud 是不是雲端版（預設 kitDesign::kit_is_cloud()；測試用）
 #' @noRd
-ui_kitjoin_button <- function(label = "開啟 kitJoin", class = kitDesign::kit_btn_class(),
+# 原文：開啟 kitJoin
+ui_kitjoin_button <- function(label = "\u958b\u555f kitJoin", class = kitDesign::kit_btn_class(),
                               cloud = kitDesign::kit_is_cloud()) {
   if (!isTRUE(cloud)) {
     return(shiny::tags$span(
       class = "kit-hint kit-kitjoin-local",
-      "本機版：在 R 執行 ", shiny::tags$code("kitJoin::run_kitjoin()"),
-      "（用了 ", shiny::tags$code("library(kitverse)"), " 時直接 ", shiny::tags$code("run_kitjoin()"),
-      "）開啟 KIT 資料處理工具（kitJoin），資料不會離開這台電腦。"
+      # 原文：本機版：在 R 執行 
+      "\u672c\u6a5f\u7248\uff1a\u5728 R \u57f7\u884c ", shiny::tags$code("kitJoin::run_kitjoin()"),
+      # 原文：（用了  |  時直接 
+      "\uff08\u7528\u4e86 ", shiny::tags$code("library(kitverse)"), " \u6642\u76f4\u63a5 ", shiny::tags$code("run_kitjoin()"),
+      # 原文：）開啟 KIT 資料處理工具（kitJoin），資料不會離開這台電腦。
+      "\uff09\u958b\u555f KIT \u8cc7\u6599\u8655\u7406\u5de5\u5177\uff08kitJoin\uff09\uff0c\u8cc7\u6599\u4e0d\u6703\u96e2\u958b\u9019\u53f0\u96fb\u8166\u3002"
     ))
   }
   shiny::tags$span(
@@ -71,7 +85,8 @@ ui_kitjoin_button <- function(label = "開啟 kitJoin", class = kitDesign::kit_b
       class = paste("btn kit-ext-btn", class), shiny::icon("arrow-up-right-from-square"), label
     ),
     " ",
-    shiny::tags$small(class = "kit-hint", "（開啟網路上的雲端版 kitJoin）")
+    # 原文：（開啟網路上的雲端版 kitJoin）
+    shiny::tags$small(class = "kit-hint", "\uff08\u958b\u555f\u7db2\u8def\u4e0a\u7684\u96f2\u7aef\u7248 kitJoin\uff09")
   )
 }
 
@@ -81,8 +96,10 @@ ui_kitjoin_hint <- function(class = kitDesign::kit_btn_class(), hint_class = "ki
                             cloud = kitDesign::kit_is_cloud()) {
   shiny::tags$p(
     class = hint_class,
-    "資料是寬格式（一題一欄）、欄名不一樣，或分數不是從 0 開始？",
-    paste0("可以先到 kitJoin 的「", KITJOIN_KITS_TAB, "」轉好，再回來上傳。"),
+    # 原文：資料是寬格式（一題一欄）、欄名不一樣，或分數不是從 0 開始？
+    "\u8cc7\u6599\u662f\u5bec\u683c\u5f0f\uff08\u4e00\u984c\u4e00\u6b04\uff09\u3001\u6b04\u540d\u4e0d\u4e00\u6a23\uff0c\u6216\u5206\u6578\u4e0d\u662f\u5f9e 0 \u958b\u59cb\uff1f",
+    # 原文：可以先到 kitJoin 的「 | 」轉好，再回來上傳。
+    paste0("\u53ef\u4ee5\u5148\u5230 kitJoin \u7684\u300c", KITJOIN_KITS_TAB, "\u300d\u8f49\u597d\uff0c\u518d\u56de\u4f86\u4e0a\u50b3\u3002"),
     ui_kitjoin_button(class = class, cloud = cloud)
   )
 }
@@ -96,13 +113,15 @@ kitsui_error_ui <- function(detail) {
   head <- substr(detail, 1, at - 1)
   said <- substr(detail, at + nchar(KITSUI_KITS_SAYS), nchar(detail))
   shiny::tagList(head, shiny::tags$details(
-    class = "d-inline kit-kits-says", shiny::tags$summary("kits 的原文"), shiny::tags$code(said)
+    # 原文：kits 的原文
+    class = "d-inline kit-kits-says", shiny::tags$summary("kits \u7684\u539f\u6587"), shiny::tags$code(said)
   ))
 }
 
 #' 檢查結果（kits_check()）：一排細節裡的一個收合區塊（kitDesign::kit_detail()）
 #' @noRd
-ui_check_panel <- function(id, title = "kits 的檢查") {
+# 原文：kits 的檢查
+ui_check_panel <- function(id, title = "kits \u7684\u6aa2\u67e5") {
   kitDesign::kit_detail(title, shiny::tags$div(class = "kit-table-scroll", shiny::tableOutput(id)))
 }
 
@@ -125,8 +144,10 @@ kit_table <- function(expr, digits = 2) {
 # 計數的欄（人數、列次數、題數…）：畫面上加千分位（KIT 設計語言 5）。只換這些欄：
 # 波次（2009 年）、編號這類數字不加
 KIT_COUNT_COLS <- c("n", "n_visits", "n_items", "rows", "wave_n", "n_1", "n_2", "drift_n",
-                    "fixed_n", "steps", "steps_judged", "n_anchors", "人數", "列次數", "題數",
-                    "列數", "步驟數", "偏移（題）", "固定（題）")
+                    # 原文：人數 | 列次數 | 題數
+                    "fixed_n", "steps", "steps_judged", "n_anchors", "\u4eba\u6578", "\u5217\u6b21\u6578", "\u984c\u6578",
+                    # 原文：列數 | 步驟數 | 偏移（題） | 固定（題）
+                    "\u5217\u6578", "\u6b65\u9a5f\u6578", "\u504f\u79fb\uff08\u984c\uff09", "\u56fa\u5b9a\uff08\u984c\uff09")
 
 #' 計數的欄（KIT_COUNT_COLS）是整數時，換成加千分位的文字
 #' @noRd
@@ -172,7 +193,8 @@ check_table <- function(...) {
 #' @noRd
 checks_or_ok <- function(tab) {
   if (is.null(tab) || nrow(tab) > 0) return(tab)
-  data.frame(result = "kits_check()：全部通過，沒有提醒。")
+  # 原文：kits_check()：全部通過，沒有提醒。
+  data.frame(result = "kits_check()\uff1a\u5168\u90e8\u901a\u904e\uff0c\u6c92\u6709\u63d0\u9192\u3002")
 }
 
 #' 下載鈕的位置：一個 uiOutput（id 後面加 _ui）
@@ -262,10 +284,12 @@ plot_save <- function(p, file, pandoc_ok = kit_pandoc_ok()) {
   if (is.function(p)) p <- tryCatch(p(), error = \(e) e)
   if (inherits(p, "error") || is.null(p)) {
     why <- if (inherits(p, "error")) trimws(conditionMessage(p)) else ""
-    kitDesign::kit_abort(if (nzchar(why)) why else "這張圖還沒有內容。請先完成這一頁的步驟。")
+    # 原文：這張圖還沒有內容。請先完成這一頁的步驟。
+    kitDesign::kit_abort(if (nzchar(why)) why else "\u9019\u5f35\u5716\u9084\u6c92\u6709\u5167\u5bb9\u3002\u8acb\u5148\u5b8c\u6210\u9019\u4e00\u9801\u7684\u6b65\u9a5f\u3002")
   }
   out <- tryCatch(kits::kits_save_plot(p, file), error = \(e) e)
-  if (inherits(out, "error")) kitDesign::kit_abort(kit_error_text(out, "存圖檔（HTML）"))
+  # 原文：存圖檔（HTML）
+  if (inherits(out, "error")) kitDesign::kit_abort(kit_error_text(out, "\u5b58\u5716\u6a94\uff08HTML\uff09"))
   invisible(file)
 }
 
@@ -282,8 +306,10 @@ csv_or_note <- function(table_fun) {
   tab <- tryCatch(table_fun(), error = \(e) e)
   if (inherits(tab, "error") || is.null(tab)) {
     why <- if (inherits(tab, "error")) conditionMessage(tab) else ""
-    text <- "這張表還沒有內容。請先完成這一頁的步驟。"
-    if (nzchar(why)) text <- paste0(text, "（", why, "）")
+    # 原文：這張表還沒有內容。請先完成這一頁的步驟。
+    text <- "\u9019\u5f35\u8868\u9084\u6c92\u6709\u5167\u5bb9\u3002\u8acb\u5148\u5b8c\u6210\u9019\u4e00\u9801\u7684\u6b65\u9a5f\u3002"
+    # 原文：（ | ）
+    if (nzchar(why)) text <- paste0(text, "\uff08", why, "\uff09")
     return(data.frame(note = text))
   }
   as.data.frame(tab)
@@ -310,11 +336,16 @@ kitsui_display_names <- function(df) {
 # kits 函式直接算出來的表（coef(item)、kits_check()、適配度、kits_subj_table()、偏移表、連結係數、
 # 分數表與題目表）維持英文欄名，方便和 kits 的說明與 R 的輸出對照；下載的 CSV 一律維持原欄名。
 KITSUI_SCREEN_NAMES <- c(
-  scale = "量尺", n_visits = "列次數", n_items = "題數", waves = "波次", calibration = "校準方式",
-  data = "資料", drift_n = "偏移（題）", fixed_n = "固定（題）", item_id = "題號", status = "狀態",
-  steps = "步驟數", detail = "說明", bank = "題庫", route = "換算路線", final_scale = "最後的量尺",
-  n = "列次數", note = "說明", from = "從", to = "到", state = "狀態", link = "連結", kind = "種類",
-  made = "什麼時候做的", round = "回合"
+  # 原文：量尺 | 列次數 | 題數 | 波次 | 校準方式
+  scale = "\u91cf\u5c3a", n_visits = "\u5217\u6b21\u6578", n_items = "\u984c\u6578", waves = "\u6ce2\u6b21", calibration = "\u6821\u6e96\u65b9\u5f0f",
+  # 原文：資料 | 偏移（題） | 固定（題） | 題號 | 狀態
+  data = "\u8cc7\u6599", drift_n = "\u504f\u79fb\uff08\u984c\uff09", fixed_n = "\u56fa\u5b9a\uff08\u984c\uff09", item_id = "\u984c\u865f", status = "\u72c0\u614b",
+  # 原文：步驟數 | 說明 | 題庫 | 換算路線 | 最後的量尺
+  steps = "\u6b65\u9a5f\u6578", detail = "\u8aaa\u660e", bank = "\u984c\u5eab", route = "\u63db\u7b97\u8def\u7dda", final_scale = "\u6700\u5f8c\u7684\u91cf\u5c3a",
+  # 原文：列次數 | 說明 | 從 | 到 | 狀態 | 連結 | 種類
+  n = "\u5217\u6b21\u6578", note = "\u8aaa\u660e", from = "\u5f9e", to = "\u5230", state = "\u72c0\u614b", link = "\u9023\u7d50", kind = "\u7a2e\u985e",
+  # 原文：什麼時候做的 | 回合
+  made = "\u4ec0\u9ebc\u6642\u5019\u505a\u7684", round = "\u56de\u5408"
 )
 
 #' 摘要表的欄名換成中文（只換 KITSUI_SCREEN_NAMES 有的欄；只用在畫面上）
