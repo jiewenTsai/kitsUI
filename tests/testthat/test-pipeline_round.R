@@ -4,13 +4,11 @@ test_that("kitm03 lan 3-48 個月一波一回合：版本、併分數、舊 beta
   expect_equal(last$fixed$version$rounds, names(chain))
   expect_equal(
     dplyr::arrange(last$fixed$versions, current_id)$current_id,
-    c("lana02_r12", "lanc03_r24", "lanc05_r48", "lanc08_r24")
+    c("lana04_r18", "lana05_r24", "lana06_r18", "lanc03_r48", "lanc09_r48")
   )
-  expect_equal(nrow(last$fixed$bank), 84)
+  expect_equal(nrow(last$fixed$bank), 87)
   expect_true(all(lengths(purrr::map(chain, "stopped")) == 0))
-  capped <- dplyr::filter(last$fixed$checks, check == "capped")
-  expect_equal(capped$item_id, "lanc09")
-  expect_equal(capped$round, "18")
+  # 併分數（capped）在 test-pipeline_categories.R 用模擬資料測
   # 舊的 beta 一回合一回合都沒動
   for (i in seq_along(chain)[-1]) {
     old <- chain[[i - 1]]$fixed$bank
@@ -23,7 +21,7 @@ test_that("kitm03 lan 3-48 個月一波一回合：版本、併分數、舊 beta
   co <- coef(item)[match(paste(added$item_id, added$item_score),
                          paste(coef(item)$item_id, coef(item)$item_score)), ]
   expect_equal(added$beta, co$beta)
-  expect_true("lanc05_r48" %in% colnames(last$data[["lan M03"]]))
+  expect_true("lanc03_r48" %in% colnames(last$data[["lan M03"]]))
 })
 
 test_that("多個量尺的一回合：沒有題庫的量尺自由校準", {
@@ -353,12 +351,7 @@ test_that("checks.csv 一列對一列：偏移、併分數、新版本；之前�
   # 新版本：本來就是 ASCII
   nv <- dplyr::filter(r$log, check == "new version")
   expect_equal(nv$detail_en, nv$detail)
-  # 併分數（第 18 回合）
-  cap <- dplyr::filter(chain[["18"]]$log, check == "capped")
-  expect_match(cap$detail, "^[0-9]+ 列次超過 [0-9]+ 分，併為 [0-9]+ 分$")
-  n <- regmatches(cap$detail, gregexpr("[0-9]+", cap$detail))[[1]]
-  expect_equal(dplyr::filter(r$fixed$checks, check == "capped")$detail,
-               sprintf("%s visits above score %s, merged into %s", n[1], n[2], n[3]))
+  # 併分數的中文與英文：test-pipeline_categories.R
   # 之前回合的列（舊固定檔可能是中文）照原樣留著
   old <- chain[["3"]]$fixed
   old$checks <- tibble::tibble(round = "0", scale = "lan M03", item_id = NA_character_,

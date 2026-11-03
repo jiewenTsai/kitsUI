@@ -407,10 +407,10 @@ test_that("固定了哪些題：狀態、核對、全部固定的題、csv；偏
     session$setInputs(run = 1, scale = "lan M03", plot_type = "drift")
     expect_true(session$getReturned()()$ok)
     html <- output$fixed_status$html
-    expect_match(html, "這一回合固定 13 題（沿用題庫的參數），換成新版本 2 題")
+    expect_match(html, "這一回合固定 14 題（沿用題庫的參數），換成新版本 1 題")
     expect_match(html, "參數和題庫完全相同（最大差 0）")
-    expect_match(html, "lanc03 → lanc03_r24")
-    expect_match(html, "看全部固定的題（13 題）")
+    expect_match(html, "lana05 → lana05_r24")
+    expect_match(html, "看全部固定的題（14 題）")
     expect_false(grepl("alert-danger", html))
     csv <- kit_test_dl_csv(output, session, "dl_status")
     expect_named(csv, c("scale", "item_id", "status", "steps", "detail"))
@@ -418,8 +418,8 @@ test_that("固定了哪些題：狀態、核對、全部固定的題、csv；偏
     expect_equal(csv$status[1], "偏移 → 新版本")
     # 每個量尺一列：偏移與固定的題數和「固定了哪些題」相同
     ov <- items_overview(session$getReturned()(), checks_all())
-    expect_equal(ov$fixed_n, 13L)
-    expect_equal(ov$drift_n, 2L)
+    expect_equal(ov$fixed_n, 14L)
+    expect_equal(ov$drift_n, 1L)
     expect_match(output$fixed_status$html, "<th>題號</th>")
     # 偏移把關圖
     p <- plot_obj()

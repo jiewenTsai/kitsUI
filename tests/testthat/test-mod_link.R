@@ -44,7 +44,8 @@ test_that("內部連結與外部連結各做一次，回傳加上連結的固定
     expect_match(html, session$ns("internal_points_dl_ui"))
     expect_match(output$internal_points_dl_ui$html, "下載內部連結的點（CSV）")
     expect_equal(kit_test_download_name(session, "internal_points_dl"), "link_lan_M36_points.csv")
-    expect_match(output$internal_checks, "全部通過")
+    # kits_check() 的結果：沒有提醒時一句「全部通過」，有提醒時列出這條連結的提醒
+    expect_match(output$internal_checks, "全部通過|link_lan_M36")
     # 只建了這一條連結
     expect_named(link_objs(), "lan M36")
 

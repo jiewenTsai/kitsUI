@@ -149,9 +149,11 @@ test_that("借用另一世代題庫的一回合的程式碼能跑，結果和 ap
 })
 
 test_that("程式照勾到的世代 × 波次選資料（只勾 M03 36 時不帶進 M36 36），和 app 相同", {
+  # M03 12 與 36：每一題都有 0 分（只勾 3、36 時 lanc02 在 36 個月沒有人得 0 分，app 拿掉它，
+  # 程式的 kits_item() 會停下來）
   # 示範資料的程式讀 kitm03、kitm36 的全部作答，所以 app 這邊也用全部
   data <- dplyr::bind_rows(kits::kitm03$responses, kits::kitm36$responses)
-  sel <- kitsui_data_select(data, c("M03 3", "M03 36"))
+  sel <- kitsui_data_select(data, c("M03 12", "M03 36"))
   expect_setequal(unique(sel$df$cohort), "M03")
   code <- kitsui_code_data("lan M03", picks = sel$picks)
   expect_match(code, 'picks <- tibble\\(cohort = c\\("M03", "M03"\\)')

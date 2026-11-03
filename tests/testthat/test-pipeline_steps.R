@@ -30,30 +30,30 @@ test_that("通過步驟改了門檻與 age50：門檻是那一步的門檻，age
   expect_false("step" %in% names(kitsui_item_table_shown(one)))
 })
 
-test_that("新版本的題沿用原來題號的設定（lana02 -> lana02_r12）", {
+test_that("新版本的題沿用原來題號的設定（lana04 -> lana04_r18）", {
   ch <- lan_chain()
   r <- ch[["18"]]
   item <- r$items[["lan M03"]]
   vers <- r$fixed$versions
-  expect_true("lana02_r12" %in% coef(item)$item_id)
-  expect_equal(kitsui_base_ids(c("lana02_r12", "lana01"), vers), c("lana02", "lana01"))
-  expect_equal(kitsui_item_step_arg(item, c(lana02 = 2L), vers), c(lana02_r12 = 2L))
+  expect_true("lana04_r18" %in% coef(item)$item_id)
+  expect_equal(kitsui_base_ids(c("lana04_r18", "lana01"), vers), c("lana04", "lana01"))
+  expect_equal(kitsui_item_step_arg(item, c(lana04 = 2L), vers), c(lana04_r18 = 2L))
   # 都是 1、沒有設定、校準裡沒有那個分數：用 1
-  expect_equal(kitsui_item_step_arg(item, c(lana02 = 1L), vers), 1)
+  expect_equal(kitsui_item_step_arg(item, c(lana04 = 1L), vers), 1)
   expect_equal(kitsui_item_step_arg(item, kitsui_steps_vec(NULL), vers), 1)
-  expect_equal(kitsui_item_step_arg(item, c(lana02 = 9L), vers), 1)
+  expect_equal(kitsui_item_step_arg(item, c(lana04 = 9L), vers), 1)
   tab <- kitsui_item_table(r, kitsui_demo("M03", 18, "lan"), r$fixed, "lan M03",
-                           steps = c(lana02 = 2L))
-  expect_equal(tab$step[tab$item_id == "lana02_r12"], 2)
+                           steps = c(lana04 = 2L))
+  expect_equal(tab$step[tab$item_id == "lana04_r18"], 2)
   # 這一回合的題：目前的題號與原來的題號
   known <- kitsui_round_item_steps(r$items, vers)
-  expect_equal(known$item_id[known$current_id == "lana02_r12"], "lana02")
+  expect_equal(known$item_id[known$current_id == "lana04_r18"], "lana04")
   co <- coef(item)
-  expect_equal(known$top[known$current_id == "lana02_r12"],
-               max(co$item_score[co$item_id == "lana02_r12"]))
+  expect_equal(known$top[known$current_id == "lana04_r18"],
+               max(co$item_score[co$item_id == "lana04_r18"]))
   # 上傳時用新版本的題號也可以：換回原來的題號
-  chk <- kitsui_steps_check(tibble::tibble(item_id = "lana02_r12", step = "2"), known)
-  expect_equal(chk$steps, c(lana02 = 2L))
+  chk <- kitsui_steps_check(tibble::tibble(item_id = "lana04_r18", step = "2"), known)
+  expect_equal(chk$steps, c(lana04 = 2L))
 })
 
 test_that("固定檔：寫出再讀回相同；下一回合用它當預設；沒有改時固定檔原樣", {

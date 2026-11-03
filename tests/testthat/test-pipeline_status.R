@@ -25,8 +25,8 @@ test_that("偏移的題換成新版本；沒有判斷的題固定，原因來自
   expect_equal(nrow(tab), length(co_ids))
   expect_false(anyDuplicated(tab$key) > 0)
   moved <- tab[tab$kind == "moved", ]
-  expect_equal(moved$key, c("lanc03", "lanc08"))
-  expect_equal(moved$item_id, c("lanc03 → lanc03_r24", "lanc08 → lanc08_r24"))
+  expect_equal(moved$key, "lana05")
+  expect_equal(moved$item_id, "lana05 → lana05_r24")
   expect_equal(unique(moved$status), "偏移 → 新版本")
   expect_match(moved$detail, "離判斷用的線 [0-9.]+ logit，超過界線")
   status_of <- \(id) tab$status[tab$key == id]
@@ -35,7 +35,8 @@ test_that("偏移的題換成新版本；沒有判斷的題固定，原因來自
   expect_match(tab$detail[tab$key == "lana01"], "沒有人得 0 分")
   expect_match(tab$detail[tab$key == "lana03"], "步驟上下的人不夠")
   expect_match(tab$detail[tab$key == "lanc09"], "這一回合估的步驟：")
-  expect_equal(status_of("lana02_r12"), "固定（不判斷偏移，沿用題庫）")
+  # 上一回合的新版本在題庫裡：照常判斷、固定
+  expect_equal(status_of("lana04_r18"), "固定（沿用題庫）")
   # 判斷過、沒有偏移
   judged <- x$round$drift[["lan M03"]]$items
   ok <- judged$item_id[judged$drift %in% FALSE]
@@ -43,7 +44,7 @@ test_that("偏移的題換成新版本；沒有判斷的題固定，原因來自
   expect_match(tab$detail[match(ok, tab$key)], "已判斷，沒有偏移")
   # 問題在前：偏移、拿掉、新題，再是固定的
   expect_equal(tab$kind, sort_by_status(tab$kind))
-  expect_equal(tab$steps[tab$key == "lanc03"], 3L)
+  expect_equal(tab$steps[tab$key == "lana05"], 3L)
 })
 
 test_that("新題：不在題庫的題這一回合估計", {
@@ -69,7 +70,7 @@ test_that("每一回合固定的步驟都和題庫完全相同（最大差 0）"
   }
   txt <- kitsui_status_text(chain_status("24")$tab, chain_status("24")$check)
   expect_equal(txt$main,
-               "這一回合固定 13 題（沿用題庫的參數），換成新版本 2 題，新題 0 題，拿掉 0 題。")
+               "這一回合固定 14 題（沿用題庫的參數），換成新版本 1 題，新題 0 題，拿掉 0 題。")
 })
 
 test_that("題庫的值被改過：核對抓得到，紅框列出步驟", {
@@ -140,7 +141,7 @@ test_that("偏移把關圖：點照狀態上色，帶子外的步驟就是 kits 
   expect_true(any(grepl("^lana03 step 1<br>Fixed \\(not judged, bank value\\)", open$hovertext)))
   expect_true(all(grepl("Step not judged", open$hovertext)))
   moved <- p$x$data[[match("Drifted -> new version", names)]]
-  expect_true(all(grepl("^lanc0[38] step", moved$hovertext)))
+  expect_true(all(grepl("^lana05 step", moved$hovertext)))
   expect_match(moved$hovertext[1], "Bank threshold \\(fixed value\\)")
   expect_match(moved$hovertext[1], "Free trial threshold")
   # 判斷的步驟寫離判斷用的線多遠與界線；沒有判斷的步驟不寫

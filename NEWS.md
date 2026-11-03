@@ -1,3 +1,12 @@
+# kitsUI 0.8.6
+
+Tests only; nothing changes on screen. kits 0.26.0 has new demo data (`kitm03` at 60 and 72 months
+from the real M03 children), so the tests that named the items of the demo data follow it: which
+items drift in the language rounds of `kitm03` (now lana04, lana06 at 18 months, lana05 at 24,
+lanc03, lanc09 at 48), the item counts, and the waves picked in the code test (12 and 36 months,
+where every item has a 0 score). The merged scores (capped) are tested on simulated data
+(`test-pipeline_categories.R`), not on the demo data, which no longer has such a case.
+
 # kitsUI 0.8.5
 
 `R CMD check` passes on every platform (r-universe showed 2 WARNINGs). Nothing changes on screen.
