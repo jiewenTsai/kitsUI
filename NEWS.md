@@ -6,6 +6,12 @@
 * The drift flag rule is one function (`kitsui_flag_rule()`), with tests exactly at its thresholds:
   drifting items equal to max(1, flag_share × judged items), and fixable items equal to
   `flag_fixed`, are not flagged (found by mutation testing). Results do not change.
+* ② warns when kits cannot really estimate a scale: a warning of `kits_item()`'s diagnostics (for
+  example a step with an SE in the thousands) becomes a round log row "estimate warning" (status
+  warn, also in `checks.csv`), a line under the scale and a point in the status box. Before, the
+  round looked ok and the bank kept values such as beta = -19 with SE 8665, for example with only
+  M03 3, 36 and 48 months picked: the two groups of booklets share only lanc01, whose scores do not
+  overlap between them, so the two groups cannot be placed on one scale.
 
 # kitsUI 0.8.7
 

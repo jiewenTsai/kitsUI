@@ -10,7 +10,7 @@
 KITSUI_CHECKS <- c("drift", "new version", "capped", "flag", "stop", "error", "D extended",
                    "borrowed bank", "bank choice", "no CML estimate, kept fixed",
                    "category problem, kept fixed", "category problem, left out",
-                   "drift not judged, kept fixed", "excluded")
+                   "drift not judged, kept fixed", "excluded", "estimate warning")
 
 #' 跑一回合
 #'
@@ -612,12 +612,35 @@ kitsui_fit_fixed <- function(X, scale, round_label, drift, ref, moved, kept, ver
 
 # 一個量尺完成：題庫只加新的步驟（題號與分數都沒有的）
 kitsui_scale_done <- function(X, item, drift, bank, new_vers, log) {
+  log <- dplyr::bind_rows(log, kitsui_estimate_warnings(item, log$round[1], item$scale))
   added <- tibble::as_tibble(stats::coef(item)) |>
     dplyr::anti_join(bank, by = c("item_id", "item_score")) |>
     dplyr::transmute(scale = item$scale, .data$item_id, item_score = as.integer(.data$item_score),
                      .data$beta, .data$beta_se, round = log$round[1])
   list(stopped = FALSE, X = X, item = item, drift = drift, added = added, versions = new_vers,
        log = log)
+}
+
+#' kits 的估計診斷是 warn 的列（例如步驟的 SE 上千、估不出來）：記成 "estimate warning"
+#'
+#' kits_item() 在 item$diagnostics 標出這些問題，但照樣給估計值；不記下來的話，這一回合看起來是
+#' ok，題庫卻存了估不出來的值。例如示範資料只勾 M03 的 3、36、48 個月：兩群題本只靠一題連在
+#' 一起，那一題在兩群的分數又不重疊，兩群的相對位置估不出來。
+#' @return 紀錄的列（round、scale、item_id、check、detail、detail_en），沒有時 0 列
+#' @noRd
+kitsui_estimate_warnings <- function(item, round_label, scale) {
+  d <- item$diagnostics
+  if (is.null(d)) return(NULL)
+  d <- d[d$status %in% "warn", ]
+  if (nrow(d) == 0) return(NULL)
+  tibble::tibble(
+    round = round_label, scale = scale, item_id = NA_character_, check = "estimate warning",
+    # 原文：kits 的估計診斷：|；寫進題庫的值可能不能用
+    detail = paste0("kits \u7684\u4f30\u8a08\u8a3a\u65b7\uff1a", d$check, "\uff1a", d$message,
+                    "\uff1b\u5beb\u9032\u984c\u5eab\u7684\u503c\u53ef\u80fd\u4e0d\u80fd\u7528"),
+    detail_en = paste0("kits estimation diagnostic: ", d$check, ": ", d$message,
+                       "; the values written to the bank may not be usable")
+  )
 }
 
 #' 新步驟的缺口：分數要從題庫最高步往上連續；超過連續最高分的併為那個分數

@@ -636,3 +636,18 @@ test_that("flag 的規則：剛好在門檻上不標記；比例的分母是已�
   expect_false(kitsui_flag_rule(0, 10, 5, 0.2, 5)[["few"]])
   expect_true(kitsui_flag_rule(0, 10, 4, 0.2, 5)[["few"]])
 })
+
+test_that("kits 的估計診斷是 warn 時，紀錄和 checks.csv 有 estimate warning，狀態是 warn", {
+  # M03 lan 只有 3、36、48 個月：兩群題本只靠 lanc01 連在一起，分數又不重疊，SE 上千
+  df <- kitsui_demo("M03", c(3, 36, 48), "lan")
+  r <- suppressMessages(kitsui_round(df, kitsui_fixed_empty(), "1"))
+  ew <- dplyr::filter(r$log, check == "estimate warning")
+  expect_identical(unique(ew$scale), "lan M03")
+  expect_match(ew$detail_en, "^kits estimation diagnostic: extreme estimates: largest SE")
+  expect_true("estimate warning" %in% r$fixed$checks$check)
+  expect_identical(items_log_table(ew)$status, rep("warn", nrow(ew)))
+  expect_match(items_attention_points(r)[1], "lan M03")
+  # 連得好的資料沒有這一列
+  ok <- suppressMessages(kitsui_round(kitsui_demo("M03", c(3, 6, 12), "lan"), kitsui_fixed_empty(), "1"))
+  expect_false("estimate warning" %in% ok$log$check)
+})

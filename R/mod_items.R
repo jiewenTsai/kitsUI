@@ -849,9 +849,12 @@ items_check_bad <- function(checks) {
 items_attention_points <- function(res, checks = NULL) {
   log <- res$log
   flags <- unique(log$scale[log$check == "flag"])
+  unsure <- unique(log$scale[log$check == "estimate warning"])
   n_cat <- sum(log$check %in% c("category problem, kept fixed", "category problem, left out"))
   bad <- items_check_bad(checks)
   out <- c(
+    # 原文：估計值可能不能用的量尺（kits 的診斷）： | 、 | 。
+    if (length(unsure) > 0) paste0("\u4f30\u8a08\u503c\u53ef\u80fd\u4e0d\u80fd\u7528\u7684\u91cf\u5c3a\uff08kits \u7684\u8a3a\u65b7\uff09\uff1a", paste(unsure, collapse = "\u3001"), "\u3002"),
     # 原文：固定的步驟和題庫不同： | 、 | 。
     if (length(bad) > 0) paste0("\u56fa\u5b9a\u7684\u6b65\u9a5f\u548c\u984c\u5eab\u4e0d\u540c\uff1a", paste(bad, collapse = "\u3001"), "\u3002"),
     # 原文：被 flag 的量尺： | 、 | 。
@@ -1100,6 +1103,7 @@ items_scale_info <- function(x) {
   # 原文：停下來了（沒有校準結果）
   mode <- if (stopped) "\u505c\u4e0b\u4f86\u4e86\uff08\u6c92\u6709\u6821\u6e96\u7d50\u679c\uff09" else log$detail[log$check == "calibration"][1]
   flags <- log$detail[log$check == "flag"]
+  unsure <- log$detail[log$check == "estimate warning"]
   shiny::tagList(
     shiny::tags$div(
       class = paste("kit-scale-info", if (stopped) "kit-warn-text"),
@@ -1134,16 +1138,17 @@ items_scale_info <- function(x) {
       # 原文：flag： | ；
       shiny::tags$p(class = "kit-warn-text", paste0("flag\uff1a", flags, collapse = "\uff1b"), " ",
                     ITEMS_FLAG_NOTE)
-    }
+    },
+    if (length(unsure) > 0) shiny::tags$p(class = "kit-warn-text", paste(unsure, collapse = "\uff1b"))
   )
 }
 
-# 這一回合的紀錄表：加上 status（flag、excluded 是 warn；stop、error 是 error；其他 ok）
+# 這一回合的紀錄表：加上 status（flag、excluded、estimate warning 是 warn；stop、error 是 error；其他 ok）
 # 畫面只放中文的 detail（detail_en 是寫進固定檔的英文）
 items_log_table <- function(log) {
   log$detail_en <- NULL
   status <- dplyr::case_when(
-    log$check %in% c("flag", "excluded") ~ "warn",
+    log$check %in% c("flag", "excluded", "estimate warning") ~ "warn",
     log$check %in% c("stop", "error") ~ "error",
     .default = "ok"
   )
