@@ -474,7 +474,8 @@ mod_items_server <- function(id, data, goto) {
       code <- kitsui_code_round(
         x$scale, d$round_label, fixed = d$fixed, fixed_file = d$fixed_file %||% "fixed_set.zip",
         data_file = d$data_file, waves = d$waves, flag_share = round()$args$flag_share,
-        flag_fixed = round()$flag_fixed[x$scale] %|NA|% 5, plan = plan, picks = d$picks
+        flag_fixed = round()$flag_fixed[x$scale] %|NA|% 5, plan = plan, picks = d$picks,
+        log = round()$log
       ) |>
         kitsui_code_drift_plot()
       info <- if (!is.null(x$item)) {

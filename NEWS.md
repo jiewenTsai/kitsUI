@@ -1,3 +1,14 @@
+# kitsUI 0.8.7
+
+The downloaded R code of a round (② 「用 R 怎麼做」) now gives the same result as the app when an
+item has a score category problem (no 0 score, a score gap, one score only). Before, the app left
+such an item out (or kept it at the bank values) but the code did not, so `kits_item()` stopped,
+for example with only M03 3 and 36 months picked (lanc02 has no 0 score at 36 months). The code
+now lists the items from the round log: `out` (not in the bank, left out this round) and `kept`
+(in the bank: not judged for drift, no new steps, fixed at the bank values). The step that merges
+scores above the bank's top step also follows the app: a score counts as a new step only when the
+score below it occurs too.
+
 # kitsUI 0.8.6
 
 Tests only; nothing changes on screen. kits 0.26.0 has new demo data (`kitm03` at 60 and 72 months

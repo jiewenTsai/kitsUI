@@ -79,18 +79,37 @@ kitsui_code_data <- function(scale, data_file = NULL, waves = NULL, picks = NULL
 #'   waves 是這一回合的波次；picks（cohort、wave_m 的表）有給時照勾到的世代 × 波次選
 #' @param plan NULL 或這一回合的 kitsui_round_plan()：有借用另一世代題庫（或一個資料量尺的波次分到
 #'   不同題庫）時，矩陣用校準到這個量尺的資料量尺與波次
+#' @param log NULL 或這一回合的紀錄（kitsui_round() 的 log）：app 拿掉或固定在題庫的值的題
+#'   （分數類別有問題、估不出 CML）照紀錄寫進程式，結果才和 app 相同
 #' @noRd
 kitsui_code_round <- function(scale, round_label, fixed = NULL, fixed_file = "fixed_set.zip",
                               data_file = NULL, waves = NULL, flag_share = 0.2, flag_fixed = 5,
-                              plan = NULL, picks = NULL) {
+                              plan = NULL, picks = NULL, log = NULL) {
   s <- kitsui_r(scale)
+  log <- log[log$scale %in% scale, ]
+  out <- unique(log$item_id[log$check == "category problem, left out"])
+  kept <- unique(log$item_id[log$check %in% c("category problem, kept fixed",
+                                              "no CML estimate, kept fixed")])
   head <- c("library(kits)", "library(dplyr)", kitsui_code_read(data_file, waves, picks))
   matrix <- c(kitsui_code_pick(scale, plan), 'X <- as.matrix(resp[attr(resp, "items")])',
               "rownames(X) <- resp$visit_id")
+  drop <- if (length(out) > 0) {
+    # 原文：# 分數類別有問題、不在題庫裡的題（app 的紀錄）：這一回合不放進來
+    c("# \u5206\u6578\u985e\u5225\u6709\u554f\u984c\u3001\u4e0d\u5728\u984c\u5eab\u88e1\u7684\u984c\uff08app \u7684\u7d00\u9304\uff09\uff1a\u9019\u4e00\u56de\u5408\u4e0d\u653e\u9032\u4f86",
+      sprintf("out <- %s", kitsui_r(out)),
+      "X <- X[, !colnames(X) %in% out, drop = FALSE]")
+  }
   if (is.null(fixed) || !scale %in% fixed$bank$scale) {
     free <- sprintf("item <- kits_item(X, scale = %s)", s)
     # 原文：# 沒有題庫：自由校準
-    return(paste(c(head, matrix, "# \u6c92\u6709\u984c\u5eab\uff1a\u81ea\u7531\u6821\u6e96", free, "coef(item)"), collapse = "\n"))
+    return(paste(c(head, matrix, drop, "# \u6c92\u6709\u984c\u5eab\uff1a\u81ea\u7531\u6821\u6e96", free, "coef(item)"), collapse = "\n"))
+  }
+  keep <- if (length(kept) > 0) {
+    # 原文：# 分數類別有問題（或估不出來）、在題庫裡的題（app 的紀錄）：不判斷偏移、不加新步驟，固定在題庫的值
+    c("# \u5206\u6578\u985e\u5225\u6709\u554f\u984c\uff08\u6216\u4f30\u4e0d\u51fa\u4f86\uff09\u3001\u5728\u984c\u5eab\u88e1\u7684\u984c\uff08app \u7684\u7d00\u9304\uff09\uff1a\u4e0d\u5224\u65b7\u504f\u79fb\u3001\u4e0d\u52a0\u65b0\u6b65\u9a5f\uff0c\u56fa\u5b9a\u5728\u984c\u5eab\u7684\u503c",
+      sprintf("kept <- %s", kitsui_r(kept)))
+  } else {
+    "kept <- character()"
   }
   paste(c(
     head,
@@ -103,18 +122,21 @@ kitsui_code_round <- function(scale, round_label, fixed = NULL, fixed_file = "fi
     "responses <- responses |>",
     '  left_join(select(versions, cohort, item_id, current_id), by = c("cohort", "item_id")) |>',
     "  mutate(item_id = coalesce(current_id, item_id), .keep = \"unused\")",
-    matrix,
+    matrix, drop, keep,
     # 原文：# 2 新步驟的缺口：超過「從題庫最高步往上連續」的分數，併為那個分數
     "# 2 \u65b0\u6b65\u9a5f\u7684\u7f3a\u53e3\uff1a\u8d85\u904e\u300c\u5f9e\u984c\u5eab\u6700\u9ad8\u6b65\u5f80\u4e0a\u9023\u7e8c\u300d\u7684\u5206\u6578\uff0c\u4f75\u70ba\u90a3\u500b\u5206\u6578",
+    # 原文：#   （kept 的題不往上加，超過題庫最高步的都併為最高步）
+    "#   \uff08kept \u7684\u984c\u4e0d\u5f80\u4e0a\u52a0\uff0c\u8d85\u904e\u984c\u5eab\u6700\u9ad8\u6b65\u7684\u90fd\u4f75\u70ba\u6700\u9ad8\u6b65\uff09",
     "for (it in intersect(colnames(X), bank$item_id)) {",
     "  k <- max(bank$item_score[bank$item_id == it])",
-    "  while ((k + 1) %in% X[, it]) k <- k + 1",
+    "  while (!it %in% kept && (k + 1) %in% X[, it] && k %in% X[, it]) k <- k + 1",
     "  X[which(X[, it] > k), it] <- k",
     "}",
     # 原文：# 3 偏移把關：題庫的 beta 當參照
     "# 3 \u504f\u79fb\u628a\u95dc\uff1a\u984c\u5eab\u7684 beta \u7576\u53c3\u7167",
     'ref <- bank[c("item_id", "item_score", "beta")]',
-    sprintf("drift <- kits_drift(X, structure(ref, scale = %s))", s),
+    "X_judge <- X[, !colnames(X) %in% kept, drop = FALSE]",
+    sprintf("drift <- kits_drift(X_judge, structure(ref, scale = %s))", s),
     "moved <- drift$items$item_id[drift$items$drift %in% TRUE]",
     "judged <- sum(!is.na(drift$items$drift))",
     "n_fixed <- n_distinct(drift$fix$item_id)",
@@ -131,7 +153,8 @@ kitsui_code_round <- function(scale, round_label, fixed = NULL, fixed_file = "fi
     "colnames(X)[match(moved, colnames(X))] <- new_id",
     # 原文：# 5 固定校準：舊的 beta 不動，只估新的步驟
     "# 5 \u56fa\u5b9a\u6821\u6e96\uff1a\u820a\u7684 beta \u4e0d\u52d5\uff0c\u53ea\u4f30\u65b0\u7684\u6b65\u9a5f",
-    sprintf("item <- kits_item(X, fixed_params = drift$fix, scale = %s)", s),
+    "fix <- bind_rows(as.data.frame(drift$fix), ref[ref$item_id %in% kept, ])",
+    sprintf("item <- kits_item(X, fixed_params = fix, scale = %s)", s),
     "coef(item)"
   ), collapse = "\n")
 }

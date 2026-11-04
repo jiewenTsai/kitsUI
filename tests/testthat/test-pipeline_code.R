@@ -149,11 +149,9 @@ test_that("借用另一世代題庫的一回合的程式碼能跑，結果和 ap
 })
 
 test_that("程式照勾到的世代 × 波次選資料（只勾 M03 36 時不帶進 M36 36），和 app 相同", {
-  # M03 12 與 36：每一題都有 0 分（只勾 3、36 時 lanc02 在 36 個月沒有人得 0 分，app 拿掉它，
-  # 程式的 kits_item() 會停下來）
   # 示範資料的程式讀 kitm03、kitm36 的全部作答，所以 app 這邊也用全部
   data <- dplyr::bind_rows(kits::kitm03$responses, kits::kitm36$responses)
-  sel <- kitsui_data_select(data, c("M03 12", "M03 36"))
+  sel <- kitsui_data_select(data, c("M03 3", "M03 36"))
   expect_setequal(unique(sel$df$cohort), "M03")
   code <- kitsui_code_data("lan M03", picks = sel$picks)
   expect_match(code, 'picks <- tibble\\(cohort = c\\("M03", "M03"\\)')
@@ -162,10 +160,12 @@ test_that("程式照勾到的世代 × 波次選資料（只勾 M03 36 時不帶
   env <- run_code(code, withr::local_tempdir())
   expect_equal(nrow(env$responses), nrow(sel$df))
   expect_setequal(unique(env$responses$cohort), "M03")
-  # 一回合的程式：同樣的選法，自由校準的結果和 app 相同
+  # 一回合的程式：同樣的選法，自由校準的結果和 app 相同。lanc02 在 36 個月沒有人得 0 分：
+  # app 拿掉它，程式照紀錄也拿掉
   lan <- dplyr::filter(sel$df, domain == "lan")
   r <- suppressMessages(kitsui_round(lan, kitsui_fixed_empty(), "1"))
-  code <- kitsui_code_round("lan M03", "1", picks = sel$picks)
+  code <- kitsui_code_round("lan M03", "1", picks = sel$picks, log = r$log)
+  expect_match(code, 'out <- "lanc02"')
   env <- run_code(code, withr::local_tempdir())
   expect_equal(coef(env$item)$beta, coef(r$items[["lan M03"]])$beta)
   # 沒有 picks 時照舊照波次選
@@ -200,4 +200,28 @@ test_that("題目表的程式帶通過步驟（step = steps）能跑，和 app �
   expect_true(all(nchar(lines) <= 100))
   expect_no_error(parse(text = kitsui_code_steps(many)))
   expect_null(kitsui_code_steps(1))
+})
+
+test_that("固定校準的程式照紀錄固定或拿掉分數類別有問題的題，結果和 app 相同", {
+  # a1 併分數照常判斷偏移；a2 沒有 0 分固定在題庫的值；新題 n1 沒有 0 分拿掉
+  sb <- sim_bank()
+  betas <- c(sb$betas, list(n1 = c(-1, 0, 1)))
+  X2 <- kits::kits_sim(seq(-3, 3, length.out = 1000), betas, prefix = "g", seed = 15)
+  X2[X2[, "a1"] == 1, "a1"] <- 2L
+  X2[, "a2"] <- X2[, "a2"] + 1L
+  X2[X2[, "n1"] == 0, "n1"] <- 1L
+  df <- sim_long(X2, 2)
+  r2 <- suppressMessages(kitsui_round(df, sb$r1$fixed, "2"))
+  expect_true(r2$ok)
+  dir <- withr::local_tempdir()
+  readr::write_csv(df, file.path(dir, "sim.csv"))
+  kitsui_write_fixed(sb$r1$fixed, file.path(dir, "fixed_1.zip"))
+  code <- kitsui_code_round("sim M03", "2", sb$r1$fixed, "fixed_1.zip", data_file = "sim.csv",
+                            log = r2$log)
+  expect_match(code, 'out <- "n1"')
+  expect_match(code, 'kept <- "a2"')
+  env <- run_code(code, dir)
+  expect_equal(coef(env$item), coef(r2$items[["sim M03"]]), ignore_attr = TRUE)
+  dr <- r2$drift[["sim M03"]]$items
+  expect_equal(env$moved, dr$item_id[dr$drift %in% TRUE])
 })
