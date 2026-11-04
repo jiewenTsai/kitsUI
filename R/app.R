@@ -38,7 +38,7 @@ kit_ui <- function(request) {
     "KIT \u91cf\u5c3a\u5efa\u69cb\u5de5\u5177", "\u81fa\u7063\u5e7c\u5152\u767c\u5c55\u8abf\u67e5\u8cc7\u6599\u5eab",
     # 原文：量尺：校準、連結、計分
     tagline = "\u91cf\u5c3a\uff1a\u6821\u6e96\u3001\u9023\u7d50\u3001\u8a08\u5206",
-    version = ver$version, date = ver$date, package = "kitsUI",
+    version = ver$version, date = ver$date, package = "kitsUI", validation = TRUE,
     meta_extra = paste0("kits v", utils::packageVersion("kits")),
     shiny::tags$head(shiny::tags$style(KITSUI_CSS)),
     if (kitDesign::kit_is_cloud()) kitsui_cloud_banner(),

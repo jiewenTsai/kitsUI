@@ -1,3 +1,12 @@
+# kitsUI 0.8.8
+
+* The version line of the header ends with a link "驗證報告" to the validation report
+  (`inst/validation/validation.md`, kitDesign 0.8.0). The report has a snapshot of the whole report
+  of a demo scenario (`inst/validation/snapshot.R`, MD5 in `results/snapshot_md5.txt`).
+* The drift flag rule is one function (`kitsui_flag_rule()`), with tests exactly at its thresholds:
+  drifting items equal to max(1, flag_share × judged items), and fixable items equal to
+  `flag_fixed`, are not flagged (found by mutation testing). Results do not change.
+
 # kitsUI 0.8.7
 
 The downloaded R code of a round (② 「用 R 怎麼做」) now gives the same result as the app when an

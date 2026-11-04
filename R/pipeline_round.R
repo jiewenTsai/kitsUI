@@ -329,8 +329,9 @@ kitsui_round_scale <- function(X, scale, fixed, round_label, flag_share, flag_fi
     return(list(stopped = TRUE, drift = drift, log = log))
   }
   # 偏移題太多、可固定的題太少，或不能判斷偏移：flag，照常校準
-  many <- length(moved) > max(1, flag_share * judged)
-  few <- n_fixed < flag_fixed
+  flag <- kitsui_flag_rule(length(moved), judged, n_fixed, flag_share, flag_fixed)
+  many <- flag[["many"]]
+  few <- flag[["few"]]
   if (many || few || unjudged) {
     # 原文：偏移題太多 | 可固定的題少於 %s 題
     why <- c(if (many) "\u504f\u79fb\u984c\u592a\u591a", if (few) sprintf("\u53ef\u56fa\u5b9a\u7684\u984c\u5c11\u65bc %s \u984c", flag_fixed),
@@ -365,6 +366,13 @@ kitsui_round_scale <- function(X, scale, fixed, round_label, flag_share, flag_fi
   out <- kitsui_scale_done(fit$X, fit$item, drift, bank, new, log)
   out$flag_fixed <- flag_fixed
   out
+}
+
+#' flag 的規則：偏移題比 max(1, flag_share × 已判斷題數) 多（many），或可固定的題比 flag_fixed 少（few）
+#' @return c(many = , few = )
+#' @noRd
+kitsui_flag_rule <- function(n_moved, judged, n_fixed, flag_share, flag_fixed) {
+  c(many = n_moved > max(1, flag_share * judged), few = n_fixed < flag_fixed)
 }
 
 #' kits_drift() 的 cut（殘差大於幾個標準差算偏移；kitsui_round() 用 kits 的預設）

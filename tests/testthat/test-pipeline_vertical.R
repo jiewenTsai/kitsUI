@@ -357,18 +357,24 @@ test_that("同一個波次有一個世代只有 1 人：kits_vertical() 的缺�
   s <- data.frame(theta = c(stats::rnorm(40), stats::rnorm(30, 1), 0.5, stats::rnorm(20, 2)),
                   wave_m = c(rep(36, 40), rep(48, 30), 36, rep(48, 20)),
                   cohort = c(rep("A", 70), "B", rep("B", 20)))
-  # kits 0.25：B 的 36 個月只有 1 人，標準差是 NA，z 是 NA，kits_vertical() 停下來
-  expect_error(kits::kits_vertical(s), "missing value where TRUE/FALSE needed")
-  v <- kitsui_kits_vertical(s)
-  expect_s3_class(v, "kits_vertical")
-  expect_equal(attr(v, "dropped"), tibble::tibble(cohort = "B", wave_m = 36, n = 1L))
-  # 其他的格和拿掉那一格以後的 kits_vertical() 完全相同
-  ref <- kits::kits_vertical(s[!(s$cohort == "B" & s$wave_m == 36), ])
   strip <- \(x) {
     attr(x, "info") <- NULL
     attr(x, "dropped") <- NULL
     x
   }
+  # kits 0.26.1 起 kits_vertical() 不停下來（檢查註記 z 算不出來）：照 kits 的結果，不拿掉格
+  if (utils::packageVersion("kits") >= "0.26.1") {
+    v <- kitsui_kits_vertical(s)
+    expect_identical(strip(v), strip(kits::kits_vertical(s)))
+    expect_null(attr(v, "dropped"))
+  }
+  # kits 0.25 的錯誤（"missing value where TRUE/FALSE needed"）：拿掉 1 人的格再算一次
+  e <- simpleError("missing value where TRUE/FALSE needed")
+  v <- kitsui_vertical_retry(s, e)
+  expect_s3_class(v, "kits_vertical")
+  expect_equal(attr(v, "dropped"), tibble::tibble(cohort = "B", wave_m = 36, n = 1L))
+  # 其他的格和拿掉那一格以後的 kits_vertical() 完全相同
+  ref <- kits::kits_vertical(s[!(s$cohort == "B" & s$wave_m == 36), ])
   expect_equal(strip(v), strip(ref))
   expect_match(kitsui_vertical_dropped_note(v), "有 1 個世代 × 波次只有 1 人，算不出分布，圖上不畫：B 的 36 個月（1 人）")
   # 沒有這個問題時：和 kits_vertical() 一模一樣，沒有 dropped

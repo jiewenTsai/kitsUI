@@ -625,3 +625,14 @@ test_that("TDCYP：tsupport B82 第二回合（24）資訊不足停下來，選�
   kitsui_write_fixed(r2b$fixed, zip_path)
   expect_true(file.exists(zip_path))
 })
+
+test_that("flag 的規則：剛好在門檻上不標記；比例的分母是已判斷的題數（突變 U03、U04、U05）", {
+  # 偏移 1 題、已判斷 5 題：max(1, 0.2 * 5) = 1，剛好等於，不標記
+  expect_false(kitsui_flag_rule(1, 5, 10, 0.2, 5)[["many"]])
+  expect_true(kitsui_flag_rule(2, 5, 10, 0.2, 5)[["many"]])
+  # 分母是已判斷的題數：偏移 2 題、已判斷 10 題、可固定 8 題 -> 2 不大於 2，不標記
+  expect_false(kitsui_flag_rule(2, 10, 8, 0.2, 5)[["many"]])
+  # 可固定的題剛好等於 flag_fixed：不標記；少 1 題才標記
+  expect_false(kitsui_flag_rule(0, 10, 5, 0.2, 5)[["few"]])
+  expect_true(kitsui_flag_rule(0, 10, 4, 0.2, 5)[["few"]])
+})
